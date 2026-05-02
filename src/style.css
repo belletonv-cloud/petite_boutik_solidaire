@@ -1,0 +1,58 @@
+/* Palette de couleurs cohérente */
+:root {
+  /* Couleurs primaires */
+  --primary-teal: #1BA9A8;
+  --primary-teal-dark: #158886;
+  --primary-coral: #E95E5E;
+  --primary-coral-light: #F15A5A;
+  
+  /* Couleurs secondaires */
+  --secondary-beige: #F5E6D3;
+  --secondary-brown: #8B6F47;
+  --secondary-cream: #FFF9F0;
+  
+  /* Grises */
+  --text-dark: #333333;
+  --text-gray: #666666;
+  --text-light: #999999;
+  --bg-light: #FAFAFA;
+  
+  /* Gradients */
+  --gradient-warm: linear-gradient(135deg, #E95E5E 0%, #F5E6D3 100%);
+  --gradient-cool: linear-gradient(135deg, #1BA9A8 0%, #E95E5E 100%);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  color: var(--text-dark);
+  background-color: var(--bg-light);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  color: var(--primary-teal);
+}
+
+h2 {
+  margin-bottom: 12px;
+}
+
+a {
+  color: var(--primary-teal);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
