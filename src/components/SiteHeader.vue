@@ -3,14 +3,29 @@
     <div class="header-content">
       <img src="@/assets/logo.jpg" alt="Logo La P'tite Boutik Solidaire" class="logo" />
       <div class="header-text">
-        <h1>La P'tite Boutik Solidaire</h1>
-        <p class="tagline">Association Bras Ouverts de Morlaix</p>
+        <h1>{{ titre }}</h1>
+        <p class="tagline">{{ tagline }}</p>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+import { onSnapshot, doc } from 'firebase/firestore'
+import { db } from '../firebase.js'
+
+const titre = ref('La P\'tite Boutik Solidaire')
+const tagline = ref('Association Bras Ouverts de Morlaix')
+
+onMounted(() => {
+  onSnapshot(doc(db, 'config', 'textes'), snap => {
+    if (!snap.exists()) return
+    const d = snap.data()
+    if (d.header_titre) titre.value = d.header_titre
+    if (d.header_tagline) tagline.value = d.header_tagline
+  })
+})
 </script>
 
 <style scoped>

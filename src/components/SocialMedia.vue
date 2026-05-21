@@ -1,42 +1,52 @@
 <template>
   <section class="social-media">
-    <h2>Nos actualités en vidéo</h2>
-    <p class="social-subtitle">Suivez nos actualités et découvrez nos derniers arrivages en vidéo !</p>
-    <div class="social-container">
-      <div class="video-container">
-        <iframe
-          src="https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F2685106605160519%2F&show_text=false&width=267&t=0"
-          width="267"
-          height="476"
-          style="border:none;overflow:hidden"
-          scrolling="no"
-          frameborder="0"
-          allowfullscreen="true"
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-          allowFullScreen="true"
-        ></iframe>
-      </div>
-      <div class="social-info">
-        <h3>Suivez-nous !</h3>
-        <div class="social-links">
-          <a :href="facebookUrl" target="_blank" rel="noopener noreferrer" class="social-link facebook">
-            👍 Facebook
-          </a>
-          <a href="https://www.instagram.com/la_ptite_boutik_morlaix/" target="_blank" rel="noopener noreferrer" class="social-link instagram">
-            📸 Instagram
-          </a>
+    <h2>{{ titre }}</h2>
+    <p class="social-subtitle">Retrouvez nos actualités et derniers arrivages sur nos réseaux</p>
+    <div class="social-cards">
+      <a :href="facebookUrl" target="_blank" rel="noopener noreferrer" class="social-card facebook" aria-label="Facebook La P'tite Boutik Solidaire (ouvre un nouvel onglet)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="social-icon" aria-hidden="true" focusable="false">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+        <div class="social-card-text">
+          <span class="social-name">Facebook</span>
+          <span class="social-handle">{{ facebookHandle }}</span>
         </div>
-        <div class="social-stats">
-          <p>👕 Vêtements pour les Kids de 0 à 10 ans</p>
-          <p>🤲 Recycler par solidarité, ♻️ écologie et pour se rencontrer 👋</p>
+      </a>
+      <a :href="instagramUrl" target="_blank" rel="noopener noreferrer" class="social-card instagram" aria-label="Instagram (ouvre un nouvel onglet)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="social-icon" aria-hidden="true" focusable="false">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+        <div class="social-card-text">
+          <span class="social-name">Instagram</span>
+          <span class="social-handle">{{ instagramHandle }}</span>
         </div>
-      </div>
+      </a>
     </div>
   </section>
 </template>
 
 <script setup>
-const facebookUrl = 'https://www.facebook.com/people/La-Ptite-Boutik-Solidaire-Morlaix/61581840912607/#'
+import { ref, onMounted } from 'vue'
+import { onSnapshot, doc } from 'firebase/firestore'
+import { db } from '../firebase.js'
+
+const titre = ref('Suivez-nous !')
+const facebookUrl = ref('https://www.facebook.com/people/La-Ptite-Boutik-Solidaire-Morlaix/61581840912607/')
+const facebookHandle = ref('La P\'tite Boutik Solidaire')
+const instagramUrl = ref('https://www.instagram.com/la_ptite_boutik_morlaix/')
+const instagramHandle = ref('@la_ptite_boutik_morlaix')
+
+onMounted(() => {
+  onSnapshot(doc(db, 'config', 'textes'), snap => {
+    if (!snap.exists()) return
+    const d = snap.data()
+    if (d.social_titre)        titre.value        = d.social_titre
+    if (d.social_facebook_url) facebookUrl.value  = d.social_facebook_url
+    if (d.social_facebook_handle) facebookHandle.value = d.social_facebook_handle
+    if (d.social_instagram_url) instagramUrl.value = d.social_instagram_url
+    if (d.social_instagram_handle) instagramHandle.value = d.social_instagram_handle
+  })
+})
 </script>
 
 <style scoped>
@@ -56,90 +66,60 @@ const facebookUrl = 'https://www.facebook.com/people/La-Ptite-Boutik-Solidaire-M
   margin-bottom: 25px;
 }
 
-.social-container {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 30px;
-  align-items: center;
-  background: linear-gradient(135deg, #FFF9F0 0%, #F5E6D3 100%);
-  padding: 25px;
-  border-radius: 12px;
-  border: 2px solid var(--secondary-beige);
-}
-
-.video-container {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(27, 169, 168, 0.15);
-}
-
-.social-info h3 {
-  color: var(--primary-teal);
-  margin-bottom: 15px;
-  font-size: 1.2em;
-}
-
-.social-links {
+.social-cards {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
-.social-link {
-  display: inline-block;
-  padding: 12px 24px;
-  border-radius: 8px;
+.social-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 30px;
+  border-radius: 12px;
   text-decoration: none;
+  color: white;
   font-weight: 600;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  color: white;
+  min-width: 240px;
 }
 
-.social-link.facebook {
-  background: #1BA9A8;
-}
-
-.social-link.instagram {
-  background: var(--primary-coral);
-}
-
-.social-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.social-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   text-decoration: none;
 }
 
-.social-stats {
+.social-card.facebook {
+  background: #1877F2;
+}
+
+.social-card.instagram {
+  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+
+.social-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.social-card-text {
+  display: flex;
+  flex-direction: column;
   text-align: left;
-  padding-top: 15px;
-  border-top: 2px solid var(--secondary-beige);
 }
 
-.social-stats p {
-  color: var(--text-dark);
-  font-size: 0.95em;
-  margin-bottom: 8px;
-  line-height: 1.5;
+.social-name {
+  font-size: 1.1em;
+  font-weight: 700;
 }
 
-.social-stats p:last-child {
-  margin-bottom: 0;
-}
-
-@media (max-width: 768px) {
-  .social-container {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .social-info {
-    text-align: center;
-  }
-
-  .social-links {
-    flex-direction: row;
-    justify-content: center;
-  }
+.social-handle {
+  font-size: 0.85em;
+  opacity: 0.85;
+  font-weight: 400;
 }
 </style>

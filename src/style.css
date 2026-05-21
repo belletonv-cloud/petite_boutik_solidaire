@@ -1,5 +1,7 @@
 /* Palette de couleurs cohérente */
 :root {
+  color-scheme: light only;
+  forced-color-adjust: none;
   /* Couleurs primaires */
   --primary-teal: #1BA9A8;
   --primary-teal-dark: #158886;
@@ -26,10 +28,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  forced-color-adjust: none;
 }
 
 html {
   scroll-behavior: smooth;
+  background-color: #FAFAFA;
 }
 
 body {
@@ -38,6 +42,14 @@ body {
   background-color: var(--bg-light);
   line-height: 1.6;
   min-height: 100vh;
+}
+
+/* Forcer le thème clair même sur les navigateurs en dark mode (Opera, Samsung...) */
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: #FAFAFA !important;
+    color: #333333 !important;
+  }
 }
 
 h1, h2, h3 {

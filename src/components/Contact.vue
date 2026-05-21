@@ -1,6 +1,6 @@
 <template>
   <section class="contact">
-    <h2>Nous trouver</h2>
+    <h2>{{ titre }}</h2>
     <div class="contact-grid">
       <div class="contact-info">
         <div class="info-group">
@@ -19,6 +19,7 @@
       <div class="contact-map">
         <iframe
           :src="mapUrl"
+          title="Carte Google Maps — La P'tite Boutik Solidaire"
           width="100%"
           height="250"
           style="border:0; border-radius: 10px;"
@@ -26,16 +27,42 @@
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
         ></iframe>
+        <a
+          :href="'https://maps.google.com/?q=' + addressEncoded"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="maps-link"
+          aria-label="Ouvrir l'adresse dans Google Maps (ouvre un nouvel onglet)"
+        >Ouvrir dans Google Maps →</a>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-const address = '2 rue Jean-Monnet, 29600 Morlaix'
-const phone = '06 20 70 54 96'
-const phoneRaw = '0620705496'
-const mapUrl = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2688.5!2d-3.8275!3d48.5775!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2s2+Rue+Jean+Monnet%2C+29600+Morlaix!5e0!3m2!1sfr!2sfr!4v1700000000000'
+import { ref, onMounted } from 'vue'
+import { onSnapshot, doc } from 'firebase/firestore'
+import { db } from '../firebase.js'
+
+const titre = ref('Nous trouver')
+const address = ref('2 rue Jean-Monnet, 29600 Morlaix')
+const phone = ref('06 20 70 54 96')
+const phoneRaw = ref('0620705496')
+const mapUrl = ref('https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2688.5!2d-3.8275!3d48.5775!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2s2+Rue+Jean+Monnet%2C+29600+Morlaix!5e0!3m2!1sfr!2sfr!4v1700000000000')
+const addressEncoded = ref('2+rue+Jean-Monnet+29600+Morlaix')
+
+onMounted(() => {
+  onSnapshot(doc(db, 'config', 'textes'), snap => {
+    if (!snap.exists()) return
+    const d = snap.data()
+    if (d.contact_titre)   titre.value   = d.contact_titre
+    if (d.contact_address) address.value = d.contact_address
+    if (d.contact_phone) phone.value = d.contact_phone
+    if (d.contact_phone_raw) phoneRaw.value = d.contact_phone_raw
+    if (d.contact_map_url) mapUrl.value = d.contact_map_url
+    if (d.contact_address) addressEncoded.value = d.contact_address.replace(/ /g, '+')
+  })
+})
 </script>
 
 <style scoped>
@@ -96,6 +123,20 @@ const mapUrl = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2688.5!2d-
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(27, 169, 168, 0.15);
+}
+
+.maps-link {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  color: var(--primary-teal);
+  font-size: 0.9em;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.maps-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 768px) {

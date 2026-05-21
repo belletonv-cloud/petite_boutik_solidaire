@@ -13,13 +13,6 @@
         </p>
         <p class="handle">📸 {{ handle }}</p>
       </div>
-      <div class="footer-section">
-        <h4>Suivez-nous</h4>
-        <div class="footer-links">
-          <a href="https://www.facebook.com/people/La-Ptite-Boutik-Solidaire-Morlaix/61581840912607/#" target="_blank" rel="noopener noreferrer" class="footer-link">Facebook</a>
-          <a href="https://www.instagram.com/la_ptite_boutik_morlaix/" target="_blank" rel="noopener noreferrer" class="footer-link">Instagram</a>
-        </div>
-      </div>
     </div>
     <div class="footer-bottom">
       <p>&copy; {{ currentYear }} La P'tite Boutik Solidaire — Association Bras Ouverts de Morlaix</p>
