@@ -170,8 +170,9 @@
             <div class="gallery-section-header">
               <h3>👕 Photos — fond supprimé <span class="photo-count">({{ photosWithBgRemoval.length }})</span></h3>
             </div>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;align-items:center">
               <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:260px" />
+              <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
             </div>
             <div class="gallery-grid">
               <div
@@ -209,8 +210,9 @@
               </div>
             </div>
             <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;align-items:center">
               <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:260px" />
+              <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
             </div>
             <div class="gallery-grid">
               <div

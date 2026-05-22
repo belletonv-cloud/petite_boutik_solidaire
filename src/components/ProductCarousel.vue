@@ -74,7 +74,14 @@
           <button v-if="filterQuery" class="search-clear" @click="filterQuery = ''" title="Effacer la recherche">✕</button>
         </div>
         <div class="grid-wrap">
-          <template v-if="baseImagesFiltered && baseImagesFiltered.length">
+          <template v-if="isFiltering">
+            <!-- skeleton placeholders -->
+            <div class="grid-item skeleton" v-for="n in 8" :key="n">
+              <div class="skeleton-thumb"></div>
+              <div class="skeleton-caption"></div>
+            </div>
+          </template>
+          <template v-else-if="baseImagesFiltered && baseImagesFiltered.length">
             <div class="grid-item" v-for="(img, i) in baseImagesFiltered" :key="i" @click="openFromGrid(i)">
               <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" width="320" height="240" />
               <div class="grid-caption">{{ img.alt }}</div>
@@ -155,6 +162,13 @@ const baseImages = computed(() =>
 )
 
 const filterQuery = ref('')
+const isFiltering = ref(false)
+
+// small debounce visually to show skeleton when search changes
+watch(filterQuery, (v, o) => {
+  isFiltering.value = true
+  setTimeout(() => { isFiltering.value = false }, 250)
+})
 
 const baseImagesFiltered = computed(() => {
   const q = (filterQuery.value || '').trim().toLowerCase()
@@ -520,6 +534,10 @@ const onSlideChange = (e) => {
   .grid-item { cursor: pointer; border-radius: 8px; overflow: hidden; background:#fafafa; display:flex;flex-direction:column;align-items:center }
   .grid-item img { width:100%; height:140px; object-fit:cover }
   .grid-caption { padding:6px 8px; font-size:0.85em; color:var(--text-gray); text-align:center }
+  .grid-item.skeleton { background:transparent; cursor:default }
+  .skeleton-thumb { width:100%; height:140px; background:linear-gradient(90deg,#eee,#f5f5f5,#eee); background-size:200% 100%; animation: shimmer 1.2s infinite }
+  .skeleton-caption { width:70%; height:14px; margin:10px 0; background:linear-gradient(90deg,#eee,#f5f5f5,#eee); background-size:200% 100%; animation: shimmer 1.2s infinite }
+  @keyframes shimmer { 0% { background-position:200% 0 } 100% { background-position:-200% 0 } }
 
   .gallery-filter button {
     padding: 8px 16px;
