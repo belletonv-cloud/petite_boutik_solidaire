@@ -171,8 +171,10 @@
               <h3>👕 Photos — fond supprimé <span class="photo-count">({{ photosWithBgRemoval.length }})</span></h3>
             </div>
             <div style="display:flex;justify-content:flex-end;margin-bottom:8px;align-items:center">
-              <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:260px" />
-              <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
+              <div class="search-field" style="width:260px;position:relative">
+                <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:100%" />
+                <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
+              </div>
             </div>
             <div class="gallery-grid">
               <div
@@ -211,8 +213,10 @@
             </div>
             <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
             <div style="display:flex;justify-content:flex-end;margin-bottom:8px;align-items:center">
-              <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:260px" />
-              <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
+              <div class="search-field" style="width:260px;position:relative">
+                <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:100%" />
+                <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
+              </div>
             </div>
             <div class="gallery-grid">
               <div
@@ -1495,6 +1499,9 @@ const loadData = () => {
 }
 
 .input-search { padding:8px 10px; border:1px solid #ddd; border-radius:8px }
+.search-field { position:relative; display:inline-flex; align-items:center }
+.search-field .input-search { padding-right: 34px }
+.search-clear { position:absolute; right:8px; background:transparent; border:none; font-size:14px; cursor:pointer; color:#888 }
 .thumb-tags { margin-top:6px }
 .thumb-tag-input { width:100%; padding:6px 8px; border-radius:6px; border:1px solid #eee }
 .input-date:focus, .input-text:focus, .input-textarea:focus, .input-select:focus {
