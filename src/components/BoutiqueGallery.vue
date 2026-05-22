@@ -5,17 +5,26 @@
     <swiper
       :modules="modules"
       :slides-per-view="1"
-      :loop="true"
+      :loop="images.length > 1"
       :autoplay="{ delay: 3000, disableOnInteraction: false }"
-      :pagination="{ clickable: true }"
-      :navigation="true"
+      :pagination="{ clickable: false, type: 'fraction' }"
+      :navigation="images.length > 1"
       class="my-swiper"
-      @swiper="s => swiperInstance = s"
+      @swiper="onSwiper"
     >
-      <swiper-slide v-for="(img, idx) in images" :key="idx">
-        <img :src="img.src" :alt="img.alt" class="slide-image" />
+    <swiper-slide v-for="(img, idx) in slides" :key="img.id || idx">
+        <img
+          :src="img.src"
+          loading="lazy"
+          :alt="img.alt"
+          class="slide-image"
+          @error="($event.target).src = img.fallback || '/placeholder.jpg'"
+        />
       </swiper-slide>
     </swiper>
+    <div class="swiper-pagination-fraction">
+      {{ (typeof swiperInstance?.realIndex !== 'undefined' ? (swiperInstance.realIndex + 1) : (typeof swiperInstance?.activeIndex !== 'undefined' ? swiperInstance.activeIndex + 1 : 1)) }} / {{ slides.length || 1 }}
+    </div>
     <div class="carousel-controls">
       <button class="pause-btn" @click="togglePause" :aria-label="isPaused ? 'Reprendre' : 'Pause'">
         {{ isPaused ? '▶ Reprendre' : '⏸ Pause' }}
@@ -25,7 +34,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
@@ -37,17 +46,6 @@ import { db } from '../firebase.js'
 
 const modules = [Autoplay, Pagination, Navigation]
 
-const allImages = [
-  { id: '21', src: '/photos/PHOTO-2026-05-02-21-17-21.jpg', alt: 'Vitrine de la boutique' },
-  { id: '24', src: '/photos/PHOTO-2026-05-02-21-17-24.jpg', alt: "Vue d'ensemble de la boutique" },
-  { id: '222', src: '/photos/PHOTO-2026-05-02-21-17-222.jpg', alt: 'Vêtements suspendus en boutique' },
-  { id: '11', src: '/photos/PHOTO-2026-05-02-21-17-11.jpg', alt: 'Rayon chaussures' },
-  { id: '29', src: '/photos/PHOTO-2026-05-02-21-17-29.jpg', alt: 'Accueil en boutique' },
-  { id: '28', src: '/photos/PHOTO-2026-05-02-21-17-28.jpg', alt: 'Espace poussettes' },
-  { id: '22', src: '/photos/PHOTO-2026-05-02-21-17-22.jpg', alt: 'Vêtements en boutique' },
-  { id: '092', src: '/photos/PHOTO-2026-05-02-21-17-092.jpg', alt: 'Matériel de puériculture' },
-  { id: '09', src: '/photos/PHOTO-2026-05-02-21-17-09.jpg', alt: 'Rayon chaussures' },
-]
 
 const boutiqueState = ref({})
 const dynamicPhotos = ref([])
@@ -56,22 +54,54 @@ onMounted(() => {
   onSnapshot(doc(db, 'config', 'galleries'), snap => {
     if (snap.exists()) {
       boutiqueState.value = snap.data().boutique || {}
+      console.debug('[BoutiqueGallery] boutiqueState', boutiqueState.value)
     }
-  })
+  }, (err) => console.error('[BoutiqueGallery] galleries snapshot error', err))
+
   onSnapshot(query(collection(db, 'photos'), orderBy('createdAt')), snap => {
     dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  })
+    console.debug('[BoutiqueGallery] dynamicPhotos count', dynamicPhotos.value.length, dynamicPhotos.value.map(p => ({ id: p.id, gallery: p.gallery, active: p.active })))
+    
+  }, (err) => console.error('[BoutiqueGallery] photos snapshot error', err))
 })
 
-const images = computed(() => [
-  ...allImages.filter(p => boutiqueState.value[p.id] !== false),
-  ...dynamicPhotos.value
-    .filter(p => p.gallery === 'boutique' && p.active)
-    .map(p => ({ src: p.url, alt: p.alt }))
-])
+const images = computed(() =>
+  dynamicPhotos.value
+  .filter(p => p && p.active && p.gallery === 'boutique')
+    .map(p => ({
+      id: p.id,
+      src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
+      alt: p.alt || '',
+      fallback: p.fallback || '/placeholder.jpg'
+    }))
+)
+
+// If there are no images from Firestore, provide a fallback slide so Swiper
+// has at least one slide to measure and won't collapse to height: 0.
+const slides = computed(() => {
+  if (images.value && images.value.length) return images.value
+  return [{ id: '__placeholder', src: '/placeholder.jpg', alt: 'Aucune photo', fallback: '/placeholder.jpg' }]
+})
+
+// debug toggles removed (migration applied)
 
 const swiperInstance = ref(null)
 const isPaused = ref(false)
+
+// Ensure Swiper recalculates once images change (fires after images are rendered)
+watch(images, async (val) => {
+  // wait for DOM update
+  await nextTick()
+  const s = swiperInstance.value
+  if (!s) return
+  // update dimensions and pagination
+  if (typeof s.update === 'function') s.update()
+  // if slides were added, ensure we start at first slide
+  if (val && val.length) {
+    try { s.slideTo(0) } catch (e) { /* ignore */ }
+  }
+  
+})
 
 const togglePause = () => {
   if (!swiperInstance.value) return
@@ -81,6 +111,11 @@ const togglePause = () => {
   } else {
     swiperInstance.value.autoplay.start()
   }
+}
+
+function onSwiper(s) {
+  // ensure we keep the Swiper instance in the ref so controls work
+  swiperInstance.value = s
 }
 </script>
 
@@ -162,4 +197,29 @@ const togglePause = () => {
   background: var(--primary-teal);
   color: white;
 }
+  .swiper-pagination-fraction {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--primary-teal);
+    font-weight: 500;
+  }
+
+  .swiper-pagination-fraction::before {
+    content: 'Photo ';
+  }
+
+  .slide-image {
+    width: 100%;
+    height: auto;
+    max-height: 60vh;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  .slide-image[src*="placeholder.jpg"] {
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+  }
+
 </style>

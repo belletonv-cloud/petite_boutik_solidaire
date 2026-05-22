@@ -7,6 +7,7 @@ import Hero from './components/Hero.vue'
 import About from './components/About.vue'
 import Products from './components/Products.vue'
 import Gallery from './components/ProductCarousel.vue'
+import BoutiqueGallery from './components/BoutiqueGallery.vue'
 import Association from './components/Association.vue'
 import Calendar from './components/Calendar.vue'
 import Hours from './components/Hours.vue'
@@ -18,7 +19,7 @@ import ActuBanner from './components/ActuBanner.vue'
 
 const blocs = ref({})
 
-const DEFAULT_ORDER = ['hero', 'about', 'carousel', 'collection', 'association', 'calendrier', 'engagement', 'contact', 'social']
+const DEFAULT_ORDER = ['hero', 'about', 'boutique-gallery', 'carousel', 'collection', 'association', 'calendrier', 'engagement', 'contact', 'social']
 
 const isVisible = (id) => {
   if (blocs.value[id] === undefined) return true
@@ -43,16 +44,17 @@ onMounted(() => {
     <ActuBanner />
 
     <template v-for="id in blocOrder" :key="id">
-      <Hero          v-if="id === 'hero'       && isVisible('hero')"       />
-      <About         v-if="id === 'about'      && isVisible('about')"      />
-      <Products      v-if="id === 'collection' && isVisible('collection')" />
-      <Gallery       v-if="id === 'carousel'   && isVisible('carousel')"   />
-      <Association   v-if="id === 'association'&& isVisible('association')"/>
-      <Calendar      v-if="id === 'calendrier' && isVisible('calendrier')" />
-      <Hours         v-if="id === 'calendrier' && isVisible('calendrier')" id="horaires" />
-      <Engagement    v-if="id === 'engagement' && isVisible('engagement')" />
-      <Contact       v-if="id === 'contact'    && isVisible('contact')"    id="contact" />
-      <SocialMedia   v-if="id === 'social'     && isVisible('social')"     />
+      <Hero          v-if="id === 'hero'             && isVisible('hero')"       />
+      <About         v-if="id === 'about'            && isVisible('about')"      />
+      <BoutiqueGallery v-if="id === 'boutique-gallery' && isVisible('boutique-gallery')" />
+      <Products      v-if="id === 'collection'       && isVisible('collection')" />
+      <Gallery       v-if="id === 'carousel'         && isVisible('carousel')"   />
+      <Association   v-if="id === 'association'      && isVisible('association')"/>
+      <Calendar      v-if="id === 'calendrier'       && isVisible('calendrier')" />
+      <Hours         v-if="id === 'calendrier'       && isVisible('calendrier')" id="horaires" />
+      <Engagement    v-if="id === 'engagement'       && isVisible('engagement')" />
+      <Contact       v-if="id === 'contact'          && isVisible('contact')"    id="contact" />
+      <SocialMedia   v-if="id === 'social'           && isVisible('social')"     />
     </template>
 
     <SiteFooter />

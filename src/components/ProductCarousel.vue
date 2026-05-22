@@ -2,110 +2,123 @@
   <div class="gallery-container">
     <h2>Galerie photos</h2>
     <p class="subtitle">Cliquez sur une photo pour la voir en grand</p>
+    
+    <div class="gallery-filter">
+      <button
+        @click="filter = 'boutique'"
+        :class="{ active: filter === 'boutique' }"
+        aria-label="Voir les photos de la boutique"
+      >
+        Boutique
+      </button>
+      <button
+        @click="filter = 'articles'"
+        :class="{ active: filter === 'articles' }"
+        aria-label="Voir les photos des articles"
+      >
+        Articles
+      </button>
+    </div>
+
     <swiper
       :modules="modules"
       :slides-per-view="1"
-      :loop="true"
-      :autoplay="{ delay: 3000, disableOnInteraction: false }"
-      :pagination="{ clickable: true }"
-      :navigation="true"
+      :loop="images.length > 1"
+      :autoplay="{ delay: 3500, disableOnInteraction: false }"
+      :pagination="{ clickable: false, type: 'fraction' }"
+      :navigation="images.length > 1"
+      :auto-height="true"
       class="my-swiper"
       @swiper="onSwiper"
     >
       <swiper-slide v-for="(img, idx) in images" :key="idx">
         <div class="slide-frame" @click="openModal(idx)">
-          <img :src="img.src" :alt="img.alt" class="slide-image" />
+          <img :src="img.src" :alt="img.alt" class="slide-image" @error="($event.target).src = '/placeholder.jpg'" />
         </div>
       </swiper-slide>
     </swiper>
+    <div class="swiper-pagination-fraction">
+      {{ swiperInstance?.realIndex ? swiperInstance.realIndex + 1 : 1 }} / {{ images.length || 1 }}
+    </div>
 
     <div class="carousel-controls">
       <button class="pause-btn" @click="togglePause" :aria-label="isPaused ? 'Reprendre' : 'Pause'">
-        {{ isPaused ? '▶ Reprendre' : '⏸ Pause' }}
+        {{ isPaused ? '▶' : '⏸' }}
       </button>
     </div>
 
     <div class="modal-overlay" v-if="modalOpen" @click.self="closeModal" role="dialog" aria-modal="true">
       <div class="modal-content">
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
+        <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
+        <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
         <img :src="images[modalIndex].src" :alt="images[modalIndex].alt" class="modal-image" />
+        <p class="modal-caption">{{ images[modalIndex].alt }}</p>
+        <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/autoplay'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
-import { onSnapshot, doc, collection, query, orderBy } from 'firebase/firestore'
+import { onSnapshot, collection, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 
 const modules = [Autoplay, Pagination, Navigation]
-
-// Toutes les photos (produits + boutique) en une seule galerie
-const allImages = [
-  { id: '07', src: '/photos/PHOTO-2026-05-02-21-17-07.jpg', alt: 'Salopette et t-shirt' },
-  { id: '072', src: '/photos/PHOTO-2026-05-02-21-17-072.jpg', alt: 'Sandales' },
-  { id: '13', src: '/photos/PHOTO-2026-05-02-21-17-13.jpg', alt: 'Tenue complète' },
-  { id: '17', src: '/photos/PHOTO-2026-05-02-21-17-17.jpg', alt: 'Tenue bébé et nounours' },
-  { id: '18', src: '/photos/PHOTO-2026-05-02-21-17-18.jpg', alt: 'Combinaison bébé' },
-  { id: '20', src: '/photos/PHOTO-2026-05-02-21-17-20.jpg', alt: 'Cheval à bascule' },
-  { id: '212', src: '/photos/PHOTO-2026-05-02-21-17-212.jpg', alt: 'Trotteur VTech' },
-  { id: '25', src: '/photos/PHOTO-2026-05-02-21-17-25.jpg', alt: 'Veste kaki' },
-  { id: '252', src: '/photos/PHOTO-2026-05-02-21-17-252.jpg', alt: 'Robe rose' },
-  { id: '26', src: '/photos/PHOTO-2026-05-02-21-17-26.jpg', alt: 'Ensemble marine' },
-  { id: '262', src: '/photos/PHOTO-2026-05-02-21-17-262.jpg', alt: 'Ensemble blanc rayé' },
-  { id: '12', src: '/photos/PHOTO-2026-05-02-21-17-12.jpg', alt: 'Veste marine' },
-  { id: '14', src: '/photos/PHOTO-2026-05-02-21-17-14.jpg', alt: 'Robe et peluche' },
-  { id: '21', src: '/photos/PHOTO-2026-05-02-21-17-21.jpg', alt: 'Vitrine de la boutique' },
-  { id: '24', src: '/photos/PHOTO-2026-05-02-21-17-24.jpg', alt: "Vue d'ensemble de la boutique" },
-  { id: '222', src: '/photos/PHOTO-2026-05-02-21-17-222.jpg', alt: 'Vêtements suspendus en boutique' },
-  { id: '11', src: '/photos/PHOTO-2026-05-02-21-17-11.jpg', alt: 'Rayon chaussures' },
-  { id: '29', src: '/photos/PHOTO-2026-05-02-21-17-29.jpg', alt: 'Accueil en boutique' },
-  { id: '28', src: '/photos/PHOTO-2026-05-02-21-17-28.jpg', alt: 'Espace poussettes' },
-  { id: '22', src: '/photos/PHOTO-2026-05-02-21-17-22.jpg', alt: 'Vêtements en boutique' },
-  { id: '092', src: '/photos/PHOTO-2026-05-02-21-17-092.jpg', alt: 'Matériel de puériculture' },
-  { id: '09', src: '/photos/PHOTO-2026-05-02-21-17-09.jpg', alt: 'Rayon chaussures' },
-]
-
-const galleriesState = ref({ gallery: {} })
 const dynamicPhotos = ref([])
-const photoAlts = ref({})
 
 onMounted(() => {
-  onSnapshot(doc(db, 'config', 'galleries'), snap => {
-    if (snap.exists()) {
-      const data = snap.data()
-      galleriesState.value = { gallery: data.gallery || {} }
-    }
-  })
-  onSnapshot(doc(db, 'config', 'photoAlts'), snap => {
-    if (snap.exists()) photoAlts.value = snap.data()
-  })
-  onSnapshot(query(collection(db, 'photos'), orderBy('createdAt')), snap => {
-    dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  })
+  onSnapshot(
+    query(collection(db, 'photos'), orderBy('createdAt')),
+    snap => { dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() })) },
+    err => { console.warn('Firestore photos error:', err) }
+  )
+  document.addEventListener('keydown', onKeydown)
 })
 
-const altFor = (id, defaultAlt) => photoAlts.value[id] ?? defaultAlt
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+})
 
-const images = computed(() => [
-  ...allImages.filter(p => galleriesState.value.gallery[p.id] !== false)
-    .map(p => ({ src: p.src, alt: altFor(p.id, p.alt) })),
-  ...dynamicPhotos.value
-    .filter(p => p.active)
-    .map(p => ({ src: p.url, alt: p.alt }))
-])
+function bgRemovalUrl(url, removeBg) {
+  if (!removeBg || !url?.includes('cloudinary')) return url;
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.pathname.includes('/upload/')) {
+      return url.replace('/upload/', '/upload/e_background_removal,f_auto/');
+    }
+    return url;
+  } catch {
+    return url; // Retourne l'URL originale si invalide
+  }
+}
+
+const filter = ref('boutique') // 'boutique' ou 'articles'
+
+const images = computed(() =>
+  dynamicPhotos.value
+    .filter(p => p.active && (
+      filter.value === 'boutique'
+        ? (p.gallery === 'boutique' || !p.gallery) // Affiche aussi les images sans champ `gallery`
+        : p.gallery !== 'boutique'
+    ))
+    .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), alt: p.alt }))
+)
 
 const swiperInstance = ref(null)
 const isPaused = ref(false)
 const modalOpen = ref(false)
 const modalIndex = ref(0)
+
+// Fallback image for broken links
+const placeholderImage = '/placeholder.jpg'
 
 const onSwiper = (swiper) => {
   swiperInstance.value = swiper
@@ -130,6 +143,21 @@ const openModal = (idx) => {
 const closeModal = () => {
   modalOpen.value = false
   document.body.style.overflow = ''
+}
+
+const prevModal = () => {
+  modalIndex.value = (modalIndex.value - 1 + images.value.length) % images.value.length
+}
+
+const nextModal = () => {
+  modalIndex.value = (modalIndex.value + 1) % images.value.length
+}
+
+const onKeydown = (e) => {
+  if (!modalOpen.value) return
+  if (e.key === 'Escape') closeModal()
+  if (e.key === 'ArrowLeft') prevModal()
+  if (e.key === 'ArrowRight') nextModal()
 }
 </script>
 
@@ -170,15 +198,15 @@ const closeModal = () => {
 :deep(.swiper-button-next),
 :deep(.swiper-button-prev) {
   color: var(--primary-teal);
-  background: rgba(255,255,255,0.8);
-  width: 36px;
-  height: 36px;
+  background: rgba(255,255,255,0.85);
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
 }
 
 :deep(.swiper-button-next:after),
 :deep(.swiper-button-prev:after) {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
 }
 
@@ -188,16 +216,20 @@ const closeModal = () => {
   justify-content: center;
   cursor: pointer;
   transition: transform 0.2s;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 100%;
 }
 
 .slide-frame:hover {
-  transform: scale(1.02);
+  transform: scale(1.015);
 }
 
 .slide-image {
+  display: block;
   width: 100%;
-  height: 400px;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   border-radius: 8px;
 }
 
@@ -206,7 +238,7 @@ const closeModal = () => {
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 8px;
   flex-wrap: wrap;
 }
 
@@ -214,13 +246,15 @@ const closeModal = () => {
   background: none;
   border: 2px solid var(--primary-teal);
   color: var(--primary-teal);
-  border-radius: 20px;
-  padding: 6px 16px;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
   cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 600;
+  font-size: 0.85em;
   transition: all 0.3s;
-  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pause-btn:hover {
@@ -234,7 +268,7 @@ const closeModal = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.92);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -244,21 +278,49 @@ const closeModal = () => {
 
 .modal-content {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   max-width: 90vw;
   max-height: 90vh;
 }
 
 .modal-close {
   position: absolute;
-  top: -15px;
-  right: -15px;
+  top: -18px;
+  right: -18px;
   background: var(--primary-coral);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.modal-close:hover {
+  background: #d14545;
+  transform: scale(1.1);
+}
+
+.modal-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.1);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -267,15 +329,86 @@ const closeModal = () => {
   z-index: 10;
 }
 
-.modal-close:hover {
-  background: #d14545;
-  transform: scale(1.1);
+.modal-nav:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-50%) scale(1.1);
 }
+
+.modal-prev { left: 12px; }
+.modal-next { right: 12px; }
 
 .modal-image {
   max-width: 100%;
-  max-height: 85vh;
+  max-height: 80vh;
   object-fit: contain;
   border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
+
+.modal-caption {
+  color: rgba(255,255,255,0.8);
+  font-size: 0.9em;
+  margin-top: 12px;
+  text-align: center;
+  max-width: 80%;
+}
+
+.modal-counter {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.8em;
+  margin-top: 4px;
+}
+  .gallery-filter {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .gallery-filter button {
+    padding: 8px 16px;
+    border: 1px solid var(--primary-teal);
+    background: white;
+    color: var(--primary-teal);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .gallery-filter button:hover {
+    background: var(--primary-teal);
+    color: white;
+  }
+
+  .gallery-filter button.active {
+    background: var(--primary-teal);
+    color: white;
+  }
+
+  .swiper-pagination-fraction {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--primary-teal);
+    font-weight: 500;
+  }
+
+  .swiper-pagination-fraction::before {
+    content: 'Photo ';
+  }
+
+  .slide-image {
+    width: 100%;
+    height: auto;
+    max-height: 60vh;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .slide-image[src*="placeholder.jpg"] {
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+  }
+
 </style>

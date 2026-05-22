@@ -51,7 +51,8 @@
       <!-- Panneau preview iframe -->
       <div class="preview-panel" v-if="showPreview">
         <div class="preview-panel-bar">
-          <span>Aperçu du site en direct</span>
+          <span>Aperçu du site {{ previewMode === 'local' ? 'local' : 'déployé' }}</span>
+          <button @click="togglePreviewMode" class="btn-refresh">{{ previewMode === 'local' ? '🌐 Site déployé' : '💻 Local' }}</button>
           <button @click="refreshPreview" class="btn-refresh">↺ Rafraîchir</button>
           <button @click="showPreview = false" class="btn-close-preview">✕</button>
         </div>
@@ -164,48 +165,67 @@
             </div>
           </div>
 
-          <!-- Toutes les photos -->
-          <div class="gallery-section">
-            <h3>Toutes les photos</h3>
-            <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte directement.</p>
+          <!-- Photos avec fond supprimé (👕) -->
+          <div class="gallery-section" v-if="photosWithBgRemoval.length">
+            <div class="gallery-section-header">
+              <h3>👕 Photos — fond supprimé <span class="photo-count">({{ photosWithBgRemoval.length }})</span></h3>
+            </div>
             <div class="gallery-grid">
               <div
                 class="gallery-thumb"
-                v-for="photo in allPhotos"
-                :key="'s-'+photo.id"
-                :class="{ inactive: !isPhotoActive('gallery', photo.id) }"
+                v-for="photo in photosWithBgRemoval"
+                :key="photo._key"
+                :class="{ inactive: !photo._active }"
               >
-                <img :src="photo.src" :alt="photo.alt" />
+                <img :src="photo._src" :alt="photo._displayAlt" />
                 <div class="thumb-overlay">
                   <label class="toggle-label">
-                    <input type="checkbox" :checked="isPhotoActive('gallery', photo.id)" @change="togglePhoto('gallery', photo.id)" />
-                    <span>{{ isPhotoActive('gallery', photo.id) ? 'Visible' : 'Masquée' }}</span>
+                    <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
+                    <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
                   </label>
+                  <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" title="Réafficher le décor">🖼</button>
+                  <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
                 </div>
                 <div class="thumb-edit-alt">
-                  <input type="text" :value="photoAlt(photo)" @change="e => savePhotoAlt(photo, e.target.value)" class="input-text thumb-alt-input" placeholder="Description" />
-                </div>
-              </div>
-              <!-- Photos dynamiques Cloudinary -->
-              <div
-                class="gallery-thumb"
-                v-for="photo in dynamicPhotos"
-                :key="'d-'+photo.id"
-                :class="{ inactive: !photo.active }"
-              >
-                <img :src="photo.url" :alt="photo.alt" />
-                <div class="thumb-overlay">
-                  <label class="toggle-label">
-                    <input type="checkbox" :checked="photo.active" @change="toggleDynamicPhoto(photo)" />
-                    <span>{{ photo.active ? 'Visible' : 'Masquée' }}</span>
-                  </label>
-                  <button class="thumb-delete" @click="deleteDynamicPhoto(photo)" title="Supprimer">🗑</button>
-                </div>
-                <div class="thumb-edit-alt">
-                  <input type="text" :value="photo.alt" @change="e => saveDynamicPhotoAlt(photo, e.target.value)" class="input-text thumb-alt-input" placeholder="Description" />
+                  <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
+                  <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Photos avec décor (🖼) -->
+          <div class="gallery-section">
+            <div class="gallery-section-header">
+              <h3>🖼 Photos — avec décor <span class="photo-count">({{ photosWithDecor.length }})</span></h3>
+              <div class="gallery-header-actions">
+                <button v-if="dynamicPhotos.length" class="btn-delete-all" @click="deleteAllDynamicPhotos">🗑 Tout supprimer</button>
+              </div>
+            </div>
+            <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
+            <div class="gallery-grid">
+              <div
+                class="gallery-thumb"
+                v-for="photo in photosWithDecor"
+                :key="photo._key"
+                :class="{ inactive: !photo._active }"
+              >
+                <img :src="photo._src" :alt="photo._displayAlt" />
+                <div class="thumb-overlay">
+                  <label class="toggle-label">
+                    <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
+                    <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
+                  </label>
+                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" title="Supprimer le fond">👕</button>
+                  <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
+                </div>
+                <div class="thumb-edit-alt">
+                  <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
+                  <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
+                </div>
+              </div>
+            </div>
+            <p class="empty" v-if="!dynamicPhotos.length">Aucune photo pour l'instant. Ajoutez-en avec le formulaire ci-dessus.</p>
           </div>
         </section>
 
@@ -514,9 +534,16 @@ const tab = ref('fermetures')
 
 // Preview iframe
 const showPreview = ref(false)
-const previewSrc = ref('https://petite-boutik-solidaire.pages.dev')
-const refreshPreview = () => {
-  previewSrc.value = 'https://petite-boutik-solidaire.pages.dev?t=' + Date.now()
+const previewMode = ref('local')
+const previewTs = ref(0)
+const previewSrc = computed(() => {
+  const base = previewMode.value === 'local' ? 'http://localhost:5173' : 'https://petite-boutik-solidaire.pages.dev'
+  return base + '?t=' + previewTs.value
+})
+const refreshPreview = () => { previewTs.value = Date.now() }
+const togglePreviewMode = () => {
+  previewMode.value = previewMode.value === 'local' ? 'deployed' : 'local'
+  refreshPreview()
 }
 
 // Drag & drop blocs
@@ -813,40 +840,44 @@ const saveTextesForBloc = async (bloc) => {
 const adminList = ref([])
 const newAdminEmail = ref('')
 
-// Toutes les photos statiques (fusionnées en une seule galerie)
-const allPhotos = [
-  { id: '07', src: '/photos/PHOTO-2026-05-02-21-17-07.jpg', alt: 'Salopette et t-shirt' },
-  { id: '072', src: '/photos/PHOTO-2026-05-02-21-17-072.jpg', alt: 'Sandales' },
-  { id: '13', src: '/photos/PHOTO-2026-05-02-21-17-13.jpg', alt: 'Tenue complète' },
-  { id: '17', src: '/photos/PHOTO-2026-05-02-21-17-17.jpg', alt: 'Tenue bébé et nounours' },
-  { id: '18', src: '/photos/PHOTO-2026-05-02-21-17-18.jpg', alt: 'Combinaison bébé' },
-  { id: '20', src: '/photos/PHOTO-2026-05-02-21-17-20.jpg', alt: 'Cheval à bascule' },
-  { id: '212', src: '/photos/PHOTO-2026-05-02-21-17-212.jpg', alt: 'Trotteur VTech' },
-  { id: '25', src: '/photos/PHOTO-2026-05-02-21-17-25.jpg', alt: 'Veste kaki' },
-  { id: '252', src: '/photos/PHOTO-2026-05-02-21-17-252.jpg', alt: 'Robe rose' },
-  { id: '26', src: '/photos/PHOTO-2026-05-02-21-17-26.jpg', alt: 'Ensemble marine' },
-  { id: '262', src: '/photos/PHOTO-2026-05-02-21-17-262.jpg', alt: 'Ensemble blanc rayé' },
-  { id: '12', src: '/photos/PHOTO-2026-05-02-21-17-12.jpg', alt: 'Veste marine' },
-  { id: '14', src: '/photos/PHOTO-2026-05-02-21-17-14.jpg', alt: 'Robe et peluche' },
-  { id: '21', src: '/photos/PHOTO-2026-05-02-21-17-21.jpg', alt: 'Vitrine de la boutique' },
-  { id: '24', src: '/photos/PHOTO-2026-05-02-21-17-24.jpg', alt: "Vue d'ensemble de la boutique" },
-  { id: '222', src: '/photos/PHOTO-2026-05-02-21-17-222.jpg', alt: 'Vêtements suspendus en boutique' },
-  { id: '11', src: '/photos/PHOTO-2026-05-02-21-17-11.jpg', alt: 'Rayon chaussures' },
-  { id: '29', src: '/photos/PHOTO-2026-05-02-21-17-29.jpg', alt: 'Accueil en boutique' },
-  { id: '28', src: '/photos/PHOTO-2026-05-02-21-17-28.jpg', alt: 'Espace poussettes' },
-  { id: '22', src: '/photos/PHOTO-2026-05-02-21-17-22.jpg', alt: 'Vêtements en boutique' },
-  { id: '092', src: '/photos/PHOTO-2026-05-02-21-17-092.jpg', alt: 'Matériel de puériculture' },
-  { id: '09', src: '/photos/PHOTO-2026-05-02-21-17-09.jpg', alt: 'Rayon chaussures' },
-]
-
-// Surlignage des alt-texte modifiées (stocké dans config/photoAlts)
-const photoAlts = ref({})
-
-// État des galeries depuis Firestore : { gallery: {id: true/false} }
-const galleriesState = ref({ gallery: {} })
-
-// Photos dynamiques (uploadées via Cloudinary)
+// Photos (toutes dans Cloudinary / Firestore)
 const dynamicPhotos = ref([])
+
+// Édition du texte des photos (draft local avant sauvegarde)
+const altDraft = ref({})
+const altSavedKey = ref('')
+
+const onAltInput = (key, val) => {
+  altDraft.value[key] = val
+}
+
+const onAltSave = (photo) => {
+  const val = altDraft.value[photo._key]
+  if (val === undefined) return
+  delete altDraft.value[photo._key]
+  saveDynamicPhotoAlt(photo._raw, val)
+  altSavedKey.value = photo._key
+  setTimeout(() => { altSavedKey.value = '' }, 2000)
+}
+
+const mergedPhotos = computed(() =>
+  dynamicPhotos.value.map(p => ({
+    _key: p.id,
+    id: p.id,
+    _raw: p,
+    _src: p.url,
+    _displayAlt: p.alt,
+    _active: p.active,
+  }))
+)
+
+const photosWithBgRemoval = computed(() =>
+  mergedPhotos.value.filter(photo => photo._raw.removeBg)
+)
+
+const photosWithDecor = computed(() =>
+  mergedPhotos.value.filter(photo => !photo._raw.removeBg)
+)
 
 // Upload
 const CLOUDINARY_CLOUD = 'diqz414dk'
@@ -880,73 +911,68 @@ const uploadPhoto = async () => {
        })
        if (!res.ok) throw new Error('Erreur Cloudinary')
        const data = await res.json()
-       await addDoc(collection(db, 'photos'), {
-         url: data.secure_url,
-         gallery: upload.value.gallery,
-         alt: upload.value.alts[i],
-         active: true,
-         createdAt: new Date().toISOString(),
-       })
+        await addDoc(collection(db, 'photos'), {
+          url: data.secure_url,
+          gallery: upload.value.gallery,
+          alt: upload.value.alts[i],
+          active: true,
+          removeBg: false,
+          createdAt: new Date().toISOString(),
+        })
      }
-     upload.value.done = true
-     upload.value.files = []
-     upload.value.previews = []
-     upload.value.alts = []
-     if (fileInput.value) fileInput.value.value = ''
-   } catch (e) {
-     upload.value.error = 'Erreur lors de l\'envoi vers Cloudinary.'
-   }
-   upload.value.uploading = false
- }
+      upload.value.done = true
+      setTimeout(() => { upload.value.done = false }, 4000)
+      upload.value.files = []
+      upload.value.previews = []
+      upload.value.alts = []
+      if (fileInput.value) fileInput.value.value = ''
+    } catch (e) {
+      upload.value.error = 'Erreur lors de l\'envoi vers Cloudinary.'
+    }
+    upload.value.uploading = false
+  }
 
   const toggleDynamicPhoto = async (photo) => {
   await setDoc(doc(db, 'photos', photo.id), { ...photo, active: !photo.active })
 }
 
+const toggleRemoveBg = async (photo) => {
+  await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: !photo.removeBg })
+}
+
 const deleteDynamicPhoto = async (photo) => {
   if (!confirm(`Supprimer "${photo.alt}" ?`)) return
+  upload.value.done = false
   await deleteDoc(doc(db, 'photos', photo.id))
 }
 
-const loadDynamicPhotos = () => {
-  onSnapshot(query(collection(db, 'photos'), orderBy('createdAt')), snap => {
-    dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  })
+const deleteAllDynamicPhotos = async () => {
+  if (!dynamicPhotos.value.length) return
+  if (!confirm(`Supprimer toutes les ${dynamicPhotos.value.length} photos uploadées ? Cette action est irréversible.`)) return
+  upload.value.done = false
+  const batch = dynamicPhotos.value.map(p => deleteDoc(doc(db, 'photos', p.id)))
+  await Promise.all(batch)
 }
 
-const isPhotoActive = (gallery, id) => {
-  const state = galleriesState.value[gallery]
-  // Par défaut visible si pas encore dans Firestore
-  return state[id] !== false
-}
-
-const togglePhoto = async (gallery, id) => {
-  const newVal = !isPhotoActive(gallery, id)
-  galleriesState.value[gallery][id] = newVal
+const deleteStaticPhoto = async (photoId) => {
+  if (!confirm('Supprimer cette photo statique ? Elle pourra être restaurée plus tard.')) return
+  if (!galleriesState.value._deleted) galleriesState.value._deleted = {}
+  galleriesState.value._deleted[photoId] = true
   await setDoc(doc(db, 'config', 'galleries'), galleriesState.value)
 }
 
-const loadGalleries = () => {
-  onSnapshot(doc(db, 'config', 'galleries'), snap => {
-    if (snap.exists()) {
-      const data = snap.data()
-      galleriesState.value = {
-        gallery: data.gallery || {},
-      }
-    }
-  })
-  onSnapshot(doc(db, 'config', 'photoAlts'), snap => {
-    if (snap.exists()) photoAlts.value = snap.data()
-  })
+const restoreStaticPhoto = async (photoId) => {
+  if (!galleriesState.value._deleted) return
+  delete galleriesState.value._deleted[photoId]
+  await setDoc(doc(db, 'config', 'galleries'), galleriesState.value)
 }
 
-const photoAlt = (photo) => {
-  return photoAlts.value[photo.id] ?? photo.alt
-}
-
-const savePhotoAlt = async (photo, alt) => {
-  photoAlts.value[photo.id] = alt
-  await setDoc(doc(db, 'config', 'photoAlts'), { ...photoAlts.value })
+const loadDynamicPhotos = () => {
+  onSnapshot(
+    query(collection(db, 'photos'), orderBy('createdAt')),
+    snap => { dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() })) },
+    err => { console.warn('Firestore photos error:', err) }
+  )
 }
 
 const saveDynamicPhotoAlt = async (photo, alt) => {
@@ -1245,7 +1271,6 @@ const loadData = () => {
   loadActu()
   loadTextes()
   loadAdmins()
-  loadGalleries()
   loadDynamicPhotos()
   loadBlocs()
   loadHoraires()
@@ -1549,20 +1574,26 @@ const loadData = () => {
 }
 .thumb-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 110px;
   background: rgba(0,0,0,0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.2s;
+  pointer-events: none;
 }
 .gallery-thumb:hover .thumb-overlay {
   opacity: 1;
+  pointer-events: auto;
 }
 .gallery-thumb.inactive .thumb-overlay {
   opacity: 1;
   background: rgba(0,0,0,0.25);
+  pointer-events: auto;
 }
 .toggle-label {
   display: flex;
@@ -1669,6 +1700,135 @@ const loadData = () => {
   margin-top: 6px;
   transition: background 0.2s;
 }
+.thumb-delete:hover { background: #c03030; }
+.thumb-bg-toggle {
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-top: 4px;
+  transition: all 0.2s;
+}
+.thumb-bg-toggle.active {
+  background: rgba(27,169,168,0.7);
+  border-color: #1BA9A8;
+}
+.thumb-bg-toggle:hover { background: rgba(255,255,255,0.35); }
+.thumb-restore {
+  background: rgba(27,169,168,0.85);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  color: white;
+}
+.thumb-restore:hover { background: #158886; }
+.dynamic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 4px;
+  grid-column: 1 / -1;
+}
+.dynamic-count {
+  font-size: 0.82em;
+  color: #888;
+  font-weight: 600;
+}
+.btn-delete-all {
+  background: none;
+  border: 2px solid #E95E5E;
+  color: #E95E5E;
+  padding: 4px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 0.82em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-delete-all:hover { background: #E95E5E; color: white; }
+.btn-delete-all:disabled { opacity: 0.4; cursor: not-allowed; }
+.gallery-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btn-migrate {
+  background: none;
+  border: 2px solid #1BA9A8;
+  color: #1BA9A8;
+  padding: 4px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 0.82em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-migrate:hover { background: #1BA9A8; color: white; }
+.btn-migrate:disabled { opacity: 0.4; cursor: not-allowed; }
+.gallery-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.gallery-section-header h3 {
+  margin-bottom: 0 !important;
+}
+.thumb-edit-alt {
+  position: relative;
+}
+.alt-saved {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4CAF50;
+  font-size: 0.85em;
+  font-weight: 700;
+  pointer-events: none;
+}
+.photo-count {
+  font-weight: 400;
+  font-size: 0.75em;
+  color: #888;
+}
+.badge-static {
+  background: #1BA9A8 !important;
+}
+.badge-cloud {
+  background: #E95E5E !important;
+}
+.deleted-section {
+  margin-top: 28px;
+  padding: 16px;
+  background: #fff8f0;
+  border: 2px dashed #e0a060;
+  border-radius: 10px;
+}
+.deleted-section h4 {
+  color: #a06830;
+  margin: 0 0 4px 0;
+  font-size: 0.95em;
+}
+.thumb-deleted-label {
+  display: block;
+  font-size: 0.75em;
+  color: #999;
+  text-align: center;
+  padding: 4px;
+}
  .upload-previews {
    display: flex;
    flex-direction: column;
@@ -1699,15 +1859,18 @@ const loadData = () => {
    min-width: 0;
  }
 
- .thumb-delete:hover { background: #c03030; }
 .thumb-badge {
-  background: #1BA9A8;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
   color: white;
-  border-radius: 4px;
-  font-size: 0.7em;
-  padding: 1px 5px;
-  margin-left: 4px;
-  vertical-align: middle;
+  border-radius: 6px;
+  font-size: 0.75em;
+  padding: 2px 6px;
+  font-weight: 700;
+  line-height: 1.3;
+  pointer-events: none;
 }
 
 /* Aperçu calendrier */
