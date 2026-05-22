@@ -20,6 +20,11 @@
       </button>
     </div>
 
+    <div class="search-row">
+      <input type="search" v-model="filterQuery" placeholder="Rechercher par mot-clé ou tag" class="input-search" />
+      <button class="btn-grid" @click="gridOpen = true" title="Ouvrir la grille">🔳 Voir la grille</button>
+    </div>
+
     <swiper
       :modules="modules"
       :slides-per-view="1"
@@ -56,6 +61,22 @@
         <img :src="images[modalIndex].src" :alt="images[modalIndex].alt" class="modal-image" />
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
+      </div>
+    </div>
+
+    <!-- Grid modal view -->
+    <div class="grid-overlay" v-if="gridOpen" @click.self="gridOpen = false">
+      <div class="grid-content">
+        <button class="grid-close" @click="gridOpen = false">✕</button>
+        <div class="grid-search-row">
+          <input type="search" v-model="filterQuery" placeholder="Filtrer par mot-clé ou tag" class="input-search full" />
+        </div>
+        <div class="grid-wrap">
+          <div class="grid-item" v-for="(img, i) in baseImages" :key="i" @click="openFromGrid(i)">
+            <img :src="img.src" :alt="img.alt" />
+            <div class="grid-caption">{{ img.alt }}</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -103,7 +124,8 @@ function bgRemovalUrl(url, removeBg) {
 
 const filter = ref('boutique') // 'boutique' ou 'articles'
 
-const images = computed(() =>
+// images before search filtering (respecting boutique/articles)
+const baseImages = computed(() =>
   dynamicPhotos.value
     .filter(p => p.active && (
       // Articles: only photos that had background removal applied
@@ -111,14 +133,30 @@ const images = computed(() =>
       // Boutique: the rest (not background removed)
       : (p.removeBg !== true)
     ))
-    .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), alt: p.alt }))
+    .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), alt: p.alt || '', tags: p.tags || [] }))
 )
+
+const filterQuery = ref('')
+
+// final images shown in the carousel / grid — filtered by search (alt or tags)
+const images = computed(() => {
+  const q = (filterQuery.value || '').trim().toLowerCase()
+  if (!q) return baseImages.value
+  return baseImages.value.filter(img => {
+    if ((img.alt || '').toLowerCase().includes(q)) return true
+    const tags = img.tags || []
+    if (Array.isArray(tags)) return tags.some(t => (t || '').toLowerCase().includes(q))
+    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
+    return false
+  })
+})
 
 const swiperInstance = ref(null)
 const isPaused = ref(false)
 const modalOpen = ref(false)
 const modalIndex = ref(0)
 const currentIndex = ref(0)
+const gridOpen = ref(false)
 
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
@@ -145,6 +183,22 @@ const openModal = (idx) => {
   currentIndex.value = idx
   modalOpen.value = true
   document.body.style.overflow = 'hidden'
+}
+
+const openFromGrid = (idx) => {
+  // open modal from the grid — but we need to map index according to images list
+  // the grid shows baseImages (unfiltered by search), but clicking should open the
+  // corresponding index in the current filtered images if present. We'll attempt
+  // to find the clicked image in images and open at that index.
+  const clicked = baseImages.value[idx]
+  const targetIndex = images.value.findIndex(i => i.src === clicked.src)
+  if (targetIndex !== -1) {
+    openModal(targetIndex)
+  } else {
+    // fallback: open modal at first
+    openModal(0)
+  }
+  gridOpen.value = false
 }
 
 const closeModal = () => {
@@ -381,6 +435,60 @@ const onSlideChange = (e) => {
     gap: 10px;
     margin-bottom: 15px;
   }
+
+  .search-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .input-search {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 220px;
+  }
+
+  .btn-grid {
+    padding: 8px 12px;
+    background: var(--primary-teal);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  /* Grid modal */
+  .grid-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 20px;
+  }
+
+  .grid-content {
+    background: white;
+    max-width: 1000px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+  }
+
+  .grid-close { position: absolute; right: 14px; top: 12px; border: none; background: transparent; font-size: 20px; cursor: pointer }
+
+  .grid-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 8px }
+  .grid-item { cursor: pointer; border-radius: 8px; overflow: hidden; background:#fafafa; display:flex;flex-direction:column;align-items:center }
+  .grid-item img { width:100%; height:140px; object-fit:cover }
+  .grid-caption { padding:6px 8px; font-size:0.85em; color:var(--text-gray); text-align:center }
 
   .gallery-filter button {
     padding: 8px 16px;
