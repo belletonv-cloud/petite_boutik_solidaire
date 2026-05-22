@@ -58,7 +58,7 @@
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
-        <img :src="images[modalIndex].src" :alt="images[modalIndex].alt" class="modal-image" />
+        <img :src="images[modalIndex].src" :alt="images[modalIndex].alt" class="modal-image" loading="lazy" />
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
       </div>
@@ -73,7 +73,7 @@
         </div>
         <div class="grid-wrap">
           <div class="grid-item" v-for="(img, i) in baseImages" :key="i" @click="openFromGrid(i)">
-            <img :src="img.src" :alt="img.alt" />
+            <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" width="320" height="240" />
             <div class="grid-caption">{{ img.alt }}</div>
           </div>
         </div>
@@ -125,6 +125,19 @@ function bgRemovalUrl(url, removeBg) {
 const filter = ref('boutique') // 'boutique' ou 'articles'
 
 // images before search filtering (respecting boutique/articles)
+function cloudinaryTransform(url, transform) {
+  if (!url || !url.includes('/upload/')) return url
+  return url.replace('/upload/', `/upload/${transform}/`)
+}
+
+function thumbFor(url, removeBg) {
+  if (!url) return url
+  // prefer small, cropped, auto quality thumbnails
+  const baseTransform = 'w_320,h_240,c_fill,f_auto,q_auto'
+  if (removeBg) return cloudinaryTransform(url, `e_background_removal,${baseTransform}`)
+  return cloudinaryTransform(url, baseTransform)
+}
+
 const baseImages = computed(() =>
   dynamicPhotos.value
     .filter(p => p.active && (
@@ -133,7 +146,7 @@ const baseImages = computed(() =>
       // Boutique: the rest (not background removed)
       : (p.removeBg !== true)
     ))
-    .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), alt: p.alt || '', tags: p.tags || [] }))
+    .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), thumb: thumbFor(p.url, p.removeBg), alt: p.alt || '', tags: p.tags || [] }))
 )
 
 const filterQuery = ref('')

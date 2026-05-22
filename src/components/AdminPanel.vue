@@ -180,7 +180,7 @@
                 :key="photo._key"
                 :class="{ inactive: !photo._active }"
               >
-                <img :src="photo._src" :alt="photo._displayAlt" />
+                <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
                 <div class="thumb-overlay">
                   <label class="toggle-label">
                     <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
@@ -219,7 +219,7 @@
                 :key="photo._key"
                 :class="{ inactive: !photo._active }"
               >
-                <img :src="photo._src" :alt="photo._displayAlt" />
+                <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
                 <div class="thumb-overlay">
                   <label class="toggle-label">
                     <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
@@ -896,6 +896,7 @@ const mergedPhotos = computed(() =>
     id: p.id,
     _raw: p,
     _src: p.url,
+    _srcThumb: (p.url && p.url.includes('/upload/')) ? p.url.replace('/upload/', '/upload/w_320,h_240,c_fill,f_auto,q_auto/') : p.url,
     _displayAlt: p.alt,
     _active: p.active,
   }))
