@@ -65,19 +65,22 @@ onMounted(() => {
   }, (err) => console.error('[BoutiqueGallery] photos snapshot error', err))
 })
 
-const images = computed(() =>
-  // Select photos for the Boutique view based on the photo type flags.
-  // Business rule: show photos that are either "avec décor" or "fond supprimé".
-  // Accept both boolean and string representations for removeBg.
-  dynamicPhotos.value
-    .filter(p => p && p.active && p.gallery === 'boutique' && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
-    .map(p => ({
-      id: p.id,
-      src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
-      alt: p.alt || '',
-      fallback: p.fallback || '/placeholder.jpg'
-    }))
-)
+// TEMPORARY DEBUG: log incoming data and filtered results
+const images = computed(() => {
+  console.log('[BoutiqueGallery] dynamicPhotos:', dynamicPhotos.value)
+  const filteredStrict = dynamicPhotos.value.filter(p => p && p.active && p.gallery === 'boutique' && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
+  console.log('[BoutiqueGallery] filteredStrict:', filteredStrict)
+  // helpful quick check: how many active photos are available at all
+  const filteredActive = dynamicPhotos.value.filter(p => p && p.active)
+  console.log('[BoutiqueGallery] filteredActiveCount:', filteredActive.length)
+
+  return filteredStrict.map(p => ({
+    id: p.id,
+    src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
+    alt: p.alt || '',
+    fallback: p.fallback || '/placeholder.jpg'
+  }))
+})
 
 // If there are no images from Firestore, provide a fallback slide so Swiper
 // has at least one slide to measure and won't collapse to height: 0.
