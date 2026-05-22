@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
@@ -169,10 +169,15 @@ const filterQuery = ref('')
 const isFiltering = ref(false)
 
 // small debounce visually to show skeleton when search changes
-watch(filterQuery, (v, o) => {
+let _filterTimer = null
+watchEffect(() => {
+  // read the ref to track it
+  const _q = filterQuery.value
   isFiltering.value = true
-  setTimeout(() => { isFiltering.value = false }, 250)
+  if (_filterTimer) clearTimeout(_filterTimer)
+  _filterTimer = setTimeout(() => { isFiltering.value = false; _filterTimer = null }, 250)
 })
+onUnmounted(() => { if (_filterTimer) clearTimeout(_filterTimer) })
 
 const baseImagesFiltered = computed(() => {
   const q = (filterQuery.value || '').trim().toLowerCase()
