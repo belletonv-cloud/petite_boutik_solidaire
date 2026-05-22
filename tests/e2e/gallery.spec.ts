@@ -10,17 +10,9 @@ test.describe('Public Gallery E2E', () => {
   })
 
   test('boutique gallery shows at least one image', async ({ page }) => {
-    // First try: wait until component ctx reports images
-    const imagesCount = await page.waitForFunction(() => {
-      const el = document.querySelector('.carousel-container') || document.querySelector('.my-swiper')
-      if (!el || !el.__vueParentComponent) return 0
-      const ctx = el.__vueParentComponent.ctx
-      const imgs = ctx && ctx.images && ctx.images.value
-      return Array.isArray(imgs) ? imgs.length : 0
-    }, null, { timeout: 20000 })
-
-    const count = await imagesCount.jsonValue()
-    // if component has images, consider the gallery populated
+    // Wait for slide images rendered in DOM (stabilised via data-test attributes)
+    await page.waitForSelector('[data-test="slide-image"]', { timeout: 20000 })
+    const count = await page.locator('[data-test="slide-image"]').count()
     expect(count).toBeGreaterThan(0)
   })
 
