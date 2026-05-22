@@ -68,9 +68,13 @@ onMounted(() => {
 const images = computed(() =>
   // Select photos for the Boutique view based on the photo type flags.
   // Business rule: show photos that are either "avec décor" or "fond supprimé".
-  // Those are represented by the presence of the `removeBg` boolean field in the document.
+  // Accept both boolean and string representations for removeBg.
   dynamicPhotos.value
-    .filter(p => p && p.active && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
+    .filter(p => {
+      if (!p || !p.active) return false
+      const v = p.removeBg
+      return v === true || v === false || v === 'true' || v === 'false'
+    })
     .map(p => ({
       id: p.id,
       src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
