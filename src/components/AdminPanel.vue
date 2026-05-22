@@ -1502,6 +1502,13 @@ const loadData = () => {
 .search-field { position:relative; display:inline-flex; align-items:center }
 .search-field .input-search { padding-right: 34px }
 .search-clear { position:absolute; right:8px; background:transparent; border:none; font-size:14px; cursor:pointer; color:#888 }
+.input-search::-webkit-search-cancel-button,
+.input-search::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input-search::-ms-clear,
+.input-search::-ms-reveal { display:none; width:0; height:0 }
 .thumb-tags { margin-top:6px }
 .thumb-tag-input { width:100%; padding:6px 8px; border-radius:6px; border:1px solid #eee }
 .input-date:focus, .input-text:focus, .input-textarea:focus, .input-select:focus {

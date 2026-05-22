@@ -496,6 +496,19 @@ const onSlideChange = (e) => {
     width: 220px;
   }
 
+  /* Hide native search clear buttons (WebKit / IE) to avoid double icons */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="search"]::-ms-clear,
+  input[type="search"]::-ms-reveal {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
   .search-field { position: relative; display:inline-flex; align-items:center }
   .search-field .input-search { padding-right: 34px }
   .search-clear { position:absolute; right:8px; background:transparent; border:none; font-size:14px; cursor:pointer; color:#888 }
