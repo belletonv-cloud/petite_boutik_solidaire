@@ -22,7 +22,7 @@
 
     <div class="search-row">
       <input type="search" v-model="filterQuery" placeholder="Rechercher par mot-clé ou tag" class="input-search" />
-      <button class="btn-grid" @click="gridOpen = true" title="Ouvrir la grille">🔳 Voir la grille</button>
+      <button class="btn-grid" @click="gridOpen = true" title="Ouvrir la vue en grille">🔳 Voir toutes les photos</button>
     </div>
 
     <swiper
@@ -72,7 +72,7 @@
           <input type="search" v-model="filterQuery" placeholder="Filtrer par mot-clé ou tag" class="input-search full" />
         </div>
         <div class="grid-wrap">
-          <div class="grid-item" v-for="(img, i) in baseImages" :key="i" @click="openFromGrid(i)">
+          <div class="grid-item" v-for="(img, i) in baseImagesFiltered" :key="i" @click="openFromGrid(i)">
             <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" width="320" height="240" />
             <div class="grid-caption">{{ img.alt }}</div>
           </div>
@@ -151,6 +151,18 @@ const baseImages = computed(() =>
 
 const filterQuery = ref('')
 
+const baseImagesFiltered = computed(() => {
+  const q = (filterQuery.value || '').trim().toLowerCase()
+  if (!q) return baseImages.value
+  return baseImages.value.filter(img => {
+    if ((img.alt || '').toLowerCase().includes(q)) return true
+    const tags = img.tags || []
+    if (Array.isArray(tags)) return tags.some(t => (t || '').toLowerCase().includes(q))
+    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
+    return false
+  })
+})
+
 // final images shown in the carousel / grid — filtered by search (alt or tags)
 const images = computed(() => {
   const q = (filterQuery.value || '').trim().toLowerCase()
@@ -199,11 +211,8 @@ const openModal = (idx) => {
 }
 
 const openFromGrid = (idx) => {
-  // open modal from the grid — but we need to map index according to images list
-  // the grid shows baseImages (unfiltered by search), but clicking should open the
-  // corresponding index in the current filtered images if present. We'll attempt
-  // to find the clicked image in images and open at that index.
-  const clicked = baseImages.value[idx]
+  // open modal from the grid — grid shows baseImagesFiltered
+  const clicked = baseImagesFiltered.value[idx]
   const targetIndex = images.value.findIndex(i => i.src === clicked.src)
   if (targetIndex !== -1) {
     openModal(targetIndex)
