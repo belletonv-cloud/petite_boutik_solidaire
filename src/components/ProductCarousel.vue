@@ -22,6 +22,7 @@
 
     <div class="search-row">
       <input type="search" v-model="filterQuery" placeholder="Rechercher par mot-clé ou tag" class="input-search" />
+      <button v-if="filterQuery" class="search-clear" @click="filterQuery = ''" title="Effacer la recherche">✕</button>
       <button class="btn-grid" @click="gridOpen = true" title="Ouvrir la vue en grille">🔳 Voir toutes les photos</button>
     </div>
 
@@ -70,12 +71,16 @@
         <button class="grid-close" @click="gridOpen = false">✕</button>
         <div class="grid-search-row">
           <input type="search" v-model="filterQuery" placeholder="Filtrer par mot-clé ou tag" class="input-search full" />
+          <button v-if="filterQuery" class="search-clear" @click="filterQuery = ''" title="Effacer la recherche">✕</button>
         </div>
         <div class="grid-wrap">
-          <div class="grid-item" v-for="(img, i) in baseImagesFiltered" :key="i" @click="openFromGrid(i)">
-            <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" width="320" height="240" />
-            <div class="grid-caption">{{ img.alt }}</div>
-          </div>
+          <template v-if="baseImagesFiltered && baseImagesFiltered.length">
+            <div class="grid-item" v-for="(img, i) in baseImagesFiltered" :key="i" @click="openFromGrid(i)">
+              <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" width="320" height="240" />
+              <div class="grid-caption">{{ img.alt }}</div>
+            </div>
+          </template>
+          <div v-else class="empty-grid">Aucune photo trouvée pour "{{ filterQuery }}".</div>
         </div>
       </div>
     </div>
@@ -472,6 +477,10 @@ const onSlideChange = (e) => {
     border-radius: 8px;
     width: 220px;
   }
+
+  .search-clear { background: transparent; border: none; font-size: 16px; cursor: pointer; margin-left:6px }
+
+  .empty-grid { text-align:center; padding:30px; color:#666; font-size:1em }
 
   .btn-grid {
     padding: 8px 12px;
