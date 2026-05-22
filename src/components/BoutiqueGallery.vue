@@ -52,42 +52,31 @@ const dynamicPhotos = ref([])
 
 onMounted(() => {
   onSnapshot(doc(db, 'config', 'galleries'), snap => {
-    if (snap.exists()) {
-      boutiqueState.value = snap.data().boutique || {}
-      console.debug('[BoutiqueGallery] boutiqueState', boutiqueState.value)
-    }
+    if (snap.exists()) boutiqueState.value = snap.data().boutique || {}
   }, (err) => console.error('[BoutiqueGallery] galleries snapshot error', err))
 
   onSnapshot(query(collection(db, 'photos'), orderBy('createdAt')), snap => {
+    // populate dynamic photos from Firestore
     dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    console.debug('[BoutiqueGallery] dynamicPhotos count', dynamicPhotos.value.length, dynamicPhotos.value.map(p => ({ id: p.id, gallery: p.gallery, active: p.active })))
-    
   }, (err) => console.error('[BoutiqueGallery] photos snapshot error', err))
 })
 
-// TEMPORARY DEBUG: log incoming data and filtered results
-const images = computed(() => {
-  console.log('[BoutiqueGallery] dynamicPhotos:', dynamicPhotos.value)
-  const filteredStrict = dynamicPhotos.value.filter(p => p && p.active && p.gallery === 'boutique' && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
-  console.log('[BoutiqueGallery] filteredStrict:', filteredStrict)
-  // helpful quick check: how many active photos are available at all
-  const filteredActive = dynamicPhotos.value.filter(p => p && p.active)
-  console.log('[BoutiqueGallery] filteredActiveCount:', filteredActive.length)
+// Images computed: select photos that represent Boutique items.
+// Business rule: show photos that are active and have the removeBg flag
+// (covers both "avec décor" and "fond supprimé").
+const images = computed(() =>
+  dynamicPhotos.value
+    .filter(p => p && p.active && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
+    .map(p => ({
+      id: p.id,
+      src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
+      alt: p.alt || '',
+      fallback: p.fallback || '/placeholder.jpg'
+    }))
+)
 
-  return filteredStrict.map(p => ({
-    id: p.id,
-    src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
-    alt: p.alt || '',
-    fallback: p.fallback || '/placeholder.jpg'
-  }))
-})
-
-// If there are no images from Firestore, provide a fallback slide so Swiper
-// has at least one slide to measure and won't collapse to height: 0.
-const slides = computed(() => {
-  if (images.value && images.value.length) return images.value
-  return [{ id: '__placeholder', src: '/placeholder.jpg', alt: 'Aucune photo', fallback: '/placeholder.jpg' }]
-})
+// Slides: use images; if empty, return a single placeholder slide to keep layout stable.
+const slides = computed(() => images.value && images.value.length ? images.value : [{ id: '__placeholder', src: '/placeholder.jpg', alt: 'Aucune photo', fallback: '/placeholder.jpg' }])
 
 // debug toggles removed (migration applied)
 
@@ -106,7 +95,7 @@ watch(images, async (val) => {
   if (val && val.length) {
     try { s.slideTo(0) } catch (e) { /* ignore */ }
   }
-  
+  // no debug exposure in production
 })
 
 const togglePause = () => {

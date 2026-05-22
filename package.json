@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "firebase": "^12.12.1",
+    "firebase-admin": "^11.11.1",
     "swiper": "^12.1.4",
     "vue": "^3.4.27"
   },
