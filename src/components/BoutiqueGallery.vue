@@ -1,11 +1,11 @@
 <template>
-  <div class="carousel-container">
+  <div class="carousel-container" data-test="boutique-carousel">
     <h2>Découvrez notre boutique</h2>
     <p class="subtitle">Un lieu chaleureux pour toute la famille</p>
     <swiper
       :modules="modules"
       :slides-per-view="1"
-      :loop="images.length > 1"
+      :loop="false"
       :autoplay="{ delay: 3000, disableOnInteraction: false }"
       :pagination="false"
       :navigation="images.length > 1"
@@ -19,12 +19,13 @@
           loading="lazy"
           :alt="img.alt"
           class="slide-image"
+          data-test="slide-image"
           @error="($event.target).src = img.fallback || '/placeholder.jpg'"
         />
       </swiper-slide>
     </swiper>
     <div class="swiper-pagination-fraction">
-      {{ (currentIndex + 1) }} / {{ images.length || 1 }}
+      {{ Math.min(currentIndex + 1, images.length || 1) }} / {{ images.length || 1 }}
     </div>
     <div class="carousel-controls">
       <button class="pause-btn" @click="togglePause" :aria-label="isPaused ? 'Reprendre' : 'Pause'">
@@ -68,7 +69,7 @@ onMounted(() => {
 // This keeps the UI tolerant of inconsistent data while prioritising properly processed images.
 const images = computed(() =>
   dynamicPhotos.value
-    .filter(p => p && p.active && (p.removeBg === true || p.gallery === 'boutique'))
+    .filter(p => p && p.active && p.removeBg === false)
     .map(p => ({
       id: p.id,
       src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
