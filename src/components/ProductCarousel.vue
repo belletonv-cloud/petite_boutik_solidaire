@@ -25,11 +25,12 @@
       :slides-per-view="1"
       :loop="images.length > 1"
       :autoplay="{ delay: 3500, disableOnInteraction: false }"
-      :pagination="{ clickable: false, type: 'fraction' }"
+      :pagination="false"
       :navigation="images.length > 1"
       :auto-height="true"
       class="my-swiper"
       @swiper="onSwiper"
+      @slideChange="onSlideChange"
     >
       <swiper-slide v-for="(img, idx) in images" :key="idx">
         <div class="slide-frame" @click="openModal(idx)">
@@ -38,7 +39,7 @@
       </swiper-slide>
     </swiper>
     <div class="swiper-pagination-fraction">
-      {{ swiperInstance?.realIndex ? swiperInstance.realIndex + 1 : 1 }} / {{ images.length || 1 }}
+      {{ (currentIndex || 0) + 1 }} / {{ images.length || 1 }}
     </div>
 
     <div class="carousel-controls">
@@ -120,12 +121,15 @@ const swiperInstance = ref(null)
 const isPaused = ref(false)
 const modalOpen = ref(false)
 const modalIndex = ref(0)
+const currentIndex = ref(0)
 
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
 
 const onSwiper = (swiper) => {
   swiperInstance.value = swiper
+  // initialize the custom counter
+  currentIndex.value = typeof swiper.realIndex !== 'undefined' ? swiper.realIndex : (typeof swiper.activeIndex !== 'undefined' ? swiper.activeIndex : 0)
 }
 
 const togglePause = () => {
@@ -140,6 +144,8 @@ const togglePause = () => {
 
 const openModal = (idx) => {
   modalIndex.value = idx
+  // keep modalIndex and currentIndex consistent when opening modal from a slide
+  currentIndex.value = idx
   modalOpen.value = true
   document.body.style.overflow = 'hidden'
 }
@@ -151,10 +157,12 @@ const closeModal = () => {
 
 const prevModal = () => {
   modalIndex.value = (modalIndex.value - 1 + images.value.length) % images.value.length
+  currentIndex.value = modalIndex.value
 }
 
 const nextModal = () => {
   modalIndex.value = (modalIndex.value + 1) % images.value.length
+  currentIndex.value = modalIndex.value
 }
 
 const onKeydown = (e) => {
@@ -162,6 +170,14 @@ const onKeydown = (e) => {
   if (e.key === 'Escape') closeModal()
   if (e.key === 'ArrowLeft') prevModal()
   if (e.key === 'ArrowRight') nextModal()
+}
+
+// keep the custom counter in sync when the swiper changes slides
+const onSlideChange = (e) => {
+  // Swiper emits the swiper instance as the event argument
+  const s = e && e.realIndex !== undefined ? e : swiperInstance.value
+  if (!s) return
+  currentIndex.value = typeof s.realIndex !== 'undefined' ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
 }
 </script>
 
