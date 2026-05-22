@@ -22,7 +22,7 @@
 
     <div class="search-row">
       <div class="search-field">
-        <input type="search" v-model="filterQuery" placeholder="Rechercher par mot-clé ou tag" class="input-search" />
+        <input type="search" v-model="filterQuery" placeholder="Rechercher (mot-clé/tag)" class="input-search" />
         <button v-if="filterQuery" class="search-clear" @click="filterQuery = ''" title="Effacer la recherche">✕</button>
       </div>
       <button class="btn-grid" @click="gridOpen = true" title="Ouvrir la vue en grille">🔳 Voir toutes les photos</button>
@@ -73,7 +73,7 @@
         <button class="grid-close" @click="gridOpen = false">✕</button>
         <div class="grid-search-row">
           <div class="search-field" style="width:100%">
-            <input type="search" v-model="filterQuery" placeholder="Filtrer par mot-clé ou tag" class="input-search full" />
+            <input type="search" v-model="filterQuery" placeholder="Filtrer (mot-clé/tag)" class="input-search full" />
             <button v-if="filterQuery" class="search-clear" @click="filterQuery = ''" title="Effacer la recherche">✕</button>
           </div>
         </div>
@@ -499,6 +499,10 @@ const onSlideChange = (e) => {
     border: 1px solid #ddd;
     border-radius: 8px;
     width: 220px;
+    /* Prevent long placeholders from wrapping and increasing the input height */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Hide native search clear buttons (WebKit / IE) to avoid double icons */
