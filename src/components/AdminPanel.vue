@@ -208,7 +208,8 @@
             <div class="gallery-section-header">
               <h3>🖼 Photos — avec décor <span class="photo-count">({{ photosWithDecor.length }})</span></h3>
               <div class="gallery-header-actions">
-                <button v-if="dynamicPhotos.length" class="btn-delete-all" @click="deleteAllDynamicPhotos">🗑 Tout supprimer</button>
+                <!-- Removed global "Tout supprimer" button for consistency.
+                     Keep per-photo delete controls to avoid accidental mass-deletes. -->
               </div>
             </div>
             <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
@@ -1007,13 +1008,8 @@ const deleteDynamicPhoto = async (photo) => {
   await deleteDoc(doc(db, 'photos', photo.id))
 }
 
-const deleteAllDynamicPhotos = async () => {
-  if (!dynamicPhotos.value.length) return
-  if (!confirm(`Supprimer toutes les ${dynamicPhotos.value.length} photos uploadées ? Cette action est irréversible.`)) return
-  upload.value.done = false
-  const batch = dynamicPhotos.value.map(p => deleteDoc(doc(db, 'photos', p.id)))
-  await Promise.all(batch)
-}
+// remove deleteAllDynamicPhotos: avoid keeping mass-delete code
+// (user requested complete removal)
 
 const deleteStaticPhoto = async (photoId) => {
   if (!confirm('Supprimer cette photo statique ? Elle pourra être restaurée plus tard.')) return
@@ -1490,15 +1486,18 @@ const loadData = () => {
 .form-block label { font-weight: 600; font-size: 0.9em; color: #444; }
 
 .input-date, .input-text, .input-textarea, .input-select {
-  padding: 9px 12px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  font-size: 0.9em;
+  /* Compact, consistent inputs across the admin panel (match thumbnail editors) */
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.82em;
+  line-height: 1.2;
   font-family: inherit;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
-.input-search { padding:8px 10px; border:1px solid #ddd; border-radius:8px }
+.input-search { padding:6px 8px; border:1px solid #ddd; border-radius:6px; font-size:0.82em; line-height:1.2 }
 .search-field { position:relative; display:inline-flex; align-items:center }
 .search-field .input-search { padding-right: 34px }
 .search-clear { position:absolute; right:8px; background:transparent; border:none; font-size:14px; cursor:pointer; color:#888 }
@@ -1510,7 +1509,17 @@ const loadData = () => {
 .input-search::-ms-clear,
 .input-search::-ms-reveal { display:none; width:0; height:0 }
 .thumb-tags { margin-top:6px }
-.thumb-tag-input { width:100%; padding:6px 8px; border-radius:6px; border:1px solid #eee }
+.thumb-tag-input {
+  /* More compact than .input-text so content fits in small thumbnail editors */
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.82em;
+  line-height: 1.2;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+.thumb-tag-input:focus { border-color: #1BA9A8; outline: none }
 .input-date:focus, .input-text:focus, .input-textarea:focus, .input-select:focus {
   outline: none;
   border-color: #1BA9A8;
@@ -1701,17 +1710,16 @@ const loadData = () => {
   border-top: 1px solid #eee;
 }
 .thumb-alt-input {
+  /* More compact than .input-text so content fits in small thumbnail editors */
   width: 100%;
   box-sizing: border-box;
-  font-size: 0.75em;
-  padding: 4px 6px;
+  font-size: 0.82em;
+  line-height: 1.2;
+  padding: 6px 8px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
 }
-.thumb-alt-input:focus {
-  border-color: #1BA9A8;
-  outline: none;
-}
+.thumb-alt-input:focus { border-color: #1BA9A8; outline: none }
 
 /* UPLOAD */
 .upload-block {
@@ -1921,18 +1929,24 @@ const loadData = () => {
    gap: 10px;
    width: 100%;
  }
- .upload-preview-item img {
-   width: 80px;
-   height: 80px;
-   object-fit: cover;
-   border-radius: 8px;
-   border: 2px solid #1BA9A8;
-   flex-shrink: 0;
- }
- .upload-alt-input {
-   flex: 1;
-   min-width: 0;
- }
+  .upload-preview-item img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #1BA9A8;
+    flex-shrink: 0;
+  }
+  .upload-alt-input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.82em;
+    line-height: 1.2;
+  }
 
 .thumb-badge {
   position: absolute;
