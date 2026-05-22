@@ -170,10 +170,13 @@
             <div class="gallery-section-header">
               <h3>👕 Photos — fond supprimé <span class="photo-count">({{ photosWithBgRemoval.length }})</span></h3>
             </div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+              <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:260px" />
+            </div>
             <div class="gallery-grid">
               <div
                 class="gallery-thumb"
-                v-for="photo in photosWithBgRemoval"
+                v-for="photo in photosWithBgRemovalFiltered"
                 :key="photo._key"
                 :class="{ inactive: !photo._active }"
               >
@@ -190,6 +193,9 @@
                   <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
                   <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
                 </div>
+                <div class="thumb-tags">
+                  <input type="text" :value="tagDraft[photo._key] ?? (photo._raw.tags ? (Array.isArray(photo._raw.tags)?photo._raw.tags.join(', '):photo._raw.tags) : '')" @input="onTagInput(photo._key, $event.target.value)" @blur="onTagSave(photo)" class="input-text thumb-tag-input" placeholder="Tags (séparés par ,)" />
+                </div>
               </div>
             </div>
           </div>
@@ -203,10 +209,13 @@
               </div>
             </div>
             <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+              <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:260px" />
+            </div>
             <div class="gallery-grid">
               <div
                 class="gallery-thumb"
-                v-for="photo in photosWithDecor"
+                v-for="photo in photosWithDecorFiltered"
                 :key="photo._key"
                 :class="{ inactive: !photo._active }"
               >
@@ -222,6 +231,9 @@
                 <div class="thumb-edit-alt">
                   <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
                   <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
+                </div>
+                <div class="thumb-tags">
+                  <input type="text" :value="tagDraft[photo._key] ?? (photo._raw.tags ? (Array.isArray(photo._raw.tags)?photo._raw.tags.join(', '):photo._raw.tags) : '')" @input="onTagInput(photo._key, $event.target.value)" @blur="onTagSave(photo)" class="input-text thumb-tag-input" placeholder="Tags (séparés par ,)" />
                 </div>
               </div>
             </div>
@@ -860,6 +872,24 @@ const onAltSave = (photo) => {
   setTimeout(() => { altSavedKey.value = '' }, 2000)
 }
 
+// Tag editing support (admin)
+const adminSearch = ref('')
+const tagDraft = ref({})
+
+const onTagInput = (key, val) => {
+  tagDraft.value[key] = val
+}
+
+const onTagSave = async (photo) => {
+  const raw = photo._raw
+  const val = tagDraft.value[photo._key]
+  if (val === undefined) return
+  delete tagDraft.value[photo._key]
+  // Normalize: split by comma into array, trim, remove empties
+  const tags = val.split(',').map(s => s.trim()).filter(Boolean)
+  await setDoc(doc(db, 'photos', raw.id), { ...raw, tags })
+}
+
 const mergedPhotos = computed(() =>
   dynamicPhotos.value.map(p => ({
     _key: p.id,
@@ -878,6 +908,30 @@ const photosWithBgRemoval = computed(() =>
 const photosWithDecor = computed(() =>
   mergedPhotos.value.filter(photo => !photo._raw.removeBg)
 )
+
+const photosWithBgRemovalFiltered = computed(() => {
+  const q = (adminSearch.value || '').trim().toLowerCase()
+  if (!q) return photosWithBgRemoval.value
+  return photosWithBgRemoval.value.filter(p => {
+    if ((p._displayAlt || '').toLowerCase().includes(q)) return true
+    const tags = p._raw.tags
+    if (Array.isArray(tags)) return tags.some(t => (t||'').toLowerCase().includes(q))
+    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
+    return false
+  })
+})
+
+const photosWithDecorFiltered = computed(() => {
+  const q = (adminSearch.value || '').trim().toLowerCase()
+  if (!q) return photosWithDecor.value
+  return photosWithDecor.value.filter(p => {
+    if ((p._displayAlt || '').toLowerCase().includes(q)) return true
+    const tags = p._raw.tags
+    if (Array.isArray(tags)) return tags.some(t => (t||'').toLowerCase().includes(q))
+    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
+    return false
+  })
+})
 
 // Upload
 const CLOUDINARY_CLOUD = 'diqz414dk'
@@ -1436,6 +1490,10 @@ const loadData = () => {
   font-family: inherit;
   transition: border-color 0.2s;
 }
+
+.input-search { padding:8px 10px; border:1px solid #ddd; border-radius:8px }
+.thumb-tags { margin-top:6px }
+.thumb-tag-input { width:100%; padding:6px 8px; border-radius:6px; border:1px solid #eee }
 .input-date:focus, .input-text:focus, .input-textarea:focus, .input-select:focus {
   outline: none;
   border-color: #1BA9A8;
