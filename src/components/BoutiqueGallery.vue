@@ -70,11 +70,7 @@ const images = computed(() =>
   // Business rule: show photos that are either "avec décor" or "fond supprimé".
   // Accept both boolean and string representations for removeBg.
   dynamicPhotos.value
-    .filter(p => {
-      if (!p || !p.active) return false
-      const v = p.removeBg
-      return v === true || v === false || v === 'true' || v === 'false'
-    })
+    .filter(p => p && p.active && p.gallery === 'boutique' && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
     .map(p => ({
       id: p.id,
       src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
