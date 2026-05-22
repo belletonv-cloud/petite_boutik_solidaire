@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
@@ -86,6 +86,8 @@ const swiperInstance = ref(null)
 const isPaused = ref(false)
 // track current index for a stable, custom counter
 const currentIndex = ref(0)
+// stable handler reference so we can remove it safely on unmount
+let slideHandler = null
 
 // Ensure Swiper recalculates once images change (fires after images are rendered)
 watch(images, async (val) => {
@@ -97,10 +99,15 @@ watch(images, async (val) => {
   if (typeof s.update === 'function') s.update()
   // if slides were added, ensure we start at first slide
   if (val && val.length) {
-    try { s.slideTo(0) } catch (e) { /* ignore */ }
+    try {
+      // when loop is enabled, slideToLoop ensures the logical first slide is shown
+      if (s.params && s.params.loop && typeof s.slideToLoop === 'function') s.slideToLoop(0)
+      else s.slideTo(0)
+    } catch (e) { /* ignore */ }
   }
-  // reset our counter when the image set changes
-  currentIndex.value = 0
+  // give Swiper a microtask to stabilise, then sync counter
+  await new Promise(r => setTimeout(r, 0))
+  if (slideHandler) slideHandler()
   // no debug exposure in production
 })
 
@@ -118,15 +125,31 @@ function onSwiper(s) {
   // ensure we keep the Swiper instance in the ref so controls work
   swiperInstance.value = s
   try {
-    currentIndex.value = typeof s.realIndex !== 'undefined' ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
+    const handler = () => { currentIndex.value = (typeof s.realIndex !== 'undefined') ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0) }
+    slideHandler = handler
+    // initialize once
+    handler()
+    // register events if available
+    if (s && typeof s.on === 'function') {
+      s.on('slideChange', handler)
+      if (typeof s.on === 'function') s.on('init', handler)
+    }
   } catch (e) { currentIndex.value = 0 }
 }
 
 function onSlideChange() {
   const s = swiperInstance.value
   if (!s) return
-  currentIndex.value = typeof s.realIndex !== 'undefined' ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
+  currentIndex.value = (typeof s.realIndex !== 'undefined') ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
 }
+
+onUnmounted(() => {
+  const s = swiperInstance.value
+  if (s && typeof s.off === 'function' && slideHandler) {
+    try { s.off('slideChange', slideHandler) } catch (e) { /* ignore */ }
+    try { s.off('init', slideHandler) } catch (e) { /* ignore */ }
+  }
+})
 </script>
 
 <style scoped>
