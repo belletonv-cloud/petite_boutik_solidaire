@@ -106,13 +106,10 @@ const filter = ref('boutique') // 'boutique' ou 'articles'
 const images = computed(() =>
   dynamicPhotos.value
     .filter(p => p.active && (
-      filter.value === 'boutique'
-        // Boutique: include items explicitly marked for boutique OR those processed
-        // with background removal. This ensures boutique view shows intended photos.
-        ? (p.gallery === 'boutique' || p.removeBg === true)
-        // Articles: exclude anything that belongs to boutique or was processed as
-        // background-removed (avoid duplicates between views).
-        : (p.gallery !== 'boutique' && p.removeBg !== true)
+      // Articles: only photos that had background removal applied
+      filter.value === 'articles' ? (p.removeBg === true)
+      // Boutique: the rest (not background removed)
+      : (p.removeBg !== true)
     ))
     .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), alt: p.alt }))
 )
