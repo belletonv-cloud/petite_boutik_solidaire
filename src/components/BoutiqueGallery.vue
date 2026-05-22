@@ -7,10 +7,11 @@
       :slides-per-view="1"
       :loop="images.length > 1"
       :autoplay="{ delay: 3000, disableOnInteraction: false }"
-      :pagination="{ clickable: false, type: 'fraction' }"
+      :pagination="false"
       :navigation="images.length > 1"
       class="my-swiper"
       @swiper="onSwiper"
+      @slideChange="onSlideChange"
     >
     <swiper-slide v-for="(img, idx) in slides" :key="img.id || idx">
         <img
@@ -23,7 +24,7 @@
       </swiper-slide>
     </swiper>
     <div class="swiper-pagination-fraction">
-      {{ (typeof swiperInstance?.realIndex !== 'undefined' ? (swiperInstance.realIndex + 1) : (typeof swiperInstance?.activeIndex !== 'undefined' ? swiperInstance.activeIndex + 1 : 1)) }} / {{ slides.length || 1 }}
+      {{ (currentIndex + 1) }} / {{ images.length || 1 }}
     </div>
     <div class="carousel-controls">
       <button class="pause-btn" @click="togglePause" :aria-label="isPaused ? 'Reprendre' : 'Pause'">
@@ -62,11 +63,12 @@ onMounted(() => {
 })
 
 // Images computed: select photos that represent Boutique items.
-// Business rule: show photos that are active and have the removeBg flag
-// (covers both "avec décor" and "fond supprimé").
+// Business rule: prefer photos that had their background removed (removeBg === true),
+// but also include photos explicitly marked for the boutique gallery (gallery === 'boutique').
+// This keeps the UI tolerant of inconsistent data while prioritising properly processed images.
 const images = computed(() =>
   dynamicPhotos.value
-    .filter(p => p && p.active && Object.prototype.hasOwnProperty.call(p, 'removeBg'))
+    .filter(p => p && p.active && (p.removeBg === true || p.gallery === 'boutique'))
     .map(p => ({
       id: p.id,
       src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
@@ -82,6 +84,8 @@ const slides = computed(() => images.value && images.value.length ? images.value
 
 const swiperInstance = ref(null)
 const isPaused = ref(false)
+// track current index for a stable, custom counter
+const currentIndex = ref(0)
 
 // Ensure Swiper recalculates once images change (fires after images are rendered)
 watch(images, async (val) => {
@@ -95,6 +99,8 @@ watch(images, async (val) => {
   if (val && val.length) {
     try { s.slideTo(0) } catch (e) { /* ignore */ }
   }
+  // reset our counter when the image set changes
+  currentIndex.value = 0
   // no debug exposure in production
 })
 
@@ -111,6 +117,15 @@ const togglePause = () => {
 function onSwiper(s) {
   // ensure we keep the Swiper instance in the ref so controls work
   swiperInstance.value = s
+  try {
+    currentIndex.value = typeof s.realIndex !== 'undefined' ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
+  } catch (e) { currentIndex.value = 0 }
+}
+
+function onSlideChange() {
+  const s = swiperInstance.value
+  if (!s) return
+  currentIndex.value = typeof s.realIndex !== 'undefined' ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
 }
 </script>
 

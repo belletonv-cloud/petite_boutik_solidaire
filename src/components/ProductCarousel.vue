@@ -106,8 +106,12 @@ const images = computed(() =>
   dynamicPhotos.value
     .filter(p => p.active && (
       filter.value === 'boutique'
-        ? (p.gallery === 'boutique' || !p.gallery) // Affiche aussi les images sans champ `gallery`
-        : p.gallery !== 'boutique'
+        // Boutique: include items explicitly marked for boutique OR those processed
+        // with background removal. This ensures boutique view shows intended photos.
+        ? (p.gallery === 'boutique' || p.removeBg === true)
+        // Articles: exclude anything that belongs to boutique or was processed as
+        // background-removed (avoid duplicates between views).
+        : (p.gallery !== 'boutique' && p.removeBg !== true)
     ))
     .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), alt: p.alt }))
 )
