@@ -108,8 +108,11 @@
           live.style.cssText = 'position:fixed;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;';
           var toast = document.createElement('div');
           toast.id = 'reset-zoom-toast';
-          toast.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:rgba(0,0,0,0.75);color:white;padding:8px 12px;border-radius:8px;display:none;z-index:100000;font-size:14px;';
+          // make the toast clickable to dismiss (cursor:pointer) and visually prominent
+          toast.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:rgba(0,0,0,0.75);color:white;padding:8px 12px;border-radius:8px;display:none;z-index:100000;font-size:14px;cursor:pointer;';
           toast.textContent = 'Réglage de l\'affichage...';
+          // clicking the toast hides it immediately
+          toast.addEventListener('click', function(){ try{ this.style.display = 'none'; }catch(e){} });
           document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(ctrl); document.body.appendChild(live); document.body.appendChild(toast); });
           ctrl.addEventListener('click', function(e){ e.preventDefault(); resetZoomTemporarily(); });
           if (window.visualViewport) {
