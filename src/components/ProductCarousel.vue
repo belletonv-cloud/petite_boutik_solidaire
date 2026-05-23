@@ -310,10 +310,34 @@ const onPointerUpWindow = (e) => {
   window.removeEventListener('pointerup', onPointerUpWindow)
 }
 
+const lastTapTime = ref(0)
 const onPointerDown = (e) => {
   if (!enableMagnifier.value) return
-  // only left button
-  if (e.button !== 0) return
+  // double-tap support for touch
+  const now = Date.now()
+  if (now - lastTapTime.value < 300) {
+    // double tap: toggle zoom
+    const rect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
+    const cx = rect ? e.clientX : 0
+    const cy = rect ? e.clientY : 0
+    if (zoomFactor.value === 1) {
+      const next = Math.min(zoomMax, 1.8)
+      const offsetX = rect ? cx - rect.left : 0
+      const offsetY = rect ? cy - rect.top : 0
+      transformX.value = transformX.value + offsetX * (1 - next)
+      transformY.value = transformY.value + offsetY * (1 - next)
+      zoomFactor.value = next
+    } else {
+      zoomFactor.value = 1
+      transformX.value = 0
+      transformY.value = 0
+    }
+    lastTapTime.value = 0
+    return
+  }
+  lastTapTime.value = now
+  // only left button for pointer devices
+  if (e.pointerType === 'mouse' && e.button !== 0) return
   dragging.value = true
   _startPointer.x = e.clientX
   _startPointer.y = e.clientY
@@ -836,11 +860,17 @@ const onSlideChange = (e) => {
   overflow: auto;
 }
 
-.modal-image-outer { display:flex; align-items:center; justify-content:center; overflow:hidden; width:100% }
-.modal-image { cursor: default }
+  .modal-image-outer { display:flex; align-items:center; justify-content:center; overflow:hidden; width:100%; position:relative }
+.modal-image { cursor: default; max-width: 100% }
 .modal-image.interactive { cursor: grab }
 .modal-image.interactive:active { cursor: grabbing }
 .modal-img-wrap:hover .modal-image.interactive:not(.zoomed) { cursor: zoom-in }
+
+/* mobile specific: make transform origin center so panning feels right and hide any overlaying controls */
+@media (max-width: 700px) {
+  .modal-image { transform-origin: center center !important }
+  .zoom-controls { right: 6px; bottom: 6px }
+}
 
 .modal-spinner {
   width: 48px;
