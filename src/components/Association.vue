@@ -127,7 +127,12 @@ const openModal = (r, idx) => {
     el = document.querySelector(`.badge[data-recognition-index="${idx}"]`)
   } catch (e) { el = null }
   _lastBadgeEl = el || null
-  modalImage.value = r.src
+  // resolve relative paths to absolute so production paths work the same as dev
+  try {
+    modalImage.value = r.src ? new URL(r.src, window.location.href).href : r.src
+  } catch (e) {
+    modalImage.value = r.src
+  }
   modalAlt.value = r.alt || r.text || r.title || 'Article'
   modalOpen.value = true
   // lock body scroll early to avoid touch scrolling interfering with modal display on mobile
@@ -136,6 +141,9 @@ const openModal = (r, idx) => {
   setTimeout(() => {
     const mod = document.querySelector('.app-modal-content')
     if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    // on mobile WebKit some elements with no explicit height can collapse; ensure image inside modal has natural size
+    const img = document.querySelector('.app-modal-content img')
+    if (img) img.style.maxWidth = '100%'
   }, 30)
 }
 
