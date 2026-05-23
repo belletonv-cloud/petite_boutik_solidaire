@@ -1,18 +1,24 @@
 <template>
-  <div v-if="modelValue" class="app-modal-overlay" @click.self="close" role="dialog" aria-modal="true" :aria-label="title || 'Modale'" data-open="true">
-    <div class="app-modal-content" ref="content" tabindex="-1">
-      <button class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
-      <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
-      <div class="app-modal-body">
-        <slot />
+  <TransitionRoot :show="modelValue">
+    <Dialog as="div" class="app-modal-overlay" @close="close">
+      <div class="app-modal-overlay__backdrop" aria-hidden="true"/>
+      <div class="app-modal-wrapper">
+        <TransitionChild>
+          <DialogPanel class="app-modal-content" ref="content" tabindex="-1">
+            <button class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
+            <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
+            <div class="app-modal-body"><slot /></div>
+            <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
+          </DialogPanel>
+        </TransitionChild>
       </div>
-      <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
-    </div>
-  </div>
+    </Dialog>
+  </TransitionRoot>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch, ref, nextTick } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
+import { Dialog, DialogPanel, TransitionRoot, TransitionChild } from '@headlessui/vue'
 const props = defineProps({ modelValue: { type: Boolean, default: false }, title: { type: String, default: '' }, footer: { type: String, default: '' } })
 const emit = defineEmits(['update:modelValue','close'])
 const content = ref(null)
@@ -25,7 +31,6 @@ watch(() => props.modelValue, async (open) => {
   if (open) {
     document.body.style.overflow = 'hidden'
     await nextTick()
-    // focus content for accessibility
     if (content.value && typeof content.value.focus === 'function') content.value.focus()
     window.addEventListener('keydown', onKey)
   } else {
@@ -48,6 +53,8 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   z-index: 1600;
   padding: 20px;
 }
+.app-modal-overlay__backdrop { position: absolute; inset:0; background: rgba(0,0,0,0.6) }
+.app-modal-wrapper { position: relative; z-index: 1; display:flex; align-items:center; justify-content:center; width:100% }
 .app-modal-content {
   background: #fff;
   max-width: 720px;
