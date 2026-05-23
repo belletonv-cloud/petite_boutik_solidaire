@@ -337,19 +337,20 @@ const onPointerDown = (e) => {
       const offsetY = rect ? cy - rect.top : 0
       // adjust transforms so the tapped point stays under the finger
       const prev = zoomFactor.value
-      // visual translate before (Tvis_old) = transformX / prev
-      const tvisOldX = prev ? transformX.value / prev : 0
-      const tvisOldY = prev ? transformY.value / prev : 0
-      const tvisNewX = tvisOldX + offsetX * (prev - next)
-      const tvisNewY = tvisOldY + offsetY * (prev - next)
+      const V_oldX = prev ? transformX.value / prev : 0
+      const V_oldY = prev ? transformY.value / prev : 0
+      const ratio = next / prev
+      // V_new = V_old * ratio + offset * (1 - ratio)
+      const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
+      const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
       zoomFactor.value = next
       // clamp using new zoom
-      const scaledW2 = rect.width * next
-      const scaledH2 = rect.height * next
+      const scaledW2 = rect.width * zoomFactor.value
+      const scaledH2 = rect.height * zoomFactor.value
       const minVisX2 = Math.min(0, rect.width - scaledW2)
       const minVisY2 = Math.min(0, rect.height - scaledH2)
-      transformX.value = clamp(tvisNewX * next, minVisX2 * next, 0)
-      transformY.value = clamp(tvisNewY * next, minVisY2 * next, 0)
+      transformX.value = clamp(V_newX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
+      transformY.value = clamp(V_newY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
     } else {
       zoomFactor.value = 1
       transformX.value = 0
@@ -412,19 +413,19 @@ const onWheel = (e) => {
   const rect = modalImg.value.getBoundingClientRect()
   const offsetX = e.clientX - rect.left
   const offsetY = e.clientY - rect.top
-  // compute Tvis_old (visual translate) and desired Tvis_new, then store internal = Tvis_new * next
-  const tvisOldX = prev ? transformX.value / prev : 0
-  const tvisOldY = prev ? transformY.value / prev : 0
-  const tvisNewX = tvisOldX + offsetX * (prev - next)
-  const tvisNewY = tvisOldY + offsetY * (prev - next)
+  const V_oldX = prev ? transformX.value / prev : 0
+  const V_oldY = prev ? transformY.value / prev : 0
+  const ratio2 = next / prev
+  const V_newX = V_oldX * ratio2 + offsetX * (1 - ratio2)
+  const V_newY = V_oldY * ratio2 + offsetY * (1 - ratio2)
   zoomFactor.value = next
   // clamp using new zoom
   const scaledW2 = rect.width * zoomFactor.value
   const scaledH2 = rect.height * zoomFactor.value
   const minVisX2 = Math.min(0, rect.width - scaledW2)
   const minVisY2 = Math.min(0, rect.height - scaledH2)
-  transformX.value = clamp(tvisNewX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
-  transformY.value = clamp(tvisNewY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
+  transformX.value = clamp(V_newX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
+  transformY.value = clamp(V_newY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
 }
 
 const startZoomRamp = () => {
@@ -496,17 +497,18 @@ const zoomOut = () => {
   const cy = lastPointer.value ? lastPointer.value.y : Math.round(rect.top + rect.height / 2)
   const offsetX = cx - rect.left
   const offsetY = cy - rect.top
-  const tvisOldX = prev ? transformX.value / prev : 0
-  const tvisOldY = prev ? transformY.value / prev : 0
-  const tvisNewX = tvisOldX + offsetX * (prev - next)
-  const tvisNewY = tvisOldY + offsetY * (prev - next)
+  const V_oldX = prev ? transformX.value / prev : 0
+  const V_oldY = prev ? transformY.value / prev : 0
+  const ratio3 = next / prev
+  const V_newX = V_oldX * ratio3 + offsetX * (1 - ratio3)
+  const V_newY = V_oldY * ratio3 + offsetY * (1 - ratio3)
   zoomFactor.value = next
-  const scaledW2 = rect.width * zoomFactor.value
-  const scaledH2 = rect.height * zoomFactor.value
-  const minVisX2 = Math.min(0, rect.width - scaledW2)
-  const minVisY2 = Math.min(0, rect.height - scaledH2)
-  transformX.value = clamp(tvisNewX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
-  transformY.value = clamp(tvisNewY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
+  const scaledW3 = rect.width * zoomFactor.value
+  const scaledH3 = rect.height * zoomFactor.value
+  const minVisX3 = Math.min(0, rect.width - scaledW3)
+  const minVisY3 = Math.min(0, rect.height - scaledH3)
+  transformX.value = clamp(V_newX * zoomFactor.value, minVisX3 * zoomFactor.value, 0)
+  transformY.value = clamp(V_newY * zoomFactor.value, minVisY3 * zoomFactor.value, 0)
 }
 
 // pointer move handler for circular magnifier (deprecated) - kept for reference
