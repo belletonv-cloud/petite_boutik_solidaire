@@ -9,11 +9,12 @@
           <div class="cta-desc" v-if="contactDesc">{{ contactDesc }}</div>
 
           <div class="cta-actions">
-            <a href="#contact" class="btn-primary-cta" @click="scrollTo('contact')">
+            <a href="#contact" class="square-btn" @click="scrollTo('contact')" :aria-label="btn2Label" :title="btn2Label" role="button">
               <span class="btn-icon" aria-hidden="true" v-html="iconHtml"></span>
-              <span>{{ btn2Label }}</span>
             </a>
-            <a href="#calendrier" class="btn-secondary-link" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
+            <a href="#calendrier" class="square-btn" @click="scrollTo('calendrier')" :aria-label="btn1Label" :title="btn1Label" role="button">
+              <span class="btn-icon" aria-hidden="true" v-html="btn1IconHtml"></span>
+            </a>
           </div>
         </div>
       </div>
@@ -101,46 +102,22 @@ onMounted(() => {
 .cta-desc { color: rgba(255,255,255,0.95); font-size:0.97em; margin-bottom:12px; line-height:1.4; max-height:3.1em; overflow:hidden }
 
 .cta-actions { display:flex; gap:12px; align-items:center; justify-content:center }
-.btn-primary-cta {
+.square-btn {
+  width:56px;
+  height:56px;
   display:inline-flex;
   align-items:center;
-  gap:10px;
-  padding:10px 18px;
-  background: linear-gradient(180deg, var(--primary-coral), #e64f4f);
+  justify-content:center;
+  border-radius:8px;
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.18);
   color: white;
-  border-radius: 14px;
-  text-decoration:none;
-  font-weight:800;
-  font-size:1rem;
-  box-shadow: 0 8px 20px rgba(233,94,94,0.14);
-  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  text-decoration: none;
+  transition: background 140ms ease, transform 140ms ease, border-color 140ms ease;
 }
-.btn-primary-cta:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 12px 28px rgba(233,94,94,0.18);
-}
-.btn-primary-cta:focus-visible {
-  outline: 3px solid rgba(255,255,255,0.14);
-  outline-offset: 4px;
-}
-.btn-secondary-link {
-  display:inline-flex;
-  align-items:center;
-  padding:8px 12px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.95);
-  text-decoration:none;
-  font-weight:700;
-  border: 1px solid rgba(255,255,255,0.08);
-  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
-}
-.btn-secondary-link:hover {
-  background: white;
-  color: var(--primary-coral);
-  transform: translateY(-2px);
-}
-.btn-secondary-link:focus-visible { outline: 3px solid rgba(255,255,255,0.12); outline-offset: 4px }
+.square-btn:hover { background: transparent; transform: translateY(-2px); border-color: rgba(255,255,255,0.36) }
+.square-btn:focus-visible { outline: 3px solid rgba(255,255,255,0.12); outline-offset: 3px }
+.square-btn .btn-icon svg { width:20px; height:20px; stroke-width:1.6 }
 
   .contact-card { display:none }
   .contact-title { display:none }
