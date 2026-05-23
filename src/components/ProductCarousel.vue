@@ -55,20 +55,42 @@
       </button>
     </div>
 
-    <div class="modal-overlay" v-if="modalOpen" @click="closeModal" role="dialog" aria-modal="true">
+    <Modal v-model:modelValue="modalOpen" @close="closeModal">
       <div class="modal-content" @click.stop>
         <img v-if="logo" :src="logo" alt="Logo La P'tite Boutik Solidaire" class="modal-logo" />
-        <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
-        <div class="modal-img-wrap">
+        <div class="modal-img-wrap" ref="imgWrap">
           <div v-if="modalLoading" class="modal-spinner"></div>
-          <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" :class="{ hidden: modalLoading }" decoding="async" @load="modalLoading = false" @error="modalLoading = false" />
+          <div class="modal-image-outer">
+            <img
+              :src="images[modalIndex].fullSrc"
+              :alt="images[modalIndex].alt"
+              class="modal-image"
+            :class="{ loading: modalLoading, interactive: enableMagnifier, zoomed: zoomFactor > 1 }"
+              decoding="async"
+              @load="modalLoading = false"
+              @error="modalLoading = false"
+              @pointerdown.prevent="onPointerDown"
+              @wheel.prevent="onWheel"
+              ref="modalImg"
+              :style="{ transform: `translate(${transformX}px, ${transformY}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease' }"
+            />
+          </div>
+
+          <!-- elegant zoom controls: toggle + / - -->
+          <div class="zoom-controls">
+            <button class="zoom-toggle" @click.stop.prevent="toggleEnableMagnifier" :aria-pressed="enableMagnifier" :title="enableMagnifier ? 'Désactiver la loupe' : 'Activer la loupe'">🔎</button>
+            <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomOut" title="-" aria-label="Dézoomer">−</button>
+            <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomIn" title="+" aria-label="Zoomer">+</button>
+          </div>
         </div>
-        <p class="modal-caption">{{ images[modalIndex].alt }}</p>
-        <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+          <p class="modal-caption" style="margin:0">{{ images[modalIndex].alt }}</p>
+          <p class="modal-counter" style="margin:0">{{ modalIndex + 1 }} / {{ images.length }}</p>
+        </div>
       </div>
-    </div>
+    </Modal>
 
     <!-- Grid modal view -->
     <div class="grid-overlay" v-if="gridOpen" @click.self="gridOpen = false">
@@ -112,6 +134,8 @@ import 'swiper/css/navigation'
 import { onSnapshot, collection, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import logoUrl from '@/assets/logo.jpg'
+import Modal from './Modal.vue'
+import { nextTick } from 'vue'
 
 const modules = [Autoplay, Pagination, Navigation]
 const dynamicPhotos = ref([])
@@ -235,6 +259,209 @@ const modalIndex = ref(0)
 const currentIndex = ref(0)
 const gridOpen = ref(false)
 const modalLoading = ref(false)
+// magnifier state
+const magnifierVisible = ref(false)
+const enableMagnifier = ref(false)
+const magnifierStyle = ref({})
+const imgWrap = ref(null)
+const modalImg = ref(null)
+
+const zoomMin = 1
+const zoomMax = 2.6
+const zoomDuration = 6000 // ms to reach max
+const zoomStepMs = 100
+const zoomStep = (zoomMax - zoomMin) / (zoomDuration / zoomStepMs)
+const zoomFactor = ref(1)
+let _zoomTimer = null
+
+// transform / pan state for full-image zoom (not circular lens)
+const transformX = ref(0)
+const transformY = ref(0)
+const dragging = ref(false)
+const _startPointer = { x: 0, y: 0 }
+const _startTransform = { x: 0, y: 0 }
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+
+const onPointerMoveWindow = (e) => {
+  if (!dragging.value || !modalImg.value) return
+  const dx = e.clientX - _startPointer.x
+  const dy = e.clientY - _startPointer.y
+  const rect = modalImg.value.getBoundingClientRect()
+  const s = zoomFactor.value
+  const scaledW = rect.width * s
+  const scaledH = rect.height * s
+  const minX = Math.min(0, rect.width - scaledW)
+  const minY = Math.min(0, rect.height - scaledH)
+  transformX.value = clamp(_startTransform.x + dx, minX, 0)
+  transformY.value = clamp(_startTransform.y + dy, minY, 0)
+}
+
+const onPointerUpWindow = (e) => {
+  dragging.value = false
+  window.removeEventListener('pointermove', onPointerMoveWindow)
+  window.removeEventListener('pointerup', onPointerUpWindow)
+}
+
+const onPointerDown = (e) => {
+  if (!enableMagnifier.value) return
+  // only left button
+  if (e.button !== 0) return
+  dragging.value = true
+  _startPointer.x = e.clientX
+  _startPointer.y = e.clientY
+  _startTransform.x = transformX.value
+  _startTransform.y = transformY.value
+  window.addEventListener('pointermove', onPointerMoveWindow)
+  window.addEventListener('pointerup', onPointerUpWindow)
+}
+
+const onWheel = (e) => {
+  if (!enableMagnifier.value || !modalImg.value) return
+  e.preventDefault()
+  const delta = e.deltaY
+  const prev = zoomFactor.value
+  const step = 0.15
+  const next = clamp(prev + (delta > 0 ? -step : step), zoomMin, zoomMax)
+  if (next === prev) return
+  // keep cursor point stable while zooming
+  const rect = modalImg.value.getBoundingClientRect()
+  const offsetX = e.clientX - rect.left
+  const offsetY = e.clientY - rect.top
+  // compute new transforms so that point remains under cursor
+  transformX.value = transformX.value + offsetX * (prev - next)
+  transformY.value = transformY.value + offsetY * (prev - next)
+  zoomFactor.value = next
+  // clamp after update
+  const scaledW = rect.width * zoomFactor.value
+  const scaledH = rect.height * zoomFactor.value
+  const minX = Math.min(0, rect.width - scaledW)
+  const minY = Math.min(0, rect.height - scaledH)
+  transformX.value = clamp(transformX.value, minX, 0)
+  transformY.value = clamp(transformY.value, minY, 0)
+}
+
+const startZoomRamp = () => {
+  if (_zoomTimer) return
+  _zoomTimer = setInterval(() => {
+    zoomFactor.value = Math.min(zoomMax, zoomFactor.value + zoomStep)
+    if (zoomFactor.value >= zoomMax && _zoomTimer) { clearInterval(_zoomTimer); _zoomTimer = null }
+  }, zoomStepMs)
+}
+const stopZoomRamp = () => {
+  if (_zoomTimer) { clearInterval(_zoomTimer); _zoomTimer = null }
+  // reset quickly to min for now
+  zoomFactor.value = zoomMin
+}
+
+// Deprecated circular lens handlers
+const showMagnifier = (e) => {}
+const hideMagnifier = (e) => {}
+const toggleMagnifier = (e) => {}
+
+const toggleEnableMagnifier = () => {
+  enableMagnifier.value = !enableMagnifier.value
+  if (!enableMagnifier.value) {
+    // reset zoom and transform
+    zoomFactor.value = 1
+    transformX.value = 0
+    transformY.value = 0
+    dragging.value = false
+    stopZoomRamp()
+    return
+  }
+  // enabling: initialize zoom to a comfortable level and center image
+  zoomFactor.value = Math.max(1.6, zoomMin)
+  transformX.value = 0
+  transformY.value = 0
+}
+
+const zoomIn = () => {
+  if (!modalImg.value) { zoomFactor.value = Math.min(zoomMax, zoomFactor.value + 0.2); return }
+  const prev = zoomFactor.value
+  const next = Math.min(zoomMax, prev + 0.2)
+  if (next === prev) return
+  const rect = modalImg.value.getBoundingClientRect()
+  const cx = lastPointer.value ? lastPointer.value.x : Math.round(rect.left + rect.width / 2)
+  const cy = lastPointer.value ? lastPointer.value.y : Math.round(rect.top + rect.height / 2)
+  const offsetX = cx - rect.left
+  const offsetY = cy - rect.top
+  // adjust transforms so the point remains under the cursor
+  transformX.value = transformX.value + offsetX * (prev - next)
+  transformY.value = transformY.value + offsetY * (prev - next)
+  zoomFactor.value = next
+  // clamp
+  const scaledW = rect.width * zoomFactor.value
+  const scaledH = rect.height * zoomFactor.value
+  const minX = Math.min(0, rect.width - scaledW)
+  const minY = Math.min(0, rect.height - scaledH)
+  transformX.value = clamp(transformX.value, minX, 0)
+  transformY.value = clamp(transformY.value, minY, 0)
+}
+const zoomOut = () => {
+  if (!modalImg.value) { zoomFactor.value = Math.max(zoomMin, zoomFactor.value - 0.2); return }
+  const prev = zoomFactor.value
+  const next = Math.max(zoomMin, prev - 0.2)
+  if (next === prev) return
+  const rect = modalImg.value.getBoundingClientRect()
+  const cx = lastPointer.value ? lastPointer.value.x : Math.round(rect.left + rect.width / 2)
+  const cy = lastPointer.value ? lastPointer.value.y : Math.round(rect.top + rect.height / 2)
+  const offsetX = cx - rect.left
+  const offsetY = cy - rect.top
+  transformX.value = transformX.value + offsetX * (prev - next)
+  transformY.value = transformY.value + offsetY * (prev - next)
+  zoomFactor.value = next
+  const scaledW = rect.width * zoomFactor.value
+  const scaledH = rect.height * zoomFactor.value
+  const minX = Math.min(0, rect.width - scaledW)
+  const minY = Math.min(0, rect.height - scaledH)
+  transformX.value = clamp(transformX.value, minX, 0)
+  transformY.value = clamp(transformY.value, minY, 0)
+}
+
+// pointer move handler for circular magnifier (deprecated) - kept for reference
+const onMagnifierMove = (e) => {
+  // no-op: lens behavior replaced by full-image zoom and pan handlers
+}
+
+// store last pointer position so +/- buttons update the lens immediately
+const lastPointer = ref(null)
+
+const computeMagnifierAt = (clientX, clientY) => {
+  if (!modalImg.value) return
+  const img = modalImg.value
+  const rect = img.getBoundingClientRect()
+  const x = clientX - rect.left
+  const y = clientY - rect.top
+  const rx = Math.max(0, Math.min(rect.width, x))
+  const ry = Math.max(0, Math.min(rect.height, y))
+  const size = Math.min(160, Math.max(120, Math.floor(window.innerWidth / 12)))
+  const margin = 8
+  const leftRaw = clientX - size / 2
+  const topRaw = clientY - size / 2
+  const left = Math.max(margin, Math.min(window.innerWidth - size - margin, leftRaw))
+  const top = Math.max(margin, Math.min(window.innerHeight - size - margin, topRaw))
+  const zoom = zoomFactor.value || 2
+  const bgWidth = Math.round(rect.width * zoom)
+  const bgHeight = Math.round(rect.height * zoom)
+  const posX = Math.round(-(rx * zoom - size / 2))
+  const posY = Math.round(-(ry * zoom - size / 2))
+  magnifierStyle.value = {
+    width: size + 'px',
+    height: size + 'px',
+    left: left + 'px',
+    top: top + 'px',
+    backgroundImage: `url(${img.src})`,
+    backgroundSize: `${bgWidth}px ${bgHeight}px`,
+    backgroundPosition: `${posX}px ${posY}px`
+  }
+}
+
+// magnifier pane style (a small preview box inside the modal to the right)
+const magnifierPaneStyle = ref({})
+const updateMagnifierPane = (e) => {
+  // deprecated: using lens that follows pointer instead
+}
 const logo = logoUrl
 const overlayVariant = ref(1) // 1: subtle, 2: stronger coral
 const logoSmall = ref(false)
@@ -295,8 +522,21 @@ const openModal = (idx) => {
   currentIndex.value = idx
   modalOpen.value = true
   modalLoading.value = true
-  document.body.style.overflow = 'hidden'
+  // if the image was preloaded, consider it loaded immediately for UX
+  const img = images[modalIndex.value]
+  if (img && img.fullSrc) {
+    const test = new Image()
+    test.src = img.fullSrc
+    if (test.complete) modalLoading.value = false
+  }
+  // ensure modal image fits well on large desktop screens by capping fullSrc transform
   preloadAdjacent(idx, images.value)
+  // enable magnifier on large viewports
+  enableMagnifier.value = window.innerWidth > 900
+  // reset zoom/transform for the new image
+  zoomFactor.value = 1
+  transformX.value = 0
+  transformY.value = 0
 }
 
 const openFromGrid = (idx) => {
@@ -322,6 +562,10 @@ const prevModal = () => {
   currentIndex.value = modalIndex.value
   modalLoading.value = true
   preloadAdjacent(modalIndex.value, images.value)
+  // reset transforms
+  zoomFactor.value = 1
+  transformX.value = 0
+  transformY.value = 0
 }
 
 const nextModal = () => {
@@ -329,6 +573,10 @@ const nextModal = () => {
   currentIndex.value = modalIndex.value
   modalLoading.value = true
   preloadAdjacent(modalIndex.value, images.value)
+  // reset transforms
+  zoomFactor.value = 1
+  transformX.value = 0
+  transformY.value = 0
 }
 
 const onKeydown = (e) => {
@@ -424,7 +672,8 @@ const onSlideChange = (e) => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s;
+  /* keep animations light to improve frame rate */
+  transition: transform 0.12s ease;
   border-radius: 10px;
   overflow: hidden;
   width: 100%;
@@ -440,7 +689,8 @@ const onSlideChange = (e) => {
 }
 
 .slide-frame:hover {
-  transform: scale(1.015);
+  /* minimal transform to avoid layout jank; GPU hinting below */
+  transform: translateZ(0) scale(1.008);
 }
 
 .slide-image {
@@ -449,6 +699,8 @@ const onSlideChange = (e) => {
   height: 100%;
   object-fit: contain;
   border-radius: 8px;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .carousel-controls {
@@ -496,35 +748,14 @@ const onSlideChange = (e) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: fit-content;
-  max-width: min(calc(100vw - 40px), 900px);
+  width: 100%;
+  max-width: 900px;
   margin: 30px auto;
   cursor: default;
   background-color: rgb(245, 230, 211); /* warm beige */
   padding: 18px;
   border-radius: 12px;
   color: var(--text-dark);
-}
-
-.modal-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--primary-coral);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  line-height: 1;
 }
 
   /* modal shows the brand logo (small) but not control text labels; keep styling for logo */
@@ -584,7 +815,15 @@ const onSlideChange = (e) => {
   justify-content: center;
   min-height: 200px;
   width: 100%;
+  max-height: 80vh;
+  overflow: auto;
 }
+
+.modal-image-outer { display:flex; align-items:center; justify-content:center; overflow:hidden; width:100% }
+.modal-image { cursor: default }
+.modal-image.interactive { cursor: grab }
+.modal-image.interactive:active { cursor: grabbing }
+.modal-img-wrap:hover .modal-image.interactive:not(.zoomed) { cursor: zoom-in }
 
 .modal-spinner {
   width: 48px;
@@ -594,18 +833,88 @@ const onSlideChange = (e) => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   position: absolute;
+  transition: opacity 220ms ease;
 }
+
+.magnifier {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-color: #fff;
+  z-index: 1700;
+}
+
+.magnifier-pane {
+  position: fixed;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+
+.zoom-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,250,250,0.86));
+  border-radius: 999px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  cursor: pointer;
+}
+/* removed zoom-btn */
+
+.zoom-controls { position: absolute; right: 8px; bottom: 8px; display:flex; gap:8px; align-items:center }
+.zoom-small { background: rgba(255,255,255,0.95); border-radius:8px; padding:6px 8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer }
+.zoom-toggle { background: rgba(255,255,255,0.95); border-radius:8px; padding:6px 8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer }
+.zoom-toggle[aria-pressed="true"] {
+  /* active state: solid primary teal to ensure visibility */
+  background: var(--primary-teal);
+  color: white;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 6px 18px rgba(17,150,140,0.12);
+}
+
+.magnifier-indicator {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+  backdrop-filter: blur(3px);
+}
+
+.modal-img-wrap:hover .modal-image.interactive { cursor: zoom-in }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
 .modal-image {
-  max-width: 100%;
-  max-height: calc(var(--vh, 1vh) * 80);
+  width: auto;
+  max-width: calc(100vw - 80px);
+  height: auto;
+  max-height: calc(80vh - 160px);
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  transition: opacity 180ms ease, transform 220ms ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.modal-image.loading {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 .modal-image.hidden {
