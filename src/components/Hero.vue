@@ -11,10 +11,10 @@
 
       <div class="hero-right" v-if="btn2Visible">
         <div class="contact-card">
-          <div class="contact-title">Besoin d'aide ?</div>
-          <div class="contact-desc">Nous sommes là pour répondre à vos questions et vous accueillir à la boutique.</div>
+          <div class="contact-title">{{ contactTitle }}</div>
+          <div class="contact-desc">{{ contactDesc }}</div>
           <a href="#contact" class="btn btn-cta" @click="scrollTo('contact')">
-            <span class="btn-icon" aria-hidden="true" v-html="mailSvg"></span>
+            <span class="btn-icon" aria-hidden="true" v-html="iconHtml"></span>
             <span class="btn-text">{{ btn2Label }}</span>
           </a>
         </div>
@@ -34,10 +34,15 @@ const tagline = ref("Vêtements enfants, chaussures et puériculture à prix min
 const gradientStart = ref('#1BA9A8')
 const gradientEnd = ref('#E95E5E')
 const gradientAngle = ref(135)
-const btn1Label = ref('Horaires')
+const btn1Label = ref('Voir les horaires')
 const btn1Visible = ref(true)
-const btn2Label = ref('Contact')
+const btn2Label = ref('Nous contacter')
 const btn2Visible = ref(true)
+
+const contactTitle = ref("Besoin d'aide ?")
+const contactDesc = ref("Nous sommes là pour répondre à vos questions et vous accueillir à la boutique.")
+// iconHtml is editable via admin (hero_btn2_icon in config.textes) and defaults to envelope SVG
+const iconHtml = ref(mailSvg)
 
 // small inline SVG for envelope icon (kept in JS so template stays tidy)
 const mailSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H19.5C20.3284 5 21 5.67157 21 6.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 6.5L12 12.5L3 6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
@@ -65,6 +70,9 @@ onMounted(() => {
     if (d.hero_btn1_visible !== undefined) btn1Visible.value = d.hero_btn1_visible
     if (d.hero_btn2_label) btn2Label.value = d.hero_btn2_label
     if (d.hero_btn2_visible !== undefined) btn2Visible.value = d.hero_btn2_visible
+    if (d.hero_contact_title) contactTitle.value = d.hero_contact_title
+    if (d.hero_contact_desc) contactDesc.value = d.hero_contact_desc
+    if (d.hero_btn2_icon) iconHtml.value = d.hero_btn2_icon
   })
 })
 </script>
