@@ -5,7 +5,7 @@
       <div class="hero-left">
         <p class="hero-tagline">{{ tagline }}</p>
         <div class="hero-actions" v-if="btn1Visible">
-          <a v-if="btn1Visible" href="#calendrier" class="btn btn-primary" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
+          <a v-if="btn1Visible" href="#calendrier" class="btn btn-outline" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
         </div>
       </div>
 
@@ -13,7 +13,7 @@
         <div class="contact-card">
           <div class="contact-title">{{ contactTitle }}</div>
           <div class="contact-desc">{{ contactDesc }}</div>
-          <a href="#contact" class="btn btn-cta" @click="scrollTo('contact')">
+          <a href="#contact" class="btn btn-outline" @click="scrollTo('contact')">
             <span class="btn-icon" aria-hidden="true" v-html="iconHtml"></span>
             <span class="btn-text">{{ btn2Label }}</span>
           </a>
@@ -165,6 +165,20 @@ onMounted(() => {
   text-decoration: underline;
   font-weight: 600;
 }
+
+/* unified outline button style used for both actions */
+.btn-outline {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.95);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-outline:hover { background: white; color: var(--primary-teal); transform: translateY(-2px); }
 
 /* Primary small action (Horaires) - ensure border is visible */
 .btn-primary {
