@@ -94,4 +94,46 @@ const onModalClose = () => {
 .badge { display:inline-flex; align-items:center; gap:8px; background:white; border:2px solid var(--primary-teal); color:var(--primary-teal); padding:10px 18px; border-radius:30px; font-weight:600; cursor:pointer }
 .badge-image { width:56px; height:56px; object-fit:cover; border-radius:8px }
 @media (max-width:600px) { .badge{ padding:8px 12px } .badge-image{ width:42px; height:42px } }
+
+/* modal styles (same pattern as MentionsLegales.vue) */
+.mentions-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1400;
+  padding: 20px;
+}
+.mentions-content {
+  background: #fff;
+  max-width: 720px;
+  width: 100%;
+  border-radius: 10px;
+  padding: 16px 18px;
+  position: relative;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  color: var(--text-dark);
+  max-height: 70vh;
+  overflow: hidden;
+}
+.mentions-content .mentions-body { height: calc(70vh - 120px); overflow-y: scroll; padding-right: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.18) transparent }
+.mentions-content .mentions-body::-webkit-scrollbar { width: 10px }
+.mentions-content .mentions-body::-webkit-scrollbar-track { background: transparent }
+.mentions-content .mentions-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.16); border-radius: 8px }
+.mentions-content h2 { margin-top: 0; color: var(--primary-teal); font-size: 1.1rem }
+.mentions-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: var(--primary-coral);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+}
 </style>
