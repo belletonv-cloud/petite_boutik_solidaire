@@ -41,7 +41,7 @@
     >
       <swiper-slide v-for="(img, idx) in images" :key="idx">
         <div class="slide-frame" @click="openModal(idx)">
-          <img :src="img.src" :alt="img.alt" class="slide-image" @error="($event.target).src = '/placeholder.jpg'" />
+          <img :src="img.src" :alt="img.alt" class="slide-image" :fetchpriority="idx === 0 ? 'high' : 'auto'" loading="lazy" @error="($event.target).src = '/placeholder.jpg'" />
         </div>
       </swiper-slide>
     </swiper>
@@ -55,14 +55,15 @@
       </button>
     </div>
 
-    <div class="modal-overlay" v-if="modalOpen" @click.self="closeModal" role="dialog" aria-modal="true">
-      <div class="modal-content">
+    <div class="modal-overlay" v-if="modalOpen" @click="closeModal" role="dialog" aria-modal="true">
+      <div class="modal-content" @click.stop>
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
         <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" loading="lazy" />
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
+        <button class="modal-close-bottom" @click="closeModal" aria-label="Fermer">Fermer ✕</button>
       </div>
     </div>
 
@@ -98,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watchEffect, watch } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
@@ -226,6 +227,35 @@ const gridOpen = ref(false)
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
 
+function preloadImage(src) {
+  if (!src || src === placeholderImage) return
+  const img = new Image()
+  img.src = src
+}
+
+function preloadAdjacent(idx, list) {
+  if (!list || !list.length) return
+  const n = list.length
+  for (const offset of [1, 2, -1, -2]) {
+    const i = (idx + offset + n) % n
+    if (list[i]?.fullSrc) preloadImage(list[i].fullSrc)
+  }
+}
+
+// preload first N images when photos load
+watch(dynamicPhotos, (photos) => {
+  if (photos.length > 0) {
+    // small delay to not block rendering
+    setTimeout(() => {
+      const imgs = images.value || []
+      for (let i = 0; i < Math.min(imgs.length, 4); i++) {
+        preloadImage(imgs[i]?.src)
+        if (imgs[i]?.fullSrc) preloadImage(imgs[i].fullSrc)
+      }
+    }, 200)
+  }
+})
+
 const onSwiper = (swiper) => {
   swiperInstance.value = swiper
   // initialize the custom counter
@@ -244,10 +274,10 @@ const togglePause = () => {
 
 const openModal = (idx) => {
   modalIndex.value = idx
-  // keep modalIndex and currentIndex consistent when opening modal from a slide
   currentIndex.value = idx
   modalOpen.value = true
   document.body.style.overflow = 'hidden'
+  preloadAdjacent(idx, images.value)
 }
 
 const openFromGrid = (idx) => {
@@ -271,11 +301,13 @@ const closeModal = () => {
 const prevModal = () => {
   modalIndex.value = (modalIndex.value - 1 + images.value.length) % images.value.length
   currentIndex.value = modalIndex.value
+  preloadAdjacent(modalIndex.value, images.value)
 }
 
 const nextModal = () => {
   modalIndex.value = (modalIndex.value + 1) % images.value.length
   currentIndex.value = modalIndex.value
+  preloadAdjacent(modalIndex.value, images.value)
 }
 
 const onKeydown = (e) => {
@@ -366,13 +398,13 @@ const onSlideChange = (e) => {
   border-radius: 10px;
   overflow: hidden;
   width: 100%;
-  height: 60vh;
+  height: calc(var(--vh, 1vh) * 60);
   max-height: 500px;
 }
 
 @media (max-width: 600px) {
   .slide-frame {
-    height: 40vh;
+    height: calc(var(--vh, 1vh) * 40);
     max-height: 320px;
   }
 }
@@ -420,16 +452,12 @@ const onSlideChange = (e) => {
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(0,0,0,0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  cursor: pointer;
 }
 
 .modal-content {
@@ -437,8 +465,10 @@ const onSlideChange = (e) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: fit-content;
+  max-width: calc(100vw - 40px);
+  margin: 30px auto;
+  cursor: default;
 }
 
 .modal-close {
@@ -451,7 +481,7 @@ const onSlideChange = (e) => {
   border-radius: 50%;
   width: 44px;
   height: 44px;
-  font-size: 20px;
+  font-size: 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -459,11 +489,29 @@ const onSlideChange = (e) => {
   transition: all 0.3s;
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  line-height: 1;
 }
 
 .modal-close:hover {
   background: #d14545;
   transform: scale(1.1);
+}
+
+.modal-close-bottom {
+  margin-top: 16px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 24px;
+  padding: 12px 32px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.modal-close-bottom:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 .modal-nav {
@@ -495,7 +543,7 @@ const onSlideChange = (e) => {
 
 .modal-image {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: calc(var(--vh, 1vh) * 80);
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
@@ -591,7 +639,25 @@ const onSlideChange = (e) => {
     position: relative;
   }
 
-  .grid-close { position: absolute; right: 14px; top: 12px; border: none; background: transparent; font-size: 20px; cursor: pointer }
+  .grid-close {
+    position: absolute;
+    right: 14px;
+    top: 12px;
+    border: none;
+    background: var(--primary-coral);
+    color: white;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    line-height: 1;
+  }
+  .grid-close:hover { background: #d14545; }
 
   .grid-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 8px }
   .grid-item { cursor: pointer; border-radius: 8px; overflow: hidden; background:#fafafa; display:flex;flex-direction:column;align-items:center }

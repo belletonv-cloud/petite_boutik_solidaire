@@ -222,7 +222,7 @@ onUnmounted(() => {
 
 .slide-image {
   width: 100%;
-  height: 60vh;
+  height: calc(var(--vh, 1vh) * 60);
   max-height: 500px;
   object-fit: contain;
   border-radius: 8px;
@@ -230,7 +230,7 @@ onUnmounted(() => {
 
 @media (max-width: 600px) {
   .slide-image {
-    height: 40vh;
+    height: calc(var(--vh, 1vh) * 40);
     max-height: 320px;
   }
 }

@@ -43,8 +43,8 @@ test.describe('Public Gallery E2E', () => {
   })
 
   test('pagination and pause controls exist and are interactable', async ({ page }) => {
-    await page.waitForSelector('.carousel-controls .pause-btn', { timeout: 5000 })
-    const btn = page.locator('.carousel-controls .pause-btn')
+    await page.waitForSelector('.gallery-container .pause-btn', { timeout: 5000 })
+    const btn = page.locator('.gallery-container .pause-btn')
     await expect(btn).toBeVisible()
     await btn.click()
     // clicking again to resume

@@ -2,6 +2,7 @@
 :root {
   color-scheme: light only;
   forced-color-adjust: none;
+  --vh: 1vh;
   /* Couleurs primaires */
   --primary-teal: #1BA9A8;
   --primary-teal-dark: #158886;
@@ -34,6 +35,8 @@
 html {
   scroll-behavior: smooth;
   background-color: #FAFAFA;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
