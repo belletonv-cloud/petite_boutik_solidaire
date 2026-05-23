@@ -299,6 +299,13 @@ const onPointerMoveWindow = (e) => {
 
 const onPointerUpWindow = (e) => {
   dragging.value = false
+  // release pointer capture if present
+  try {
+    if (modalImg.value && typeof modalImg.value.releasePointerCapture === 'function' && _capturedPointerId) {
+      modalImg.value.releasePointerCapture(_capturedPointerId)
+    }
+  } catch (err) { /* ignore */ }
+  _capturedPointerId = null
   window.removeEventListener('pointermove', onPointerMoveWindow)
   window.removeEventListener('pointerup', onPointerUpWindow)
 }
@@ -314,7 +321,17 @@ const onPointerDown = (e) => {
   _startTransform.y = transformY.value
   window.addEventListener('pointermove', onPointerMoveWindow)
   window.addEventListener('pointerup', onPointerUpWindow)
+  // attempt to capture the pointer on the image so touch moves aren't stolen by scroll
+  try {
+    if (modalImg.value && typeof modalImg.value.setPointerCapture === 'function') {
+      modalImg.value.setPointerCapture(e.pointerId)
+      _capturedPointerId = e.pointerId
+    }
+  } catch (err) { /* ignore */ }
 }
+
+// track captured pointer id for touch
+let _capturedPointerId = null
 
 const onWheel = (e) => {
   if (!enableMagnifier.value || !modalImg.value) return

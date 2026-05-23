@@ -328,27 +328,24 @@ const values = [
 
 .modal-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 8px;
+  right: 8px;
   background: var(--primary-coral);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
-  z-index: 10;
+  transition: all 0.2s ease;
+  z-index: 12;
 }
 
-.modal-close:hover {
-  background: #d14545;
-  transform: scale(1.1);
-}
+.modal-close:hover { transform: scale(1.06) }
 
 
 /* modal remnants removed */

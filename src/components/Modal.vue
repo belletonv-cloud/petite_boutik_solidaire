@@ -62,7 +62,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
 }
 .app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal) }
 .app-modal-body { overflow: auto; padding-right: 8px; -webkit-overflow-scrolling: touch }
-.app-modal-close { position: absolute; right: 12px; top: 12px; background: var(--primary-coral); color: white; border: none; width:36px; height:36px; border-radius:50%; cursor:pointer; }
+.app-modal-close { position: absolute; right: 10px; top: 10px; background: var(--primary-coral); color: white; border: none; width:44px; height:44px; border-radius:50%; cursor:pointer; display:flex;align-items:center;justify-content:center; font-size:20px }
 .app-modal-footer { margin-top: 12px }
 
 /* small entrance animation */
