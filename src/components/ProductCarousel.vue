@@ -60,7 +60,7 @@
         <img v-if="logo" :src="logo" alt="Logo La P'tite Boutik Solidaire" class="modal-logo" />
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
-        <div class="modal-img-wrap" ref="imgWrap">
+    <div class="modal-img-wrap" ref="imgWrap">
           <div v-if="modalLoading" class="modal-spinner"></div>
           <div class="modal-image-outer">
             <img
@@ -76,6 +76,17 @@
               ref="modalImg"
             :style="{ transform: `translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease' }"
           />
+          </div>
+
+          <!-- Debug overlay (visible only in modal) -->
+          <div v-if="modalOpen && debugOverlay" style="position:absolute;left:12px;top:12px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:6px;font-size:12px;z-index:2000;pointer-events:none">
+            <div style="font-weight:600;margin-bottom:6px">DEBUG</div>
+            <div>wrap: {{ debugStats.wrapW }} x {{ debugStats.wrapH }}</div>
+            <div>base: {{ debugStats.baseW }} x {{ debugStats.baseH }}</div>
+            <div>scaled: {{ debugStats.scaledW }} x {{ debugStats.scaledH }}</div>
+            <div>half: {{ debugStats.halfX }} x {{ debugStats.halfY }}</div>
+            <div>transform: {{ debugStats.transformX }} x {{ debugStats.transformY }}</div>
+            <div>zoom: {{ debugStats.zoom }}</div>
           </div>
 
           <!-- elegant zoom controls: toggle + / - -->
@@ -293,12 +304,18 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
     const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
     const scaledW = baseW * zoomFactor.value
     const scaledH = baseH * zoomFactor.value
-    const minX = Math.min(0, wrapRect.width - scaledW)
-    const minY = Math.min(0, wrapRect.height - scaledH)
+    // compute symmetric bounds around center: allow translating by half the difference
+    const halfX = Math.abs(wrapRect.width - scaledW) / 2
+    const halfY = Math.abs(wrapRect.height - scaledH) / 2
+    // use symmetric bounds only (centered system). remove old min/0 system.
+    const minX = -halfX
+    const maxX = halfX
+    const minY = -halfY
+    const maxY = halfY
     const nextX = _startTransform.x + dx
     const nextY = _startTransform.y + dy
-    transformX.value = clamp(nextX, minX, 0)
-    transformY.value = clamp(nextY, minY, 0)
+    transformX.value = clamp(nextX, minX, maxX)
+    transformY.value = clamp(nextY, minY, maxY)
     lastPointer.value = { x: e.clientX, y: e.clientY }
   }
 
@@ -328,8 +345,11 @@ const onPointerDown = (e) => {
       const next = Math.min(zoomMax, 1.8)
       const baseW = modalImg.value ? modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0 : 0
       const baseH = modalImg.value ? modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0 : 0
-      const offsetX = wrapRect ? e.clientX - wrapRect.left : 0
-      const offsetY = wrapRect ? e.clientY - wrapRect.top : 0
+      // offset relative to image's current visual position — use image rect here
+      const imgRect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
+      // offset measured relative to image center (pre-transform visual coords)
+      const offsetX = imgRect ? (e.clientX - imgRect.left - imgRect.width / 2) : 0
+      const offsetY = imgRect ? (e.clientY - imgRect.top - imgRect.height / 2) : 0
       const prev = zoomFactor.value
       const ratio = next / prev
       const V_oldX = transformX.value
@@ -338,11 +358,11 @@ const onPointerDown = (e) => {
       const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
       const newImgW = baseW * next
       const newImgH = baseH * next
-      const minX = wrapRect ? Math.min(0, wrapRect.width - newImgW) : 0
-      const minY = wrapRect ? Math.min(0, wrapRect.height - newImgH) : 0
+      const halfX = wrapRect ? Math.abs(wrapRect.width - newImgW) / 2 : 0
+      const halfY = wrapRect ? Math.abs(wrapRect.height - newImgH) / 2 : 0
       zoomFactor.value = next
-      transformX.value = clamp(V_newX, minX, 0)
-      transformY.value = clamp(V_newY, minY, 0)
+      transformX.value = clamp(V_newX, -halfX, halfX)
+      transformY.value = clamp(V_newY, -halfY, halfY)
     } else {
       zoomFactor.value = 1
       transformX.value = 0
@@ -397,8 +417,9 @@ let _capturedPointerId = null
     const wrapRect = imgWrap.value.getBoundingClientRect()
     const baseW = modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0
     const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
-    const offsetX = e.clientX - wrapRect.left
-    const offsetY = e.clientY - wrapRect.top
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const offsetX = e.clientX - imgRect.left - imgRect.width / 2
+    const offsetY = e.clientY - imgRect.top - imgRect.height / 2
     const ratio = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
@@ -406,11 +427,11 @@ let _capturedPointerId = null
     const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
     const newImgW = baseW * next
     const newImgH = baseH * next
-    const minVisX2 = Math.min(0, wrapRect.width - newImgW)
-    const minVisY2 = Math.min(0, wrapRect.height - newImgH)
+    const halfX2 = Math.abs(wrapRect.width - newImgW) / 2
+    const halfY2 = Math.abs(wrapRect.height - newImgH) / 2
     zoomFactor.value = next
-    transformX.value = clamp(V_newX, minVisX2, 0)
-    transformY.value = clamp(V_newY, minVisY2, 0)
+    transformX.value = clamp(V_newX, -halfX2, halfX2)
+    transformY.value = clamp(V_newY, -halfY2, halfY2)
   }
 
 const startZoomRamp = () => {
@@ -453,14 +474,14 @@ const toggleEnableMagnifier = () => {
     const prev = zoomFactor.value
     const next = Math.min(zoomMax, prev + 0.2)
     if (next === prev) return
-    const imageRect = modalImg.value.getBoundingClientRect()
-    const container = imgWrap.value.getBoundingClientRect()
+    const wrapRect = imgWrap.value.getBoundingClientRect()
     const baseW = modalImg.value.offsetWidth || 0
     const baseH = modalImg.value.offsetHeight || 0
-    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imageRect.left + imageRect.width / 2)
-    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imageRect.top + imageRect.height / 2)
-    const offsetX = cx - imageRect.left
-    const offsetY = cy - imageRect.top
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imgRect.left + imgRect.width / 2)
+    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imgRect.top + imgRect.height / 2)
+    const offsetX = cx - imgRect.left - imgRect.width / 2
+    const offsetY = cy - imgRect.top - imgRect.height / 2
     const ratio = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
@@ -468,24 +489,25 @@ const toggleEnableMagnifier = () => {
     const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
     const newImgW = baseW * next
     const newImgH = baseH * next
-    const minVisX2 = Math.min(0, container.width - newImgW)
-    const minVisY2 = Math.min(0, container.height - newImgH)
+    const halfX = Math.abs(wrapRect.width - newImgW) / 2
+    const halfY = Math.abs(wrapRect.height - newImgH) / 2
     zoomFactor.value = next
-    transformX.value = clamp(V_newX, minVisX2, 0)
-    transformY.value = clamp(V_newY, minVisY2, 0)
+    transformX.value = clamp(V_newX, -halfX, halfX)
+    transformY.value = clamp(V_newY, -halfY, halfY)
   }
 const zoomOut = () => {
   if (!modalImg.value) { zoomFactor.value = Math.max(zoomMin, zoomFactor.value - 0.2); return }
   const prev = zoomFactor.value
   const next = Math.max(zoomMin, prev - 0.2)
   if (next === prev) return
-    const imageRect = modalImg.value.getBoundingClientRect()
+    const wrapRect = imgWrap.value.getBoundingClientRect()
     const baseW = modalImg.value.offsetWidth || 0
     const baseH = modalImg.value.offsetHeight || 0
-    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imageRect.left + imageRect.width / 2)
-    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imageRect.top + imageRect.height / 2)
-    const offsetX = cx - imageRect.left
-    const offsetY = cy - imageRect.top
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imgRect.left + imgRect.width / 2)
+    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imgRect.top + imgRect.height / 2)
+    const offsetX = cx - imgRect.left - imgRect.width / 2
+    const offsetY = cy - imgRect.top - imgRect.height / 2
     const ratio3 = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
@@ -494,10 +516,12 @@ const zoomOut = () => {
     zoomFactor.value = next
     const newW = baseW * next
     const newH = baseH * next
-    const minVisX3 = Math.min(0, imgWrap.value.getBoundingClientRect().width - newW)
-    const minVisY3 = Math.min(0, imgWrap.value.getBoundingClientRect().height - newH)
-    transformX.value = clamp(V_newX, minVisX3, 0)
-    transformY.value = clamp(V_newY, minVisY3, 0)
+    const wrapW3 = imgWrap.value.getBoundingClientRect().width
+    const wrapH3 = imgWrap.value.getBoundingClientRect().height
+    const halfX3 = Math.abs(wrapW3 - newW) / 2
+    const halfY3 = Math.abs(wrapH3 - newH) / 2
+    transformX.value = clamp(V_newX, -halfX3, halfX3)
+    transformY.value = clamp(V_newY, -halfY3, halfY3)
   }
 
 // pointer move handler for circular magnifier (deprecated) - kept for reference
@@ -694,6 +718,49 @@ const onSlideChange = (e) => {
     }
   }
 }
+
+// Debug overlay: live stats to validate bounds in real conditions
+const debugOverlay = ref(true)
+const debugStats = computed(() => {
+  if (!modalImg.value || !imgWrap.value) return {
+    wrapW: 0, wrapH: 0, baseW: 0, baseH: 0, scaledW: 0, scaledH: 0, halfX: 0, halfY: 0, transformX: 0, transformY: 0, zoom: zoomFactor.value
+  }
+  const wrapRect = imgWrap.value.getBoundingClientRect()
+  const baseW = modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0
+  const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
+  const scaledW = baseW * zoomFactor.value
+  const scaledH = baseH * zoomFactor.value
+  const halfX = Math.abs(wrapRect.width - scaledW) / 2
+  const halfY = Math.abs(wrapRect.height - scaledH) / 2
+  return {
+    wrapW: Math.round(wrapRect.width),
+    wrapH: Math.round(wrapRect.height),
+    baseW: Math.round(baseW),
+    baseH: Math.round(baseH),
+    scaledW: Math.round(scaledW),
+    scaledH: Math.round(scaledH),
+    halfX: Math.round(halfX),
+    halfY: Math.round(halfY),
+    transformX: Number(transformX.value.toFixed(2)),
+    transformY: Number(transformY.value.toFixed(2)),
+    zoom: Number(zoomFactor.value.toFixed(3))
+  }
+})
+
+// Console logging while modal is open to make it easy to copy the test numbers
+let _debugLogger = null
+watch(() => modalOpen.value, (open) => {
+  if (_debugLogger) { clearInterval(_debugLogger); _debugLogger = null }
+  if (open && debugOverlay.value) {
+    _debugLogger = setInterval(() => {
+      // print a compact single-line snapshot for easy copy/paste
+      try {
+        const d = debugStats.value
+        console.log(`DEBUG_STATS: zoom=${d.zoom} wrap=${d.wrapW}x${d.wrapH} base=${d.baseW}x${d.baseH} scaled=${d.scaledW}x${d.scaledH} half=${d.halfX}x${d.halfY} transform=${d.transformX}x${d.transformY}`)
+      } catch (e) {}
+    }, 800)
+  }
+})
 </script>
 
 <style scoped>
