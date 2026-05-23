@@ -569,9 +569,9 @@ const onSlideChange = (e) => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255,255,255,0.1);
-  color: white;
-  border: none;
+  background: rgba(255,255,255,0.92); /* nearly solid light for contrast */
+  color: var(--text-dark);
+  border: 1px solid rgba(0,0,0,0.06);
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -580,13 +580,14 @@ const onSlideChange = (e) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
   z-index: 10;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
 }
 
 .modal-nav:hover {
-  background: rgba(255,255,255,0.25);
-  transform: translateY(-50%) scale(1.1);
+  transform: translateY(-50%) scale(1.03);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16);
 }
 
 .modal-prev { left: 12px; }
@@ -604,8 +605,8 @@ const onSlideChange = (e) => {
 .modal-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(255,255,255,0.2);
-  border-top-color: white;
+  border: 4px solid rgba(0,0,0,0.08);
+  border-top-color: var(--primary-coral);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   position: absolute;
@@ -629,17 +630,17 @@ const onSlideChange = (e) => {
 }
 
 .modal-caption {
-  color: rgba(255,255,255,0.8);
-  font-size: 0.9em;
+  color: var(--text-dark);
+  font-size: 0.95em;
   margin-top: 12px;
   text-align: center;
   max-width: 80%;
 }
 
 .modal-counter {
-  color: rgba(255,255,255,0.45);
-  font-size: 0.8em;
-  margin-top: 4px;
+  color: var(--text-gray);
+  font-size: 0.85em;
+  margin-top: 6px;
 }
   .gallery-filter {
     display: flex;
