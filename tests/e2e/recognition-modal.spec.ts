@@ -28,7 +28,7 @@ test.describe('Recognition modal (accessibility)', () => {
     await page.waitForFunction((sel) => {
       const el = document.querySelector(sel) as HTMLImageElement | null
       return !!el && el.naturalWidth > 0
-    }, {}, '.app-modal-content img, .trust-modal-img')
+    }, '.app-modal-content img, .trust-modal-img')
 
     // body overflow should be hidden
     const overflow = await page.evaluate(() => document.body.style.overflow)
