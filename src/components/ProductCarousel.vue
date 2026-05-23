@@ -67,7 +67,7 @@
                 :src="images[modalIndex].fullSrc"
               :alt="images[modalIndex].alt"
               class="modal-image"
-              :class="{ loading: modalLoading, interactive: enableMagnifier, zoomed: zoomFactor > 1 }"
+            :class="{ loading: modalLoading, interactive: enableMagnifier, zoomed: zoomFactor > 1 }"
               decoding="async"
               @load="modalLoading = false"
               @error="modalLoading = false"
@@ -77,7 +77,7 @@
               @touchmove.passive="onTouchMove"
               @touchend.passive="onTouchEnd"
               ref="modalImg"
-            :style="{ transform: `translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease' }"
+            :style="{ transform: `translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease', outline: panHintActive ? '3px solid rgba(255,255,255,0.06)' : '' }"
           />
           </div>
 
@@ -93,7 +93,7 @@
           </div>
 
           <!-- elegant zoom controls: toggle + / - -->
-          <div class="zoom-controls">
+  <div class="zoom-controls">
             <button class="zoom-toggle" @click.stop.prevent="toggleEnableMagnifier" :aria-pressed="enableMagnifier" :title="enableMagnifier ? 'Désactiver la loupe' : 'Activer la loupe'">🔎</button>
             <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomOut" title="-" aria-label="Dézoomer">−</button>
             <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomIn" title="+" aria-label="Zoomer">+</button>
@@ -540,7 +540,7 @@ const showMagnifier = (e) => {}
 const hideMagnifier = (e) => {}
 const toggleMagnifier = (e) => {}
 
-const toggleEnableMagnifier = () => {
+  const toggleEnableMagnifier = () => {
   enableMagnifier.value = !enableMagnifier.value
   if (!enableMagnifier.value) {
     // reset zoom and transform
@@ -555,7 +555,19 @@ const toggleEnableMagnifier = () => {
   zoomFactor.value = Math.max(1.6, zoomMin)
   transformX.value = 0
   transformY.value = 0
+  // when enabling magnifier, trigger a brief pan hint so user knows they can drag
+  panHintActive.value = true
+  setTimeout(() => { panHintActive.value = false }, 700)
 }
+
+// small UX hint: when user first zooms, briefly animate the image to indicate it can be panned
+const panHintActive = ref(false)
+watch(zoomFactor, (z, prev) => {
+  if (z > 1 && prev <= 1) {
+    panHintActive.value = true
+    setTimeout(() => { panHintActive.value = false }, 700)
+  }
+})
 
   const zoomIn = () => {
     if (!modalImg.value || !imgWrap.value) { zoomFactor.value = Math.min(zoomMax, zoomFactor.value + 0.2); return }
@@ -710,7 +722,7 @@ const togglePause = () => {
   }
 }
 
-const openModal = async (idx) => {
+  const openModal = async (idx) => {
   // Open modal and ensure a clean, deterministic initial state.
   // Important: reset zoom/translate BEFORE any DOM reads or side-effects so
   // bounds are computed from zoom=1 and the image is centered correctly.
@@ -719,7 +731,7 @@ const openModal = async (idx) => {
   modalOpen.value = true
   modalLoading.value = true
 
-  // immediate reset to a known state
+  // show the full image initially (zoom=1 centered) and reset transforms
   zoomFactor.value = 1
   transformX.value = 0
   transformY.value = 0
@@ -737,7 +749,8 @@ const openModal = async (idx) => {
   preloadAdjacent(idx, images.value)
 
   // enable magnifier in the modal so touch/drag/zoom is available — still user-toggleable
-  enableMagnifier.value = true
+  // keep magnifier off initially so click opens full image; user can toggle or click + to zoom
+  enableMagnifier.value = false
 
   // allow the DOM to stabilize before any subsequent handlers read sizes
   await nextTick()
