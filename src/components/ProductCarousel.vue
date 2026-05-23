@@ -74,7 +74,7 @@
               @pointerdown.prevent="onPointerDown"
               @wheel.prevent="onWheel"
               ref="modalImg"
-            :style="{ transform: `translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease' }"
+            :style="{ transform: `scale(${zoomFactor}) translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px)`, transition: dragging ? 'none' : 'transform 150ms ease' }"
           />
           </div>
 
