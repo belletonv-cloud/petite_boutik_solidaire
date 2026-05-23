@@ -94,9 +94,9 @@
 
           <!-- elegant zoom controls: toggle + / - -->
   <div class="zoom-controls">
-            <button class="zoom-toggle" @click.stop.prevent="toggleEnableMagnifier" :aria-pressed="enableMagnifier" :title="enableMagnifier ? 'Désactiver la loupe' : 'Activer la loupe'">🔎</button>
-            <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomOut" title="-" aria-label="Dézoomer">−</button>
-            <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomIn" title="+" aria-label="Zoomer">+</button>
+            <button class="zoom-toggle" aria-hidden="true">🔎</button>
+            <button class="zoom-small" :class="{ active: pinchDirection === 'out' }" @click.stop.prevent="zoomOut" title="-" aria-label="Dézoomer">−</button>
+            <button class="zoom-small" :class="{ active: pinchDirection === 'in' }" @click.stop.prevent="zoomIn" title="+" aria-label="Zoomer">+</button>
           </div>
           <!-- joystick removed (replaced by direct pan & hint animation) -->
         </div>
@@ -276,7 +276,7 @@ const gridOpen = ref(false)
 const modalLoading = ref(false)
 // magnifier state
 const magnifierVisible = ref(false)
-const enableMagnifier = ref(false)
+const enableMagnifier = ref(true)
 const magnifierStyle = ref({})
 const imgWrap = ref(null)
 const modalImg = ref(null)
@@ -297,6 +297,7 @@ let _pinchStartTransformX = 0
 let _pinchStartTransformY = 0
 let _pinchOffsetX = 0
 let _pinchOffsetY = 0
+const pinchDirection = ref(null) // 'in' | 'out' | null
 
 // transform / pan state for full-image zoom (not circular lens)
 const transformX = ref(0)
@@ -464,6 +465,8 @@ const onTouchMove = (ev) => {
     zoomFactor.value = next
     transformX.value = clamp(V_newX, -halfX, halfX)
     transformY.value = clamp(V_newY, -halfY, halfY)
+    // set pinch direction for UI feedback
+    pinchDirection.value = next > _pinchStartZoom ? 'in' : 'out'
     ev.preventDefault()
   }
 }
@@ -474,6 +477,8 @@ const onTouchEnd = (ev) => {
     _pinchStartDistance = 0
     // keep magnifier enabled after pinch so + / - buttons are available
     enableMagnifier.value = true
+    // clear pinch direction after a short delay so UI returns to neutral
+    setTimeout(() => { pinchDirection.value = null }, 600)
   }
 }
 
