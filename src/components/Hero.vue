@@ -131,18 +131,20 @@ onMounted(() => {
 }
 
 .btn-cta {
-  background: var(--primary-coral);
-  color: white;
-  padding: 12px 20px;
+  background: white;
+  color: var(--primary-teal);
+  padding: 12px 18px;
   border-radius: 10px;
   font-size: 1em;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
-.btn-cta:hover { transform: translateY(-2px); }
+.btn-cta:hover { background: var(--secondary-cream); transform: translateY(-2px); }
 
 .btn-ghost {
   display: block;
