@@ -104,12 +104,12 @@ onMounted(() => {
 .cta-desc { color: rgba(255,255,255,0.95); font-size:0. nineem; margin-bottom:6px; line-height:1.25; max-height:2.4em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
 
 .cta-actions { display:flex; gap:10px; align-items:center; justify-content:center; width:100% }
-.full-btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:8px 12px; border-radius:10px; width:100%; text-decoration:none }
-.full-btn.primary { background: linear-gradient(180deg, var(--primary-coral), #e64f4f); color:white; font-weight:800; }
-.full-btn:not(.primary) { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.95); font-weight:700 }
+.full-btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:8px 12px; border-radius:8px; width:100%; text-decoration:none; border: 2px solid rgba(255,255,255,0.12); background: transparent }
+.full-btn.primary { color: var(--primary-coral); background: transparent; border-color: rgba(233,94,94,0.18); font-weight:800 }
+.full-btn:not(.primary) { background: transparent; color: rgba(255,255,255,0.95); font-weight:700; border-color: rgba(255,255,255,0.08) }
 .full-btn .btn-icon svg { width:18px; height:18px }
 .full-btn:focus-visible { outline: 3px solid rgba(255,255,255,0.12); outline-offset: 3px }
-.full-btn:hover { transform: translateY(-2px) }
+.full-btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.06) }
 
   .contact-card { display:none }
   .contact-title { display:none }
