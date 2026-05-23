@@ -53,10 +53,12 @@
     </div>
     </div>
 
-    <Modal v-model:modelValue="modalOpen" :title="modalAlt" @close="onModalClose">
-      <div style="display:flex;align-items:center;justify-content:center;">
-        <img :src="modalImage" :alt="modalAlt" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px" />
-      </div>
+    <Modal v-model:modelValue="modalOpen" title="Ils nous font confiance" @close="onModalClose">
+      <img
+        class="trust-modal-img"
+        :src="modalImage"
+        :alt="modalAlt"
+      />
     </Modal>
   </section>
 </template>
@@ -184,6 +186,16 @@ const values = [
     description: 'Créer un lieu chaleureux où chacun·e se sent attendu·e et bienvenu·e.'
   }
 ]
+
+/* Modal image sizing specific to recognition modal */
+.trust-modal-img {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+  margin: 0 auto;
+}
 </script>
 
 <style scoped>
