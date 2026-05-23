@@ -40,11 +40,11 @@
       <h3>Ils nous font confiance</h3>
     <div class="badges">
       <template v-for="(r, i) in recognition" :key="i">
-        <button v-if="r.src" class="badge" type="button" @click="openModal(r, $event)" :aria-label="r.alt || 'Badge'">
+        <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r, i)" :aria-label="r.alt || 'Badge'">
           <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
           <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
-        <button v-else class="badge" type="button" :aria-label="r.alt || 'Badge'">
+        <button v-else class="badge" type="button" :data-recognition-index="i" :aria-label="r.alt || 'Badge'">
           <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
           <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
@@ -118,13 +118,12 @@ const sanitizeIconSafe = (html) => {
 }
 
 let _lastBadgeEl = null
-const openModal = (r, ev) => {
+const openModal = (r, idx) => {
   if (!r || !r.src) return
-  // try to find the badge element robustly from the event
+  // try to find the badge element by index (more robust on mobile)
   let el = null
   try {
-    if (ev && ev.currentTarget) el = ev.currentTarget
-    else if (ev && ev.target) el = ev.target.closest && ev.target.closest('.badge')
+    el = document.querySelector(`.badge[data-recognition-index="${idx}"]`)
   } catch (e) { el = null }
   _lastBadgeEl = el || null
   modalImage.value = r.src
