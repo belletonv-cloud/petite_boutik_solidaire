@@ -70,11 +70,11 @@ const onModalClose = () => {
 .badge { display:inline-flex; align-items:center; gap:6px; background:white; border:2px solid var(--primary-teal); color:var(--primary-teal); padding:8px 14px; border-radius:24px; font-weight:600; cursor:pointer }
 .badge-icon { display:none }
 .badge-image { display:none }
-.badge-text { display:block; max-width: 12rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.badge-text { display:block; max-width: 12rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 @media (max-width:600px) { 
   .badge{ padding:8px 12px }
   .badge-image{ display:none }
-  .badge-text{ max-width: calc(100vw - 96px); font-size: 0.95em }
+  .badge-text{ max-width: calc(100vw - 96px); min-width: 0; font-size: 0.95em }
 }
 
 /* modal styles (same pattern as MentionsLegales.vue) */
