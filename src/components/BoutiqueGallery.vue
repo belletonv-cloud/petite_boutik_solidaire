@@ -203,9 +203,15 @@ onUnmounted(() => {
 
 .slide-image {
   width: 100%;
-  height: 400px;
-  object-fit: cover;
+  height: 60vh;
+  max-height: 500px;
+  object-fit: contain;
   border-radius: 8px;
+}
+
+.slide-image[src*="placeholder.jpg"] {
+  background: #f0f0f0;
+  border: 1px dashed #ccc;
 }
 
 .carousel-controls {
@@ -231,29 +237,17 @@ onUnmounted(() => {
   background: var(--primary-teal);
   color: white;
 }
-  .swiper-pagination-fraction {
-    text-align: center;
-    margin-top: 8px;
-    font-size: 14px;
-    color: var(--primary-teal);
-    font-weight: 500;
-  }
 
-  .swiper-pagination-fraction::before {
-    content: 'Photo ';
-  }
+.swiper-pagination-fraction {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--primary-teal);
+  font-weight: 500;
+}
 
-  .slide-image {
-    width: 100%;
-    height: auto;
-    max-height: 60vh;
-    object-fit: cover;
-    border-radius: 8px;
-  }
-
-  .slide-image[src*="placeholder.jpg"] {
-    background: #f0f0f0;
-    border: 1px dashed #ccc;
-  }
+.swiper-pagination-fraction::before {
+  content: 'Photo ';
+}
 
 </style>

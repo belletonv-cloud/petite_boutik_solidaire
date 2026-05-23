@@ -35,7 +35,6 @@
       :autoplay="{ delay: 3500, disableOnInteraction: false }"
       :pagination="false"
       :navigation="images.length > 1"
-      :auto-height="true"
       class="my-swiper"
       @swiper="onSwiper"
       @slideChange="onSlideChange"
@@ -340,6 +339,8 @@ const onSlideChange = (e) => {
   border-radius: 10px;
   overflow: hidden;
   width: 100%;
+  height: 60vh;
+  max-height: 500px;
 }
 
 .slide-frame:hover {
@@ -349,7 +350,7 @@ const onSlideChange = (e) => {
 .slide-image {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: contain;
   border-radius: 8px;
 }
@@ -408,15 +409,15 @@ const onSlideChange = (e) => {
 
 .modal-close {
   position: absolute;
-  top: -18px;
-  right: -18px;
+  top: 8px;
+  right: 8px;
   background: var(--primary-coral);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 38px;
-  height: 38px;
-  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
