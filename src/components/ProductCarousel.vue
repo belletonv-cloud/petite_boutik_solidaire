@@ -57,6 +57,7 @@
 
     <div class="modal-overlay" v-if="modalOpen" @click="closeModal" role="dialog" aria-modal="true">
       <div class="modal-content" @click.stop>
+        <img v-if="logo" :src="logo" alt="Logo" class="modal-logo" />
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
@@ -111,6 +112,7 @@ import 'swiper/css/pagination'
 import 'swiper/css/navigation'
 import { onSnapshot, collection, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
+import logoUrl from '@/assets/logo.jpg'
 
 const modules = [Autoplay, Pagination, Navigation]
 const dynamicPhotos = ref([])
@@ -234,6 +236,7 @@ const modalIndex = ref(0)
 const currentIndex = ref(0)
 const gridOpen = ref(false)
 const modalLoading = ref(false)
+const logo = logoUrl
 
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
@@ -476,7 +479,7 @@ const onSlideChange = (e) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(44, 24, 16, 0.95);
+  background: linear-gradient(135deg, rgba(200, 80, 50, 0.93) 0%, rgba(60, 30, 20, 0.95) 100%);
   z-index: 1000;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -489,9 +492,13 @@ const onSlideChange = (e) => {
   flex-direction: column;
   align-items: center;
   width: fit-content;
-  max-width: calc(100vw - 40px);
+  max-width: min(calc(100vw - 40px), 900px);
   margin: 30px auto;
   cursor: default;
+  background-color: rgb(245, 230, 211); /* warm beige */
+  padding: 18px;
+  border-radius: 12px;
+  color: var(--text-dark);
 }
 
 .modal-close {
@@ -513,6 +520,18 @@ const onSlideChange = (e) => {
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   line-height: 1;
+}
+
+.modal-logo {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 56px;
+  height: auto;
+  border-radius: 6px;
+  opacity: 0.95;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 12;
 }
 
 .modal-close:hover {
@@ -671,7 +690,7 @@ const onSlideChange = (e) => {
   .grid-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(44, 24, 16, 0.92);
+    background: linear-gradient(135deg, rgba(200, 80, 50, 0.92) 0%, rgba(60, 30, 20, 0.95) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
