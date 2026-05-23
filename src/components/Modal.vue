@@ -107,7 +107,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   justify-content: center;
   position: relative; /* ensure close button stacks correctly */
 }
-.app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal); font-size: 1.25rem; font-weight: 700; text-align: center; line-height: 1.15; padding: 6px 48px 0; word-break: break-word }
+.app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal); font-size: 1rem; font-weight: 700; text-align: center; line-height: 1.2; padding: 6px 48px 0; max-width: calc(100% - 96px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .app-modal-body { overflow: auto; padding-right: 8px; -webkit-overflow-scrolling: touch }
 .app-modal-close {
   position: absolute;
