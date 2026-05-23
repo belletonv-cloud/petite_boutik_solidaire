@@ -36,37 +36,7 @@
       </div>
     </div>
 
-<<<<<<< HEAD
-    <div class="recognition" v-if="recognition && recognition.length">
-      <h3>Ils nous font confiance</h3>
-    <div class="badges">
-      <template v-for="(r, i) in recognition" :key="i">
-        <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r, i)" :aria-label="r.alt || 'Badge'">
-          <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
-          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-        </button>
-        <button v-else class="badge" type="button" :data-recognition-index="i" :aria-label="r.alt || 'Badge'">
-          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-        </button>
-      </template>
-    </div>
-    </div>
-
-    <Modal v-model:modelValue="modalOpen" title="Ils nous font confiance" @close="onModalClose">
-      <div class="modal-body">
-        <img
-          class="trust-modal-img"
-          :src="modalImage"
-          :alt="modalAlt"
-        />
-        <div v-if="debugEnabled" class="modal-debug">{{ modalImage }}</div>
-      </div>
-    </Modal>
-=======
     <Recognition :items="recognition" />
->>>>>>> restore/to-55f231e
   </section>
 </template>
 
@@ -85,14 +55,7 @@ const sanitizeIcon = (html) => {
   return String(html).replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-<<<<<<< HEAD
-const modalOpen = ref(false)
-const modalImage = ref('')
-const modalAlt = ref('')
-// enable debug display when ?debug=1 is present in the URL
-const debugEnabled = typeof window !== 'undefined' && window.location && window.location.search && window.location.search.indexOf('debug=1') !== -1
-=======
->>>>>>> restore/to-55f231e
+// Recognition handled by dedicated component
 
 
 const titreAssociation = ref("L'Association Bras Ouverts")
@@ -132,53 +95,7 @@ const sanitizeIconSafe = (html) => {
   return String(html).replace(/<[^>]*>/g, '')
 }
 
-<<<<<<< HEAD
-let _lastBadgeEl = null
-const openModal = async (r, idx) => {
-  if (!r || !r.src) return
-  // try to find the badge element by index (more robust on mobile)
-  let el = null
-  try {
-    el = document.querySelector(`.badge[data-recognition-index="${idx}"]`)
-  } catch (e) { el = null }
-  _lastBadgeEl = el || null
-  // resolve relative paths to absolute using import.meta.url so bundled assets resolve correctly
-  try {
-    modalImage.value = r.src ? new URL(r.src, import.meta.url).href : r.src
-  } catch (e) {
-    modalImage.value = r.src
-  }
-  // debug log to help tracing broken images
-  try { console.log('RECO_MODAL:', { rSrc: r.src, resolved: modalImage.value }) } catch (e) {}
-  modalAlt.value = r.alt || r.text || r.title || 'Article'
-  modalOpen.value = true
-  // allow the DOM to settle; Modal.vue handles focus/overflow/scrolling
-  await nextTick()
-  }
-
-const onModalClose = () => {
-  // after closing the modal, scroll to the recognition section so the user
-  // returns to "Ils nous font confiance"
-  try {
-    const el = document.querySelector('.recognition')
-    if (el && typeof el.scrollIntoView === 'function') {
-      // scroll to a comfortable offset so the heading isn't jammed to the top
-      const y = el.getBoundingClientRect().top + window.scrollY - 80
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
-    }
-    // return focus to the badge that opened the modal (accessibility)
-    if (_lastBadgeEl && typeof _lastBadgeEl.focus === 'function') {
-      _lastBadgeEl.focus()
-      _lastBadgeEl = null
-    }
-  } catch (e) { /* ignore */ }
-}
-
-
-// modal behavior removed; opening badges will use direct links for now
-=======
 // Recognition modal handled by src/components/Recognition.vue
->>>>>>> restore/to-55f231e
 
 const values = [
   {
