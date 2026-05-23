@@ -144,15 +144,8 @@ const openModal = async (r, idx) => {
   try { console.log('RECO_MODAL:', { rSrc: r.src, resolved: modalImage.value }) } catch (e) {}
   modalAlt.value = r.alt || r.text || r.title || 'Article'
   modalOpen.value = true
-  // wait a tick for the modal to render and then ensure content is visible and image sizing fixed
+  // allow the DOM to settle; Modal.vue handles focus/overflow/scrolling
   await nextTick()
-  const mod = document.querySelector('.app-modal-content')
-  if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  const img = mod?.querySelector('img')
-    if (img) {
-      if (img.complete) img.style.maxWidth = '100%'
-      else img.addEventListener('load', () => { img.style.maxWidth = '100%' }, { once: true })
-    }
   }
 
 const onModalClose = () => {
