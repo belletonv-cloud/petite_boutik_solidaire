@@ -17,7 +17,7 @@
       <p>{{ donsTexte2 }}</p>
 
       <div class="dons-grid">
-        <div class="dons-accepted">
+        <div class="dons-accepted" tabindex="0">
           <h4>Acceptés</h4>
           <ul>
             <li>👕 Vêtements enfants (0-10 ans) en bon état</li>
@@ -26,7 +26,7 @@
             <li>🤰 Vêtements maternité</li>
           </ul>
         </div>
-        <div class="dons-rejected">
+        <div class="dons-rejected" tabindex="0">
           <h4>Non acceptés</h4>
           <ul>
             <li>🧥 Vêtements très usés ou tâchés</li>
@@ -208,30 +208,27 @@ const values = [
 .dons-grid h4 { color: var(--primary-teal); margin-bottom: 8px }
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
-.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(0,0,0,0.04); padding: 12px; border-radius: 8px; transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease }
+.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(0,0,0,0.04); padding: 12px; border-radius: 8px; transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease }
 
-/* Hover / focus style for donate callout */
-.donate-callout:hover,
-.donate-callout:focus-visible {
+/* Hover / focus style for individual accept/reject cards */
+.dons-accepted:hover,
+.dons-accepted:focus-visible {
   transform: translateY(-6px);
-  box-shadow: 0 14px 36px rgba(27,169,168,0.14);
-  background: linear-gradient(180deg, var(--primary-teal) 0%, #0ea9a8 100%);
-  color: #fff;
+  box-shadow: 0 12px 28px rgba(27,169,168,0.12);
+  background: linear-gradient(180deg, #f7fffe 0%, #e6fffd 100%);
+  border-color: rgba(14,169,167,0.18);
 }
 
-.donate-callout:hover h3,
-.donate-callout:focus-visible h3 { color: #fff }
-.donate-callout:hover p,
-.donate-callout:focus-visible p { color: rgba(255,255,255,0.95) }
-
-.donate-callout:hover .dons-accepted,
-.donate-callout:focus-visible .dons-accepted,
-.donate-callout:hover .dons-rejected,
-.donate-callout:focus-visible .dons-rejected {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.12);
-  color: #fff;
+.dons-rejected:hover,
+.dons-rejected:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(255,90,90,0.08);
+  background: linear-gradient(180deg, #fff6f6 0%, #ffecec 100%);
+  border-color: rgba(255,90,90,0.12);
 }
+
+.dons-accepted h4 { color: var(--primary-teal) }
+.dons-rejected h4 { color: #d9534f }
 
 .recognition h3 {
   color: var(--primary-teal);
