@@ -3,7 +3,7 @@
     <div class="hero-content hero-grid">
       <div class="hero-overlay"></div>
       <div class="hero-left">
-        <p class="hero-tagline">{{ tagline }}</p>
+        <!-- tagline removed as per design: kept hero-left for layout if needed -->
       </div>
 
       <div class="hero-right" v-if="btn2Visible">
@@ -31,7 +31,8 @@ import { ref, computed, onMounted } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
 
-const tagline = ref("Vêtements & puériculture à petits prix — esprit solidaire")
+// tagline intentionally removed — content will be controlled via admin if needed
+const tagline = ref('')
 const gradientStart = ref('#1BA9A8')
 const gradientEnd = ref('#E95E5E')
 const gradientAngle = ref(135)

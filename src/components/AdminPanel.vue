@@ -755,7 +755,7 @@ const siteBlocs = ref([
     id: 'hero', icon: '🎨', label: "Bandeau d'accueil", open: false, saved: false,
     desc: 'Grande accroche, dégradé de fond et boutons',
     fields: [
-      { id: 'hero_tagline', label: 'Texte accroche', multiline: true, default: "Vêtements & puériculture à petits prix — esprit solidaire" },
+      { id: 'hero_tagline', label: 'Texte accroche', multiline: true, default: "" },
       { id: 'hero_gradient_start', label: 'Couleur de début du dégradé', type: 'color', default: '#1BA9A8' },
       { id: 'hero_gradient_end', label: 'Couleur de fin du dégradé', type: 'color', default: '#E95E5E' },
       { id: 'hero_gradient_angle', label: 'Angle du dégradé (°)', type: 'number', default: 135 },
