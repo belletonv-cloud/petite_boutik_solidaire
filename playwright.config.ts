@@ -65,6 +65,10 @@ export default defineConfig({
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
     },
+    {
+      name: 'Mobile Safari iPhone 13',
+      use: { ...devices['iPhone 13'], browserName: 'webkit' },
+    },
 
     /* Test against branded browsers. */
     // {
