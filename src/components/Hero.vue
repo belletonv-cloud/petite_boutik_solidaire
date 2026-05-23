@@ -98,19 +98,19 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-.hero-grid { display:grid; grid-template-columns: 1fr 360px; gap: 22px; align-items:center }
+.hero-grid { display:grid; grid-template-columns: 1fr 280px; gap: 18px; align-items:center }
 .hero-left { text-align:left }
 .hero-right { display:flex; align-items:center; justify-content:center }
 
-.contact-card { background: rgba(255,255,255,0.04); padding:12px; border-radius:10px; text-align:left; max-width:320px }
-.contact-title { font-weight:700; color:white; margin-bottom:6px; font-size:1em }
-.contact-desc { color: rgba(255,255,255,0.9); font-size:0.95em; margin-bottom:10px; line-height:1.4 }
+.contact-card { background: rgba(255,255,255,0.04); padding:10px; border-radius:10px; text-align:left; max-width:280px; box-shadow: none }
+.contact-title { font-weight:700; color:white; margin-bottom:4px; font-size:0.98em }
+.contact-desc { color: rgba(255,255,255,0.9); font-size:0. nineem; margin-bottom:8px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
 
 .contact-actions { display:flex; gap:8px }
-.card-btn { background: rgba(255,255,255,0.06); color: white; padding:8px 10px; border-radius:8px; display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-weight:700; font-size:0.95em; border:1px solid rgba(255,255,255,0.12) }
+.card-btn { background: rgba(255,255,255,0.05); color: white; padding:6px 8px; border-radius:7px; display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-weight:600; font-size:0. nineem; border:1px solid rgba(255,255,255,0.08) }
 .card-btn:hover { background: white; color: var(--primary-teal); border-color: rgba(255,255,255,0.92) }
-.card-icon svg { width:16px; height:16px }
-.card-text { font-size:0.92em }
+.card-icon svg { width:14px; height:14px }
+.card-text { font-size:0. nineem }
 
 .hero-overlay { position:absolute; inset:0; border-radius:15px; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); pointer-events:none }
 
