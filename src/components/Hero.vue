@@ -111,13 +111,17 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: transparent;
+  background: rgba(255,255,255,0.06);
   color: white;
-  border-color: white;
+  border: 2px solid rgba(255,255,255,0.95);
+  padding: 10px 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: white;
+  color: var(--primary-teal);
+  border-color: white;
 }
 
 @media (max-width: 600px) {
