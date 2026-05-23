@@ -15,7 +15,7 @@
       </template>
     </div>
 
-    <Modal v-model:modelValue="modalOpen" :title="modalAlt" @close="onModalClose">
+    <Modal v-model="modalOpen" :title="modalAlt" @close="onModalClose">
       <div style="display:flex;align-items:center;justify-content:center;">
         <img :src="modalImage" :alt="modalAlt" class="trust-modal-img" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;display:block;margin:0 auto" />
       </div>

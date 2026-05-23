@@ -1,24 +1,20 @@
 <template>
-  <TransitionRoot :show="modelValue">
-    <Dialog as="div" class="app-modal-overlay" @close="close">
-      <div class="app-modal-overlay__backdrop" aria-hidden="true"/>
-      <div class="app-modal-wrapper">
-        <TransitionChild>
-          <DialogPanel class="app-modal-content" ref="content" tabindex="-1">
-            <button class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
-            <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
-            <div class="app-modal-body"><slot /></div>
-            <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
-          </DialogPanel>
-        </TransitionChild>
+  <teleport to="body">
+    <div v-if="modelValue" class="app-modal-overlay" @click.self="close" role="dialog" aria-modal="true" :aria-label="title || 'Modale'" data-open="true">
+      <div class="app-modal-content" ref="content" tabindex="-1">
+        <button class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
+        <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
+        <div class="app-modal-body">
+          <slot />
+        </div>
+        <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
       </div>
-    </Dialog>
-  </TransitionRoot>
+    </div>
+  </teleport>
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onUnmounted } from 'vue'
-import { Dialog, DialogPanel, TransitionRoot, TransitionChild } from '@headlessui/vue'
+import { onMounted, onUnmounted, watch, ref, nextTick } from 'vue'
 const props = defineProps({ modelValue: { type: Boolean, default: false }, title: { type: String, default: '' }, footer: { type: String, default: '' } })
 const emit = defineEmits(['update:modelValue','close'])
 const content = ref(null)
@@ -27,14 +23,42 @@ const close = () => { emit('update:modelValue', false); emit('close') }
 
 const onKey = (e) => { if (e.key === 'Escape') close() }
 
+const interceptorSelectors = ['.sticky-bar', '.section-nav', '.nav-inner']
+const disableInterceptors = () => {
+  try {
+    interceptorSelectors.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+      // store old pointer-events in data attribute
+      if (!el.dataset.__oldPointer) el.dataset.__oldPointer = el.style.pointerEvents || ''
+      el.style.pointerEvents = 'none'
+    }))
+  } catch (e) { /* ignore */ }
+}
+const restoreInterceptors = () => {
+  try {
+    interceptorSelectors.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+      if (el.dataset && Object.prototype.hasOwnProperty.call(el.dataset, '__oldPointer')) {
+        el.style.pointerEvents = el.dataset.__oldPointer || ''
+        delete el.dataset.__oldPointer
+      }
+    }))
+  } catch (e) { /* ignore */ }
+}
+
 watch(() => props.modelValue, async (open) => {
   if (open) {
     document.body.style.overflow = 'hidden'
+    disableInterceptors()
     await nextTick()
-    if (content.value && typeof content.value.focus === 'function') content.value.focus()
+    // focus content for accessibility and ensure it's visible
+    if (content.value && typeof content.value.focus === 'function') {
+      content.value.focus()
+      // ensure overlay is scrolled into view in case of strange positioning
+      try { content.value.scrollIntoView({ block: 'center', behavior: 'auto' }) } catch (e) {}
+    }
     window.addEventListener('keydown', onKey)
   } else {
     document.body.style.overflow = ''
+    restoreInterceptors()
     window.removeEventListener('keydown', onKey)
   }
 })
@@ -46,11 +70,11 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
 .app-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1600;
+  z-index: 99999; /* very high to avoid interception */
   padding: 20px;
 }
 .app-modal-overlay__backdrop { position: absolute; inset:0; background: rgba(0,0,0,0.6) }
