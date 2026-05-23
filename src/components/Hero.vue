@@ -13,6 +13,8 @@
       </div>
     </div>
   </section>
+  <!-- Floating contact action (admin controlled) -->
+  <a v-if="btn2Visible" href="#contact" class="fab" aria-label="Nous contacter" @click="scrollTo('contact')" v-html="mailSvg"></a>
 </template>
 
 <script setup>
@@ -142,6 +144,24 @@ onMounted(() => {
   .btn-cta { width: 100%; justify-content: center }
   .btn-ghost { width: 100%; text-align: center }
 }
+
+/* Floating action button */
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 56px;
+  height: 56px;
+  background: var(--primary-coral);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 26px rgba(233,94,94,0.18);
+  z-index: 1200;
+}
+.fab svg { width:22px; height:22px }
 
 @media (max-width: 600px) {
   .hero {
