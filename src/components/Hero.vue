@@ -160,15 +160,14 @@ onMounted(() => {
 
 /* Primary small action (Horaires) - ensure border is visible */
 .btn-primary {
-  background: white;
-  color: var(--primary-teal);
-  border: none;
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.95);
   padding: 12px 18px;
   border-radius: 10px;
   font-weight: 700;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
-.btn-primary:hover { background: var(--secondary-cream); transform: translateY(-2px); }
+.btn-primary:hover { background: white; color: var(--primary-teal); transform: translateY(-2px); }
 
 .btn-icon { display:inline-flex; align-items:center; justify-content:center }
 .btn-icon svg { display:block; width:18px; height:18px }
