@@ -23,9 +23,7 @@
         </div>
       </div>
     </div>
-  </section>
-  <!-- Floating contact action (admin controlled) -->
-  <a v-if="btn2Visible" href="#contact" class="fab" aria-label="Nous contacter" @click="scrollTo('contact')" v-html="mailSvg"></a>
+</section>
 </template>
 
 <script setup>

@@ -110,7 +110,13 @@ onMounted(() => {
 body {
   padding-top: 48px;
   padding-bottom: 48px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+
+/* ensure container expands so footer sticks to bottom reliably */
+.container { flex: 1 0 auto }
 </style>
 
 <style scoped>

@@ -36,15 +36,19 @@ const currentYear = new Date().getFullYear()
   color: white;
   margin-top: 50px;
   padding-top: 0;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  z-index: 800;
 }
 
 .footer-content {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 18px 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
 }
 
 .footer-section h4 {
@@ -55,9 +59,9 @@ const currentYear = new Date().getFullYear()
 
 .footer-section p {
   color: rgba(255, 255, 255, 0.85);
-  font-size: 0.95em;
-  margin-bottom: 8px;
-  line-height: 1.5;
+  font-size: 0. nine5em;
+  margin-bottom: 6px;
+  line-height: 1.4;
 }
 
 .footer-link {
@@ -84,10 +88,10 @@ const currentYear = new Date().getFullYear()
 
 .footer-bottom {
   text-align: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9em;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85em;
   margin: 0;
 }
 
