@@ -226,6 +226,8 @@ onUnmounted(() => {
   max-height: 500px;
   object-fit: contain;
   border-radius: 8px;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 @media (max-width: 600px) {

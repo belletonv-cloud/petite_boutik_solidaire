@@ -13,25 +13,50 @@
       <h3>Vous souhaitez donner ?</h3>
       <p>{{ donsTexte }}</p>
       <p>{{ donsTexte2 }}</p>
+
+      <div class="dons-grid">
+        <div class="dons-accepted">
+          <h4>Acceptés</h4>
+          <ul>
+            <li>👕 Vêtements enfants (0-10 ans) en bon état</li>
+            <li>👟 Chaussures propres et en état</li>
+            <li>🍼 Matériel de puériculture (propre, non endommagé)</li>
+            <li>🤰 Vêtements maternité</li>
+          </ul>
+        </div>
+        <div class="dons-rejected">
+          <h4>Non acceptés</h4>
+          <ul>
+            <li>🧥 Vêtements très usés ou tâchés</li>
+            <li>🚫 Sièges auto non contrôlés/âgés</li>
+            <li>♻️ Articles cassés ou dangereux</li>
+            <li>🧴 Produits d'hygiène entamés</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
-    <div class="recognition">
+    <div class="recognition" v-if="recognition && recognition.length">
       <h3>Ils nous font confiance</h3>
-      <div class="badges">
-        <button class="badge" @click="openModal('/documents/PHOTO-2026-05-02-21-17-283.jpg')" aria-label="Voir l'article de presse">
-          <span class="badge-icon">📰</span>
-          <span class="badge-text">À la une dans la presse locale</span>
+    <div class="badges">
+      <template v-for="(r, i) in recognition" :key="i">
+        <button v-if="r.src" class="badge" type="button" @click="openModal(r, $event.currentTarget)" :aria-label="r.alt || 'Badge'">
+          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
+          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
-      </div>
+        <button v-else class="badge" type="button" :aria-label="r.alt || 'Badge'">
+          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
+          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
+        </button>
+      </template>
+    </div>
     </div>
 
-    <div class="modal-overlay" v-if="modalOpen" @click.self="closeModal" role="dialog" aria-modal="true" :aria-label="modalAlt">
-      <div class="modal-content">
-        <button class="modal-close" @click="closeModal" aria-label="Fermer la modale">✕</button>
-        <img :src="modalImage" :alt="modalAlt" class="modal-image" />
-        <a :href="modalImage" target="_blank" rel="noopener noreferrer" class="modal-link">Ouvrir en pleine taille</a>
+    <Modal v-model:modelValue="modalOpen" :title="modalAlt" @close="onModalClose">
+      <div style="display:flex;align-items:center;justify-content:center;">
+        <img :src="modalImage" :alt="modalAlt" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px" />
       </div>
-    </div>
+    </Modal>
   </section>
 </template>
 
@@ -39,16 +64,28 @@
 import { ref, onMounted } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
+import Modal from './Modal.vue'
+let purifier = null
+const sanitizeIcon = (html) => {
+  if (!html) return ''
+  try {
+    if (purifier && typeof purifier.sanitize === 'function') return purifier.sanitize(html)
+  } catch (e) {}
+  // fallback basic escape
+  return String(html).replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 const modalOpen = ref(false)
 const modalImage = ref('')
 const modalAlt = ref('')
 
+
 const titreAssociation = ref("L'Association Bras Ouverts")
-const associationTexte = ref("L'Association Bras Ouverts de Morlaix est portée par des bénévoles engagées — mamans, amies et mamies — qui œuvrent chaque jour pour créer du lien social et soutenir les familles du territoire.")
-const donsTexte  = ref("Nous acceptons avec gratitude vos dons de vêtements enfants (0-10 ans) en bon état, chaussures, matériel de puériculture et vêtements pour futures mamans.")
-const donsTexte2 = ref("Apportez vos dons directement à la boutique aux horaires d'ouverture.")
-const donsVisible = ref(true)
+const associationTexte = ref("L'Association Bras Ouverts de Morlaix est portée par des bénévoles engagées qui œuvrent chaque jour pour créer du lien social et soutenir les familles du territoire.")
+  const donsTexte  = ref("Nous acceptons avec gratitude vos dons de vêtements enfants (0-10 ans) en bon état, chaussures, matériel de puériculture et vêtements pour futures mamans.")
+  const donsTexte2 = ref("Apportez vos dons directement à la boutique aux horaires d'ouverture.")
+  const donsVisible = ref(true)
+const recognition = ref([])
 
 onMounted(() => {
   onSnapshot(doc(db, 'config', 'textes'), snap => {
@@ -59,21 +96,61 @@ onMounted(() => {
       if (data.dons_texte)  donsTexte.value  = data.dons_texte
       if (data.dons_texte2) donsTexte2.value = data.dons_texte2
       if (data.dons_visible !== undefined) donsVisible.value = data.dons_visible !== false && data.dons_visible !== 'false'
+      if (Array.isArray(data.recognition_items) && data.recognition_items.length) recognition.value = data.recognition_items
+      else if (!recognition.value.length) recognition.value = [ { text: 'À la une dans la presse locale', icon: '📰', src: '/documents/PHOTO-2026-05-02-21-17-283.jpg' } ]
     }
   })
+  // try dynamic import of DOMPurify for sanitization
+  import('dompurify').then(m => { purifier = m && (m.default || m) }).catch(() => { purifier = null })
 })
 
-const openModal = (src) => {
-  modalImage.value = src
-  modalAlt.value = src.includes('284') ? 'Courrier de l\'Assemblée Nationale' : 'Article de presse'
-  modalOpen.value = true
-  document.body.style.overflow = 'hidden'
+// Helper to sanitise icon HTML and prefer emoji-only fallback
+const sanitizeIconSafe = (html) => {
+  if (!html) return ''
+  try {
+    if (purifier && purifier.sanitize) {
+      const out = purifier.sanitize(html, { ALLOWED_TAGS: [] })
+      return out
+    }
+  } catch (e) {}
+  // strip tags
+  return String(html).replace(/<[^>]*>/g, '')
 }
 
-const closeModal = () => {
-  modalOpen.value = false
-  document.body.style.overflow = ''
+let _lastBadgeEl = null
+const openModal = (r, el) => {
+  if (!r || !r.src) return
+  _lastBadgeEl = el || null
+  modalImage.value = r.src
+  modalAlt.value = r.alt || r.text || r.title || 'Article'
+  modalOpen.value = true
+  // ensure modal is scrolled into view so users see it regardless of where they clicked
+  setTimeout(() => {
+    const mod = document.querySelector('.app-modal-content')
+    if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, 30)
 }
+
+const onModalClose = () => {
+  // after closing the modal, scroll to the recognition section so the user
+  // returns to "Ils nous font confiance"
+  try {
+    const el = document.querySelector('.recognition')
+    if (el && typeof el.scrollIntoView === 'function') {
+      // scroll to a comfortable offset so the heading isn't jammed to the top
+      const y = el.getBoundingClientRect().top + window.scrollY - 80
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
+    }
+    // return focus to the badge that opened the modal (accessibility)
+    if (_lastBadgeEl && typeof _lastBadgeEl.focus === 'function') {
+      _lastBadgeEl.focus()
+      _lastBadgeEl = null
+    }
+  } catch (e) { /* ignore */ }
+}
+
+
+// modal behavior removed; opening badges will use direct links for now
 
 const values = [
   {
@@ -178,6 +255,18 @@ const values = [
   text-align: center;
 }
 
+.dons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.dons-grid h4 { color: var(--primary-teal); margin-bottom: 8px }
+.dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
+.dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
+.dons-accepted { background: #F7FFF9; border: 1px solid #CFF3E3; padding: 12px; border-radius: 8px }
+.dons-rejected { background: #FFF7F7; border: 1px solid #F3CFCF; padding: 12px; border-radius: 8px }
+
 .recognition h3 {
   color: var(--primary-teal);
   margin-bottom: 15px;
@@ -223,36 +312,24 @@ const values = [
   font-size: 1.2em;
 }
 
+
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.85);
+  inset: 0;
+  background: rgba(0,0,0,0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1400; /* same as MentionsLegales */
   padding: 20px;
 }
 
-.modal-content {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+/* mentions/modal styles removed from Association.vue */
 
 .modal-close {
   position: absolute;
-  top: -15px;
-  right: -15px;
+  top: 12px;
+  right: 12px;
   background: var(--primary-coral);
   color: white;
   border: none;
@@ -273,26 +350,8 @@ const values = [
   transform: scale(1.1);
 }
 
-.modal-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 8px;
-}
 
-.modal-link {
-  margin-top: 15px;
-  color: var(--primary-teal);
-  text-decoration: none;
-  font-weight: 600;
-  padding: 8px 16px;
-  border: 2px solid var(--primary-teal);
-  border-radius: 20px;
-  transition: all 0.3s;
-}
+/* modal remnants removed */
 
-.modal-link:hover {
-  background: var(--primary-teal);
-  color: white;
-}
+/* modal styles removed from Association.vue; modal will be reimplemented centrally */
 </style>

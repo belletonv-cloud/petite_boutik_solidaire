@@ -15,7 +15,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; {{ currentYear }} La P'tite Boutik Solidaire — Association Bras Ouverts de Morlaix</p>
+      <p>&copy; {{ currentYear }} La P'tite Boutik Solidaire — Association Bras Ouverts de Morlaix — <button class="footer-mentions" @click="openMentions">Mentions légales</button></p>
     </div>
   </footer>
 </template>
@@ -28,6 +28,17 @@ const phone = '06 20 70 54 96'
 const phoneRaw = '0620705496'
 const handle = '@la_ptite_boutik_morlaix'
 const currentYear = new Date().getFullYear()
+</script>
+
+<script>
+export default {
+  methods: {
+    openMentions() {
+      // dispatch a global event that the Mentions component listens to
+      window.dispatchEvent(new Event('open-mentions'))
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -81,6 +92,17 @@ const currentYear = new Date().getFullYear()
   display: flex;
   gap: 15px;
 }
+
+.footer-mentions {
+  background: transparent;
+  border: none;
+  color: var(--secondary-cream);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+.footer-mentions:hover { opacity: 0.9 }
 
 .footer-bottom {
   text-align: center;

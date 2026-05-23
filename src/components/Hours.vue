@@ -10,10 +10,7 @@
         <span class="day-icon">🕙</span>
         <p><strong>{{ plage }}</strong></p>
       </div>
-      <div class="hours-card">
-        <span class="day-icon">👥</span>
-        <p>{{ benevoles }}</p>
-      </div>
+    <!-- removed volunteer text card as requested -->
     </div>
   </div>
 </template>

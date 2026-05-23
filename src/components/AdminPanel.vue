@@ -349,14 +349,57 @@
                   :placeholder="field.default"
                 />
 
-                <!-- Textarea -->
-                <textarea
-                  v-else-if="field.multiline"
-                  v-model="textesValues[field.id]"
-                  class="input-textarea"
-                  :placeholder="field.default"
-                  rows="3"
-                ></textarea>
+                <!-- List (JSON) -->
+                <div v-else-if="field.type === 'list'">
+                  <!-- recognition_items special UI -->
+                  <div v-if="field.id === 'recognition_items'" class="recognition-admin">
+                  <div class="recognition-admin-item" v-for="(item, idx) in (textesValues[field.id] || [])" :key="idx" draggable="true" @dragstart="onRecognitionDragStart(idx)" @dragover.prevent="onRecognitionDragOver(idx)" @drop="onRecognitionDrop(idx)">
+                      <div class="recognition-row">
+                        <input type="text" v-model="item.text" placeholder="Texte (ex: Partenaire X)" class="input-text full" />
+                        <input type="text" v-model="item.icon" @input="item.icon = sanitizeIconInput(item.icon)" placeholder="Icône (emoji)" class="input-text" style="width:120px;margin-left:8px" />
+                      </div>
+                      <div class="recognition-row" style="align-items:center;margin-top:8px">
+                        <div class="recognition-preview" style="width:120px;height:80px;border:1px dashed #ddd;display:flex;align-items:center;justify-content:center;margin-right:8px">
+                          <img v-if="item.src" :src="item.src" style="max-width:100%;max-height:100%" />
+                          <span v-else style="color:#999;font-size:0.85em">Aucune image</span>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                          <input type="file" accept="image/*" @change="e => onRecognitionFileChange(e, idx)" />
+                          <button class="btn-delete" @click="removeRecognitionItem(idx)">Supprimer</button>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:6px">
+                          <button class="btn" @click="moveRecognitionUp(idx)" :disabled="idx===0" title="Monter">↑</button>
+                          <button class="btn" @click="moveRecognitionDown(idx)" :disabled="idx >= (textesValues[field.id]?.length || 0) - 1" title="Descendre">↓</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="margin-top:8px">
+                      <button class="btn-add-regle" @click="addRecognitionItem">+ Ajouter un élément</button>
+                    </div>
+                  </div>
+                  <textarea v-else class="input-textarea" rows="6" :value="JSON.stringify(textesValues[field.id] || [], null, 2)" @input="e => { try { textesValues[field.id] = JSON.parse(e.target.value) } catch (err) { /* ignore parse errors while typing */ } }"></textarea>
+                </div>
+
+                <!-- Textarea (special-case WYSIWYG for mentions_content) -->
+                <div v-else-if="field.multiline">
+                  <div v-if="field.id === 'mentions_content'" class="mentions-editor-block">
+                    <div class="mentions-toolbar">
+                      <button type="button" @click.prevent="document.execCommand('bold')">B</button>
+                      <button type="button" @click.prevent="document.execCommand('italic')">I</button>
+                      <button type="button" @click.prevent="{ const url = prompt('URL'); if(url) document.execCommand('createLink', false, url) }">🔗</button>
+                      <button type="button" @click.prevent="document.execCommand('insertUnorderedList')">• Liste</button>
+                    </div>
+                    <div
+                      class="mentions-editor"
+                      contenteditable
+                      :inner-html="textesValues[field.id]"
+                      @input="e => textesValues[field.id] = e.target.innerHTML"
+                      v-html="textesValues[field.id] || field.default"
+                    ></div>
+                    <div class="mentions-help">Éditeur simple. Le HTML est sanitizé avant affichage public.</div>
+                  </div>
+                  <textarea v-else v-model="textesValues[field.id]" class="input-textarea" :placeholder="field.default" rows="3"></textarea>
+                </div>
 
                 <!-- Text par défaut -->
                 <input
@@ -687,8 +730,8 @@ const loadBlocs = () => {
   })
 }
 
-// Textes (valeurs en direct)
-const textesValues = ref({
+  // Textes (valeurs en direct)
+  const textesValues = ref({
   hero_tagline: '',
   about_titre: '',
   about_texte: '',
@@ -734,6 +777,7 @@ const textesValues = ref({
   products_items: [],
   products_brands: [],
   products_prices: [],
+  recognition_items: [],
   // Sticky bottom bar
   sticky_phone: '06 20 70 54 96',
   sticky_phone_raw: '0620705496',
@@ -788,17 +832,22 @@ const siteBlocs = ref([
       { id: 'products_bienvenue', label: 'Phrase de bienvenue', multiline: false, default: 'Soyez les bienvenu(e)s !' },
     ]
   },
-  {
-    id: 'association', icon: '🤝', label: 'Bloc Association', open: false, saved: false,
-    desc: 'Texte association Bras Ouverts + appel aux dons',
-    fields: [
+      {
+        id: 'association', icon: '🤝', label: 'Bloc Association', open: false, saved: false,
+        desc: 'Texte association Bras Ouverts + appel aux dons',
+        fields: [
       { id: 'association_titre', label: 'Titre de section', multiline: false, default: "L'Association Bras Ouverts" },
       { id: 'association_texte', label: 'Texte association', multiline: true, default: "L'Association Bras Ouverts de Morlaix est portée par des bénévoles engagées — mamans, amies et mamies — qui œuvrent chaque jour pour créer du lien social et soutenir les familles du territoire." },
       { id: 'dons_texte', label: 'Texte appel aux dons (1er §)', multiline: true, default: "Nous acceptons avec gratitude vos dons de vêtements enfants (0-10 ans) en bon état, chaussures, matériel de puériculture et vêtements pour futures mamans." },
-      { id: 'dons_texte2', label: 'Texte appel aux dons (2e §)', multiline: true, default: "Apportez vos dons directement à la boutique aux horaires d'ouverture." },
-      { id: 'dons_visible', label: 'Section « Vous souhaitez donner ? » visible', type: 'toggle', default: true },
-    ]
-  },
+        { id: 'dons_texte2', label: 'Texte appel aux dons (2e §)', multiline: true, default: "Apportez vos dons directement à la boutique aux horaires d'ouverture." },
+        { id: 'dons_visible', label: 'Section « Vous souhaitez donner ? » visible', type: 'toggle', default: true },
+        // Recognition list (Ils nous font confiance)
+        { id: 'recognition_items', label: 'Ils nous font confiance — éléments (JSON liste)', type: 'list', default: [] },
+        // Mentions légales gérées ici
+        { id: 'mentions_title', label: 'Mentions — Titre', multiline: false, default: '✅ Mentions légales – La P’tite Boutik Solidaire' },
+        { id: 'mentions_content', label: 'Mentions — Contenu HTML', multiline: true, default: '' },
+      ]
+      },
   {
     id: 'calendrier', icon: '📅', label: 'Calendrier', open: false, saved: false,
     desc: 'Prochaines dates d\'ouverture (gérez les fermetures dans Fermetures)',
@@ -867,15 +916,80 @@ const loadTextes = () => {
       Object.keys(textesValues.value).forEach(k => {
         if (data[k] !== undefined) textesValues.value[k] = data[k]
       })
+      // If mentions_content is present, keep it; otherwise, set default content
+      if (!data.mentions_content && !textesValues.value.mentions_content) {
+        textesValues.value.mentions_content = ''
+      }
       // Fallbacks pour les tableaux si non encore enregistrés
-      if (!textesValues.value.products_items || !textesValues.value.products_items.length)
+  if (!textesValues.value.products_items || !textesValues.value.products_items.length)
         textesValues.value.products_items = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS_ITEMS))
       if (!textesValues.value.products_brands || !textesValues.value.products_brands.length)
         textesValues.value.products_brands = [...DEFAULT_PRODUCTS_BRANDS]
       if (!textesValues.value.products_prices || !textesValues.value.products_prices.length)
         textesValues.value.products_prices = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS_PRICES))
+      if (!textesValues.value.recognition_items || !textesValues.value.recognition_items.length)
+        textesValues.value.recognition_items = [
+          { text: 'À la une dans la presse locale', icon: '📰', src: '/documents/PHOTO-2026-05-02-21-17-283.jpg' }
+        ]
     }
   })
+}
+
+// Recognition admin helpers (file upload to Cloudinary)
+const onRecognitionFileChange = async (e, idx) => {
+  const f = e.target.files && e.target.files[0]
+  if (!f) return
+  try {
+    const form = new FormData()
+    form.append('file', f)
+    form.append('upload_preset', 'boutik-upload')
+    const res = await fetch(`https://api.cloudinary.com/v1_1/diqz414dk/image/upload`, { method: 'POST', body: form })
+    if (!res.ok) throw new Error('upload')
+    const data = await res.json()
+    if (!textesValues.value.recognition_items) textesValues.value.recognition_items = []
+    textesValues.value.recognition_items[idx].src = data.secure_url
+  } catch (err) {
+    console.warn('upload recognition image error', err)
+  }
+}
+
+const addRecognitionItem = () => {
+  if (!textesValues.value.recognition_items) textesValues.value.recognition_items = []
+  textesValues.value.recognition_items.push({ text: '', icon: '', src: '' })
+}
+
+const removeRecognitionItem = (idx) => {
+  textesValues.value.recognition_items.splice(idx, 1)
+}
+
+const moveRecognitionUp = (idx) => {
+  if (idx <= 0) return
+  const arr = textesValues.value.recognition_items
+  ;[arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]
+}
+
+const moveRecognitionDown = (idx) => {
+  const arr = textesValues.value.recognition_items
+  if (idx >= arr.length - 1) return
+  ;[arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]
+}
+
+// drag & drop reorder helpers
+let _dragIndex = null
+const onRecognitionDragStart = (i) => { _dragIndex = i }
+const onRecognitionDragOver = (i) => { /* noop for now */ }
+const onRecognitionDrop = (i) => {
+  if (_dragIndex === null) return
+  const arr = textesValues.value.recognition_items
+  const [moved] = arr.splice(_dragIndex, 1)
+  arr.splice(i, 0, moved)
+  _dragIndex = null
+}
+
+// sanitize icon input to allow only emoji/short text (strip tags)
+const sanitizeIconInput = (s) => {
+  if (!s) return ''
+  return String(s).replace(/<[^>]*>/g, '').slice(0, 8)
 }
 
 const saveTextesForBloc = async (bloc) => {
@@ -1286,7 +1400,7 @@ const DEFAULT_REGLES = [
 ]
 const horairesRegles   = ref(JSON.parse(JSON.stringify(DEFAULT_REGLES)))
 const horairesPlageTxt = ref('10h00 – 17h30 sans interruption')
-const horairesBenevoles = ref('Accueil par une équipe de bénévoles (mamans, amies et mamies)')
+  const horairesBenevoles = ref('')
 const horairesTitreCalendrier = ref("Calendrier d'ouverture")
 const horairesTitreSection    = ref("Horaires d'ouverture")
 const horairesSaved    = ref(false)
@@ -1432,6 +1546,17 @@ const loadData = () => {
 .btn-denied-logout:hover { background: #fff0f0; }
 .btn-google:hover { border-color: #1BA9A8; background: #f0fafa; }
 .btn-google img { width: 20px; height: 20px; }
+/* Mentions editor styles */
+.mentions-editor-block { border: 1px solid #e6e6e6; border-radius: 8px; padding: 8px }
+.mentions-toolbar { display:flex; gap:8px; margin-bottom:8px }
+.mentions-toolbar button { padding:6px 8px; border-radius:6px; border:1px solid #ddd; background:white; cursor:pointer }
+.mentions-editor { min-height:120px; padding:8px; border-radius:6px; background:white; outline:none }
+.mentions-help { font-size:0.85em; color:#666; margin-top:6px }
+
+/* recognition admin */
+.recognition-admin-item { border:1px solid #eee; padding:10px; border-radius:8px; margin-bottom:10px }
+.recognition-row { display:flex; gap:8px }
+.recognition-preview img { display:block }
 
 .login-error { color: #E95E5E; margin-top: 12px; font-size: 0.85em; }
 

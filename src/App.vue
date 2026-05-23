@@ -18,6 +18,7 @@ import SiteFooter from './components/SiteFooter.vue'
 import ActuBanner from './components/ActuBanner.vue'
 import SectionNav from './components/SectionNav.vue'
 import StickyBottomBar from './components/StickyBottomBar.vue'
+import MentionsLegales from './components/MentionsLegales.vue'
 
 const blocs = ref({})
 
@@ -102,6 +103,7 @@ onMounted(() => {
     </template>
 
     <SiteFooter />
+    <MentionsLegales />
     <StickyBottomBar />
   </div>
 </template>
