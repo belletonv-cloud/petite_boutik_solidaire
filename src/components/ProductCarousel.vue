@@ -92,10 +92,11 @@
             <div>zoom: {{ debugStats.zoom }}</div>
           </div>
 
-          <!-- elegant zoom controls: toggle + / - -->
-  <div class="zoom-controls">
+          <!-- elegant zoom controls: toggle + / - with numeric indicator -->
+          <div class="zoom-controls">
             <button class="zoom-toggle" aria-hidden="true">🔎</button>
             <button class="zoom-small" :class="{ active: pinchDirection === 'out' }" @click.stop.prevent="zoomOut" title="-" aria-label="Dézoomer">−</button>
+            <div class="zoom-indicator" aria-hidden="true">{{ (zoomFactor).toFixed(2) }}x</div>
             <button class="zoom-small" :class="{ active: pinchDirection === 'in' }" @click.stop.prevent="zoomIn" title="+" aria-label="Zoomer">+</button>
           </div>
           <!-- joystick removed (replaced by direct pan & hint animation) -->
@@ -742,8 +743,8 @@ const togglePause = () => {
   modalOpen.value = true
   modalLoading.value = true
 
-  // show the full image initially (zoom=1 centered) and reset transforms
-  zoomFactor.value = 1
+  // start at maximum dezoom as requested
+  zoomFactor.value = zoomMin
   transformX.value = 0
   transformY.value = 0
   lastPointer.value = null
@@ -760,8 +761,8 @@ const togglePause = () => {
   preloadAdjacent(idx, images.value)
 
   // enable magnifier in the modal so touch/drag/zoom is available — still user-toggleable
-  // keep magnifier off initially so click opens full image; user can toggle or click + to zoom
-  enableMagnifier.value = false
+  // magnifier always enabled
+  enableMagnifier.value = true
 
   // allow the DOM to stabilize before any subsequent handlers read sizes
   await nextTick()
@@ -1150,6 +1151,7 @@ watch(() => modalOpen.value, (open) => {
 .zoom-controls { position: absolute; right: 8px; bottom: 8px; display:flex; gap:8px; align-items:center }
 .zoom-small { background: rgba(255,255,255,0.95); border-radius:8px; padding:6px 8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer }
 .zoom-toggle { background: rgba(255,255,255,0.95); border-radius:8px; padding:6px 8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer }
+.zoom-indicator { background: rgba(0,0,0,0.6); color: #fff; padding:6px 8px; border-radius:8px; font-size:13px; min-width:56px; text-align:center }
 .zoom-toggle[aria-pressed="true"] {
   /* active state: solid primary teal to ensure visibility */
   background: var(--primary-teal);
