@@ -10,7 +10,10 @@
       </div>
     </div>
     <div class="donate-callout" v-if="donsVisible">
-      <h3>Vous souhaitez donner ?</h3>
+      <div class="donate-head">
+        <div class="donate-chip">Don</div>
+        <h3>Vous souhaitez donner ?</h3>
+      </div>
       <p>{{ donsTexte }}</p>
       <p>{{ donsTexte2 }}</p>
 
@@ -176,12 +179,12 @@ const values = [
 }
 
 .donate-callout {
-  position: relative;
-  background: #fff;
-  border-radius: 10px;
-  padding: 18px 18px 18px 56px;
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+  background: transparent;
+  border-radius: 8px;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .donate-callout h3 {
@@ -197,7 +200,9 @@ const values = [
   text-align: center;
 }
 
-.donate-callout:before{ content:''; position:absolute; left:16px; top:14px; bottom:14px; width:10px; background:var(--primary-teal); border-radius:6px }
+.donate-head { display:flex; align-items:center; gap:10px }
+.donate-chip { background:var(--primary-teal); color:#fff; padding:6px 10px; border-radius:999px; font-weight:700 }
+.dons-grid { display:flex; gap:10px; flex-wrap:wrap }
 .dons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px }
 .dons-grid h4 { color: var(--primary-teal); margin-bottom: 8px }
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
