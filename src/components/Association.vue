@@ -186,16 +186,6 @@ const values = [
     description: 'Créer un lieu chaleureux où chacun·e se sent attendu·e et bienvenu·e.'
   }
 ]
-
-/* Modal image sizing specific to recognition modal */
-.trust-modal-img {
-  max-width: 90vw;
-  max-height: 80vh;
-  object-fit: contain;
-  border-radius: 8px;
-  display: block;
-  margin: 0 auto;
-}
 </script>
 
 <style scoped>
@@ -400,7 +390,5 @@ const values = [
   max-height: 80vh;
   object-fit: contain;
   border-radius: 8px;
-  display: block;
-  margin: 0 auto;
 }
 </style>
