@@ -4,9 +4,6 @@
       <div class="hero-overlay"></div>
       <div class="hero-left">
         <p class="hero-tagline">{{ tagline }}</p>
-        <div class="hero-actions" v-if="btn1Visible">
-          <a v-if="btn1Visible" href="#calendrier" class="btn btn-outline" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
-        </div>
       </div>
 
       <div class="hero-right" v-if="btn2Visible">
