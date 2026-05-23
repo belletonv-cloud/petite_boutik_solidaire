@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import Modal from './Modal.vue'
@@ -127,24 +127,23 @@ const openModal = (r, idx) => {
     el = document.querySelector(`.badge[data-recognition-index="${idx}"]`)
   } catch (e) { el = null }
   _lastBadgeEl = el || null
-  // resolve relative paths to absolute so production paths work the same as dev
+  // resolve relative paths to absolute using import.meta.url so bundled assets resolve correctly
   try {
-    modalImage.value = r.src ? new URL(r.src, window.location.href).href : r.src
+    modalImage.value = r.src ? new URL(r.src, import.meta.url).href : r.src
   } catch (e) {
     modalImage.value = r.src
   }
   modalAlt.value = r.alt || r.text || r.title || 'Article'
   modalOpen.value = true
-  // lock body scroll early to avoid touch scrolling interfering with modal display on mobile
-  try { document.body.style.overflow = 'hidden' } catch (e) {}
-  // ensure modal is scrolled into view so users see it regardless of where they clicked
-  setTimeout(() => {
-    const mod = document.querySelector('.app-modal-content')
-    if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    // on mobile WebKit some elements with no explicit height can collapse; ensure image inside modal has natural size
-    const img = document.querySelector('.app-modal-content img')
-    if (img) img.style.maxWidth = '100%'
-  }, 30)
+  // wait a tick for the modal to render and then ensure content is visible and image sizing fixed
+  await nextTick()
+  const mod = document.querySelector('.app-modal-content')
+  if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  const img = mod?.querySelector('img')
+  if (img) {
+    if (img.complete) img.style.maxWidth = '100%'
+    else img.addEventListener('load', () => { img.style.maxWidth = '100%' }, { once: true })
+  }
 }
 
 const onModalClose = () => {

@@ -21,14 +21,22 @@ const close = () => { emit('update:modelValue', false); emit('close') }
 
 const onKey = (e) => { if (e.key === 'Escape') close() }
 
+let _previousActive = null
 watch(() => props.modelValue, async (open) => {
   if (open) {
+    // save previous focused element to restore focus on close
+    try { _previousActive = document.activeElement } catch (e) { _previousActive = null }
     document.body.style.overflow = 'hidden'
     await nextTick()
     // focus content for accessibility
     if (content.value && typeof content.value.focus === 'function') content.value.focus()
     window.addEventListener('keydown', onKey)
   } else {
+    // restore previous active focus
+    if (_previousActive && typeof _previousActive.focus === 'function') {
+      try { _previousActive.focus() } catch (e) {}
+    }
+    _previousActive = null
     document.body.style.overflow = ''
     window.removeEventListener('keydown', onKey)
   }
@@ -45,7 +53,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1600;
+  z-index: 2000;
   padding: 20px;
 }
 .app-modal-content {
@@ -59,6 +67,8 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   position: relative; /* ensure close button stacks correctly */
 }
 .app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal) }
