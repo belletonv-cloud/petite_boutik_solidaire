@@ -210,12 +210,12 @@ const values = [
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
 .dons-accepted { background: #F7FFF9; border: 1px solid #CFF3E3; padding: 12px; border-radius: 8px }
 .dons-rejected {
-  background: #fff;
-  border: 2px solid var(--primary-coral);
+  background: #fff8f8; /* very soft pink */
+  border: 1px solid rgba(242,184,184,0.45); /* light coral border */
   color: var(--text-dark);
-  padding: 14px;
+  padding: 12px;
   border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
 }
 
 .recognition h3 {
