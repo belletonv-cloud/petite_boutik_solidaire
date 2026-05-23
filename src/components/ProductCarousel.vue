@@ -84,10 +84,7 @@
             <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomOut" title="-" aria-label="Dézoomer">−</button>
             <button v-if="enableMagnifier" class="zoom-small" @click.stop.prevent="zoomIn" title="+" aria-label="Zoomer">+</button>
           </div>
-          <!-- joystick for mobile panning (complementary to drag) -->
-          <div v-if="showJoystick" class="joystick" ref="joystick" @pointerdown.prevent="joystickStart($event)">
-            <div class="joystick-knob" ref="joystickKnob" :style="joystickKnobStyle"></div>
-          </div>
+          <!-- joystick removed (replaced by direct pan & hint animation) -->
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
           <p class="modal-caption" style="margin:0">{{ images[modalIndex].alt }}</p>
@@ -379,56 +376,9 @@ const showJoystick = computed(() => {
   // only show when zoomed and small viewport
   return zoomFactor.value > 1 && window.innerWidth <= 700
 })
-const joystick = ref(null)
-const joystickKnob = ref(null)
-const joystickKnobStyle = ref({})
-let _joystickActive = false
-let _joystickRect = null
-const joystickStart = (e) => {
-  if (!_joystickRect) _joystickRect = joystick.value && joystick.value.getBoundingClientRect()
-  _joystickDown(e)
-  window.addEventListener('pointermove', _joystickMove)
-  window.addEventListener('pointerup', _joystickUp)
-}
-const _joystickDown = (e) => {
-  _joystickActive = true
-  updateKnob(e.clientX, e.clientY)
-}
-const _joystickMove = (e) => {
-  if (!_joystickActive) return
-  updateKnob(e.clientX, e.clientY)
-}
-const _joystickUp = (e) => {
-  _joystickActive = false
-  joystickKnobStyle.value = { transform: 'translate(0px,0px)' }
-  window.removeEventListener('pointermove', _joystickMove)
-  window.removeEventListener('pointerup', _joystickUp)
-}
+// joystick removed; left the function updateKnob earlier to avoid breaking references
 const updateKnob = (clientX, clientY) => {
-  if (!joystick.value || !modalImg.value) return
-  const jr = joystick.value.getBoundingClientRect()
-  const dx = clientX - (jr.left + jr.width / 2)
-  const dy = clientY - (jr.top + jr.height / 2)
-  const max = Math.min(jr.width, jr.height) / 2
-  const ndx = Math.max(-max, Math.min(max, dx))
-  const ndy = Math.max(-max, Math.min(max, dy))
-  joystickKnobStyle.value = { transform: `translate(${ndx}px, ${ndy}px)` }
-  // map knob offset to panning delta in pixels (proportional to displayed image size)
-  const rect = modalImg.value.getBoundingClientRect()
-  const s = zoomFactor.value
-  const scaledW = rect.width * s
-  const scaledH = rect.height * s
-  const minX = Math.min(0, rect.width - scaledW)
-  const minY = Math.min(0, rect.height - scaledH)
-  // compute normalized knob position (-1..1)
-  const nx = ndx / max
-  const ny = ndy / max
-  // target translate: push to edge depending on knob (we interpret knob as destination direction)
-  const targetX = clamp(-nx * (Math.abs(minX)), minX, 0)
-  const targetY = clamp(-ny * (Math.abs(minY)), minY, 0)
-  // ease towards target for smooth motion
-  transformX.value = clamp(transformX.value + (targetX - transformX.value) * 0.25, minX, 0)
-  transformY.value = clamp(transformY.value + (targetY - transformY.value) * 0.25, minY, 0)
+  // noop now - joystick removed
 }
 
 // track captured pointer id for touch
@@ -947,10 +897,7 @@ const onSlideChange = (e) => {
 @media (max-width: 700px) {
   .modal-image { transform-origin: center center !important }
   .zoom-controls { right: 6px; bottom: 6px }
-  /* joystick styles for mobile */
-  .joystick { position: absolute; right: 14px; bottom: 14px; width: 64px; height: 64px; border-radius: 999px; background: rgba(0,0,0,0.18); display:flex; align-items:center; justify-content:center; z-index: 1800; }
-  .joystick-knob { width: 28px; height: 28px; border-radius: 999px; background: rgba(255,255,255,0.95); box-shadow: 0 6px 12px rgba(0,0,0,0.18); transition: transform 60ms linear }
-  .joystick { touch-action: none }
+  /* joystick removed */
 }
 
 .modal-spinner {
