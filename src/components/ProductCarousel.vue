@@ -57,6 +57,7 @@
 
     <div class="modal-overlay" v-if="modalOpen" @click="closeModal" role="dialog" aria-modal="true">
       <div class="modal-content" @click.stop>
+        <img v-if="logo" :src="logo" alt="Logo La P'tite Boutik Solidaire" class="modal-logo" />
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
@@ -111,6 +112,7 @@ import 'swiper/css/pagination'
 import 'swiper/css/navigation'
 import { onSnapshot, collection, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
+import logoUrl from '@/assets/logo.jpg'
 
 const modules = [Autoplay, Pagination, Navigation]
 const dynamicPhotos = ref([])
@@ -234,6 +236,12 @@ const modalIndex = ref(0)
 const currentIndex = ref(0)
 const gridOpen = ref(false)
 const modalLoading = ref(false)
+const logo = logoUrl
+const overlayVariant = ref(1) // 1: subtle, 2: stronger coral
+const logoSmall = ref(false)
+
+const toggleOverlayVariant = () => { overlayVariant.value = overlayVariant.value === 1 ? 2 : 1 }
+const toggleLogoSize = () => { logoSmall.value = !logoSmall.value }
 
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
@@ -520,7 +528,20 @@ const onSlideChange = (e) => {
   line-height: 1;
 }
 
-  /* logo and overlay-toggle removed: modal shows only the image for a clean viewing experience */
+  /* modal shows the brand logo (small) but not control text labels; keep styling for logo */
+.modal-logo {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 56px;
+  height: auto;
+  border-radius: 6px;
+  opacity: 0.95;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 12;
+}
+
+.modal-logo.small { width: 36px; opacity: 0.95 }
 
 .modal-close:hover {
   background: #d14545;
