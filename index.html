@@ -54,9 +54,14 @@
           announceAccessibly('Réinitialisation de l\'affichage en cours');
           // temporarily set maximum-scale to 1 to force the browser to re-evaluate the zoom
           meta.setAttribute('content', base + ', maximum-scale=1.0');
-          // small timeout to allow the browser to apply
+          // try to nudge browsers that don't react immediately to meta changes:
+          try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(e) {}
+          try { var sx = window.scrollX || 0, sy = window.scrollY || 0; window.scrollTo(sx, sy + 1); setTimeout(function(){ window.scrollTo(sx, sy); }, 50); } catch(e) {}
+          // small timeout to allow the browser to apply the meta change, then restore
           setTimeout(function(){
             meta.setAttribute('content', base);
+            // small additional reflow nudge
+            try { var sx2 = window.scrollX || 0, sy2 = window.scrollY || 0; window.scrollTo(sx2, sy2 + 1); setTimeout(function(){ window.scrollTo(sx2, sy2); }, 50); } catch(e) {}
             announceAccessibly('Affichage réinitialisé');
             maybeShowResetZoomControl();
           }, RESET_META_DURATION);
