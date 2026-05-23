@@ -479,7 +479,8 @@ const onSlideChange = (e) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, rgba(200, 80, 50, 0.93) 0%, rgba(60, 30, 20, 0.95) 100%);
+  /* subtle coral tint at the top fading to a dark backdrop for good contrast */
+  background: linear-gradient(135deg, rgba(233,94,94,0.08) 0%, rgba(10,10,10,0.88) 100%);
   z-index: 1000;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -690,7 +691,8 @@ const onSlideChange = (e) => {
   .grid-overlay {
     position: fixed;
     inset: 0;
-    background: linear-gradient(135deg, rgba(200, 80, 50, 0.92) 0%, rgba(60, 30, 20, 0.95) 100%);
+    /* match modal overlay but slightly lighter */
+    background: linear-gradient(135deg, rgba(233,94,94,0.06) 0%, rgba(10,10,10,0.86) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
