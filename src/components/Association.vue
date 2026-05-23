@@ -176,10 +176,11 @@ const values = [
 }
 
 .donate-callout {
-  background: linear-gradient(180deg, #F8FFFE, #F3FBFA);
-  border: 1px solid rgba(6,128,122,0.08);
-  padding: 22px;
-  border-radius: 12px;
+  position: relative;
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 18px 18px 56px;
+  border: 1px solid rgba(0,0,0,0.04);
   box-shadow: 0 6px 18px rgba(0,0,0,0.04);
 }
 
@@ -196,12 +197,12 @@ const values = [
   text-align: center;
 }
 
+.donate-callout:before{ content:''; position:absolute; left:16px; top:14px; bottom:14px; width:10px; background:var(--primary-teal); border-radius:6px }
 .dons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px }
 .dons-grid h4 { color: var(--primary-teal); margin-bottom: 8px }
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
-.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(6,128,122,0.06); padding: 12px; border-radius: 8px }
-.dons-rejected { background: #fff7f6; border-color: rgba(220,80,80,0.06) }
+.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(0,0,0,0.04); padding: 12px; border-radius: 8px }
 
 .recognition h3 {
   color: var(--primary-teal);
