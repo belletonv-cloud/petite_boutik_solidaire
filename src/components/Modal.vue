@@ -107,10 +107,10 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   justify-content: center;
   position: relative; /* ensure close button stacks correctly */
 }
-.app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal) }
+.app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal); font-size: 1.25rem; font-weight: 700; text-align: center; line-height: 1.15; padding: 6px 48px 0; word-break: break-word }
 .app-modal-body { overflow: auto; padding-right: 8px; -webkit-overflow-scrolling: touch }
 .app-modal-close {
-  position: fixed;
+  position: absolute;
   right: 12px;
   top: 12px;
   background: var(--primary-coral);
@@ -124,7 +124,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  z-index: 100000;
+  z-index: 3;
 }
 
 @media (max-width: 520px) {
