@@ -110,6 +110,8 @@ onMounted(() => {
 .btn-primary {
   background: white;
   color: var(--primary-teal);
+  box-shadow: 0 6px 18px rgba(27,169,168,0.14);
+  padding: 12px 26px;
 }
 
 .btn-primary:hover {
@@ -117,24 +119,32 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: var(--primary-coral);
-  color: white;
-  border: none;
-  padding: 12px 22px;
-  box-shadow: 0 6px 18px rgba(233,94,94,0.18);
+  background: transparent;
+  color: var(--primary-coral);
+  border: 2px solid var(--primary-coral);
+  padding: 10px 20px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
 }
 
 .btn-secondary:hover {
-  opacity: 0.95;
+  background: var(--primary-coral);
+  color: white;
 }
 
 .btn-icon { display:inline-flex; align-items:center; justify-content:center }
 .btn-icon svg { display:block; width:16px; height:16px }
 
 .btn-text { display:inline-block }
+
+/* Mobile: stack buttons full width */
+@media (max-width: 600px) {
+  .hero-actions { flex-direction: column; gap: 12px }
+  .btn { width: 100%; text-align: center }
+  .btn .btn-icon { margin-left: 8px; }
+}
 
 @media (max-width: 600px) {
   .hero {
