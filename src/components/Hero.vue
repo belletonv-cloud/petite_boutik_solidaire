@@ -1,29 +1,24 @@
 <template>
   <section class="hero" :style="heroStyle">
-    <div class="hero-content hero-grid">
+    <div class="hero-content">
       <div class="hero-overlay"></div>
-      <div class="hero-left">
-        <!-- tagline removed as per design: kept hero-left for layout if needed -->
-      </div>
 
-      <div class="hero-right" v-if="btn2Visible">
-        <div class="contact-card">
-          <div class="contact-title">{{ contactTitle }}</div>
-          <div class="contact-desc">{{ contactDesc }}</div>
-          <div class="contact-actions">
-            <a href="#contact" class="card-btn" @click="scrollTo('contact')">
-              <span class="card-icon" aria-hidden="true" v-html="iconHtml"></span>
-              <span class="card-text">{{ btn2Label }}</span>
+      <div class="hero-center">
+        <div class="cta-card">
+          <div class="cta-title" v-if="contactTitle">{{ contactTitle }}</div>
+          <div class="cta-desc" v-if="contactDesc">{{ contactDesc }}</div>
+
+          <div class="cta-actions">
+            <a href="#contact" class="btn-primary-cta" @click="scrollTo('contact')">
+              <span class="btn-icon" aria-hidden="true" v-html="iconHtml"></span>
+              <span>{{ btn2Label }}</span>
             </a>
-            <a href="#calendrier" class="card-btn" @click="scrollTo('calendrier')">
-              <span class="card-icon" aria-hidden="true" v-html="btn1IconHtml"></span>
-              <span class="card-text">{{ btn1Label }}</span>
-            </a>
+            <a href="#calendrier" class="btn-secondary-link" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
           </div>
         </div>
       </div>
     </div>
-</section>
+  </section>
 </template>
 
 <script setup>
@@ -95,23 +90,28 @@ onMounted(() => {
 }
 
 .hero-content {
-  max-width: 1000px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.hero-grid { display:grid; grid-template-columns: 1fr 280px; gap: 18px; align-items:center }
-.hero-left { text-align:left }
-.hero-right { display:flex; align-items:center; justify-content:center }
+.hero-center { display:flex; align-items:center; justify-content:center; padding: 36px 12px }
 
-.contact-card { background: rgba(255,255,255,0.04); padding:10px; border-radius:10px; text-align:left; max-width:280px; box-shadow: none }
-.contact-title { font-weight:700; color:white; margin-bottom:4px; font-size:0.98em }
-.contact-desc { color: rgba(255,255,255,0.9); font-size:0. nineem; margin-bottom:8px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+.cta-card { background: rgba(255,255,255,0.06); padding:14px 16px; border-radius:12px; max-width:520px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); text-align:center }
+.cta-title { font-weight:800; color:white; margin-bottom:6px; font-size:1.05em }
+.cta-desc { color: rgba(255,255,255,0.95); font-size:0.97em; margin-bottom:12px; line-height:1.4; max-height:3.1em; overflow:hidden }
 
-.contact-actions { display:flex; gap:8px }
-.card-btn { background: rgba(255,255,255,0.05); color: white; padding:6px 8px; border-radius:7px; display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-weight:600; font-size:0. nineem; border:1px solid rgba(255,255,255,0.08) }
-.card-btn:hover { background: white; color: var(--primary-teal); border-color: rgba(255,255,255,0.92) }
-.card-icon svg { width:14px; height:14px }
-.card-text { font-size:0. nineem }
+.cta-actions { display:flex; gap:12px; align-items:center; justify-content:center }
+.btn-primary-cta { display:inline-flex; align-items:center; gap:10px; padding:12px 18px; background: var(--primary-coral); color: white; border-radius:10px; text-decoration:none; font-weight:800 }
+.btn-primary-cta:hover { transform: translateY(-2px) }
+.btn-secondary-link { color: rgba(255,255,255,0.9); text-decoration:underline; font-weight:700 }
+
+  .contact-card { display:none }
+  .contact-title { display:none }
+  .contact-desc { display:none }
+
+  .card-btn { display:none }
+  .card-icon { display:none }
+  .card-text { display:none }
 
 .hero-overlay { position:absolute; inset:0; border-radius:15px; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); pointer-events:none }
 
