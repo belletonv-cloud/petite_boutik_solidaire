@@ -40,7 +40,7 @@
       <h3>Ils nous font confiance</h3>
     <div class="badges">
       <template v-for="(r, i) in recognition" :key="i">
-        <button v-if="r.src" class="badge" type="button" @click="openModal(r, $event.currentTarget)" :aria-label="r.alt || 'Badge'">
+        <button v-if="r.src" class="badge" type="button" @click="openModal(r, $event)" :aria-label="r.alt || 'Badge'">
           <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
           <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
@@ -118,12 +118,20 @@ const sanitizeIconSafe = (html) => {
 }
 
 let _lastBadgeEl = null
-const openModal = (r, el) => {
+const openModal = (r, ev) => {
   if (!r || !r.src) return
+  // try to find the badge element robustly from the event
+  let el = null
+  try {
+    if (ev && ev.currentTarget) el = ev.currentTarget
+    else if (ev && ev.target) el = ev.target.closest && ev.target.closest('.badge')
+  } catch (e) { el = null }
   _lastBadgeEl = el || null
   modalImage.value = r.src
   modalAlt.value = r.alt || r.text || r.title || 'Article'
   modalOpen.value = true
+  // lock body scroll early to avoid touch scrolling interfering with modal display on mobile
+  try { document.body.style.overflow = 'hidden' } catch (e) {}
   // ensure modal is scrolled into view so users see it regardless of where they clicked
   setTimeout(() => {
     const mod = document.querySelector('.app-modal-content')

@@ -308,6 +308,8 @@ const onPointerUpWindow = (e) => {
   _capturedPointerId = null
   window.removeEventListener('pointermove', onPointerMoveWindow)
   window.removeEventListener('pointerup', onPointerUpWindow)
+  // restore touch-action on image
+  try { if (modalImg.value) modalImg.value.style.touchAction = '' } catch (e) {}
 }
 
 const lastTapTime = ref(0)
@@ -352,6 +354,16 @@ const onPointerDown = (e) => {
       _capturedPointerId = e.pointerId
     }
   } catch (err) { /* ignore */ }
+  // lock touch-action to prevent the browser handling the touch as page scroll while dragging
+  try { if (modalImg.value) modalImg.value.style.touchAction = 'none' } catch (e) {}
+}
+
+// prevent the browser's touch scrolling when dragging the image
+const applyTouchActionLock = (enable) => {
+  try {
+    if (!modalImg.value) return
+    modalImg.value.style.touchAction = enable ? 'none' : ''
+  } catch (e) {}
 }
 
 // track captured pointer id for touch
