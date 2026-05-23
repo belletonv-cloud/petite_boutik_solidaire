@@ -598,27 +598,37 @@ const togglePause = () => {
   }
 }
 
-const openModal = (idx) => {
+const openModal = async (idx) => {
+  // Open modal and ensure a clean, deterministic initial state.
+  // Important: reset zoom/translate BEFORE any DOM reads or side-effects so
+  // bounds are computed from zoom=1 and the image is centered correctly.
   modalIndex.value = idx
   currentIndex.value = idx
   modalOpen.value = true
   modalLoading.value = true
-  // if the image was preloaded, consider it loaded immediately for UX
+
+  // immediate reset to a known state
+  zoomFactor.value = 1
+  transformX.value = 0
+  transformY.value = 0
+  lastPointer.value = null
+
+  // preload image (does not change zoom/transform)
   const img = images[modalIndex.value]
   if (img && img.fullSrc) {
     const test = new Image()
     test.src = img.fullSrc
     if (test.complete) modalLoading.value = false
   }
-  // ensure modal image fits well on large desktop screens by capping fullSrc transform
+
+  // preload adjacent for UX (no layout/zoom side-effects)
   preloadAdjacent(idx, images.value)
-  // enable magnifier for modal — allow on mobile too so users can pinch/drag
-  // keep this permissive; users can still toggle it off with the UI
+
+  // enable magnifier in the modal so touch/drag/zoom is available — still user-toggleable
   enableMagnifier.value = true
-  // reset zoom/transform for the new image
-  zoomFactor.value = 1
-  transformX.value = 0
-  transformY.value = 0
+
+  // allow the DOM to stabilize before any subsequent handlers read sizes
+  await nextTick()
 }
 
 const openFromGrid = (idx) => {
