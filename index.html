@@ -115,6 +115,26 @@
           }
         } catch(e){ /* ignore */ }
       })();
+
+      // On page show / load (including refresh), ensure small screens are shown at correct zoom
+      function checkAndResetOnLoad() {
+        try {
+          var w = Math.max(window.screen.width || 0, window.innerWidth || 0);
+          if (w <= ORIENTATION_RESET_SCREEN_MAX && window.visualViewport && Math.round(window.visualViewport.scale * 100) / 100 !== 1) {
+            try {
+              var t = document.getElementById('reset-zoom-toast');
+              if (t) { t.style.display = 'block'; setTimeout(function(){ t.style.display = 'none'; }, 1200); }
+            } catch(e){}
+            // perform the gentle reset on load so the page renders correctly after refresh
+            resetZoomTemporarily();
+          } else {
+            maybeShowResetZoomControl();
+          }
+        } catch (e) { try { maybeShowResetZoomControl(); } catch (e){} }
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(checkAndResetOnLoad, 200); });
+      window.addEventListener('pageshow', function(){ setTimeout(checkAndResetOnLoad, 200); });
     </script>
     <meta name="color-scheme" content="light only" />
     <meta name="theme-color" content="#FAFAFA" />
