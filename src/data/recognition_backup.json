@@ -1,0 +1,11 @@
+{
+  "note": "Backup of recognition items and texts from Association.vue before reimplementing the block. Keeps image paths and text for later reuse.",
+  "heading": "Ils nous font confiance",
+  "items": [
+    {
+      "text": "À la une dans la presse locale",
+      "icon": "📰",
+      "src": "/documents/PHOTO-2026-05-02-21-17-283.jpg"
+    }
+  ]
+}

@@ -1,15 +1,16 @@
 <template>
-  <div v-if="modelValue" class="app-modal-overlay" @click.self="close" role="dialog" aria-modal="true" :aria-label="title || 'Modale'" data-open="true">
-    <div class="app-modal-content" ref="content" tabindex="-1">
-      <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
-      <div class="app-modal-body">
-        <slot />
+  <teleport to="body">
+    <div v-if="modelValue" class="app-modal-overlay" @click.self="close" role="dialog" aria-modal="true" :aria-label="title || 'Modale'" data-open="true">
+      <div class="app-modal-content" ref="content" tabindex="-1">
+        <button class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
+        <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
+        <div class="app-modal-body">
+          <slot />
+        </div>
+        <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
       </div>
-      <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
     </div>
-  </div>
-  <!-- fixed close button rendered outside overlay stack to avoid pointer interception issues on mobile -->
-  <button v-if="modelValue" class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
+  </teleport>
 </template>
 
 <script setup>
@@ -28,22 +29,39 @@ const close = () => {
 const onKey = (e) => { if (e.key === 'Escape') close() }
 
 let _previousActive = null
-// elements that may intercept pointer events when modal is open (sticky bars, navs)
-let _interceptorEls = []
+const interceptorSelectors = ['.sticky-bar', '.section-nav', '.nav-inner']
+const disableInterceptors = () => {
+  try {
+    interceptorSelectors.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+      if (!el.dataset.__oldPointer) el.dataset.__oldPointer = el.style.pointerEvents || ''
+      el.style.pointerEvents = 'none'
+    }))
+  } catch (e) { /* ignore */ }
+}
+const restoreInterceptors = () => {
+  try {
+    interceptorSelectors.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+      if (el.dataset && Object.prototype.hasOwnProperty.call(el.dataset, '__oldPointer')) {
+        el.style.pointerEvents = el.dataset.__oldPointer || ''
+        delete el.dataset.__oldPointer
+      }
+    }))
+  } catch (e) { /* ignore */ }
+}
+
 watch(() => props.modelValue, async (open) => {
   if (open) {
     // save previous focused element to restore focus on close
     try { _previousActive = document.activeElement } catch (e) { _previousActive = null }
     document.body.style.overflow = 'hidden'
     try { document.body.classList.add('modal-open') } catch (e) {}
+    disableInterceptors()
     await nextTick()
-    // disable known page elements that may intercept pointer events on mobile
-    try {
-      _interceptorEls = Array.from(document.querySelectorAll('.sticky-bar, .section-nav, .nav-inner'))
-      _interceptorEls.forEach(el => { try { el.style.pointerEvents = 'none' } catch (e) {} })
-    } catch (e) {}
-    // focus content for accessibility
-    if (content.value && typeof content.value.focus === 'function') content.value.focus()
+    // focus content for accessibility and ensure it's visible
+    if (content.value && typeof content.value.focus === 'function') {
+      content.value.focus()
+      try { content.value.scrollIntoView({ block: 'center', behavior: 'auto' }) } catch (e) {}
+    }
     window.addEventListener('keydown', onKey)
   } else {
     // restore previous active focus
@@ -53,31 +71,27 @@ watch(() => props.modelValue, async (open) => {
     _previousActive = null
     document.body.style.overflow = ''
     try { document.body.classList.remove('modal-open') } catch (e) {}
-    // restore pointer events on previously-modified interceptors
-    try {
-      _interceptorEls.forEach(el => { try { el.style.pointerEvents = '' } catch (e) {} })
-    } catch (e) {}
-    _interceptorEls = []
+    restoreInterceptors()
     window.removeEventListener('keydown', onKey)
   }
 })
 
-onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.style.overflow = '' })
-// ensure class removed if component destroyed
-try { document.body.classList.remove('modal-open') } catch (e) {}
+onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; try { document.body.classList.remove('modal-open') } catch (e) {} })
 </script>
 
 <style scoped>
 .app-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99999;
+  z-index: 99999; /* very high to avoid interception */
   padding: 20px;
 }
+.app-modal-overlay__backdrop { position: absolute; inset:0; background: rgba(0,0,0,0.6) }
+.app-modal-wrapper { position: relative; z-index: 1; display:flex; align-items:center; justify-content:center; width:100% }
 .app-modal-content {
   background: #fff;
   max-width: 720px;

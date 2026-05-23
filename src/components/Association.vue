@@ -36,6 +36,7 @@
       </div>
     </div>
 
+<<<<<<< HEAD
     <div class="recognition" v-if="recognition && recognition.length">
       <h3>Ils nous font confiance</h3>
     <div class="badges">
@@ -63,6 +64,9 @@
         <div v-if="debugEnabled" class="modal-debug">{{ modalImage }}</div>
       </div>
     </Modal>
+=======
+    <Recognition :items="recognition" />
+>>>>>>> restore/to-55f231e
   </section>
 </template>
 
@@ -70,7 +74,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
-import Modal from './Modal.vue'
+import Recognition from './Recognition.vue'
 let purifier = null
 const sanitizeIcon = (html) => {
   if (!html) return ''
@@ -81,11 +85,14 @@ const sanitizeIcon = (html) => {
   return String(html).replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+<<<<<<< HEAD
 const modalOpen = ref(false)
 const modalImage = ref('')
 const modalAlt = ref('')
 // enable debug display when ?debug=1 is present in the URL
 const debugEnabled = typeof window !== 'undefined' && window.location && window.location.search && window.location.search.indexOf('debug=1') !== -1
+=======
+>>>>>>> restore/to-55f231e
 
 
 const titreAssociation = ref("L'Association Bras Ouverts")
@@ -125,6 +132,7 @@ const sanitizeIconSafe = (html) => {
   return String(html).replace(/<[^>]*>/g, '')
 }
 
+<<<<<<< HEAD
 let _lastBadgeEl = null
 const openModal = async (r, idx) => {
   if (!r || !r.src) return
@@ -168,6 +176,9 @@ const onModalClose = () => {
 
 
 // modal behavior removed; opening badges will use direct links for now
+=======
+// Recognition modal handled by src/components/Recognition.vue
+>>>>>>> restore/to-55f231e
 
 const values = [
   {
@@ -282,7 +293,14 @@ const values = [
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
 .dons-accepted { background: #F7FFF9; border: 1px solid #CFF3E3; padding: 12px; border-radius: 8px }
-.dons-rejected { background: #FFF7F7; border: 1px solid #F3CFCF; padding: 12px; border-radius: 8px }
+.dons-rejected {
+  background: #fff8f8; /* very soft pink */
+  border: 1px solid rgba(242,184,184,0.45); /* light coral border */
+  color: var(--text-dark);
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
 
 .recognition h3 {
   color: var(--primary-teal);
@@ -329,18 +347,11 @@ const values = [
   font-size: 1.2em;
 }
 
-.badge-image {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
+.badge-image { display: none }
 
 @media (max-width: 600px) {
   .badge { padding: 8px 12px; gap: 6px }
-  .badge-image { width: 42px; height: 42px }
+  .badge-image { display: none }
   .badge-text { font-size: 0.85em }
 }
 

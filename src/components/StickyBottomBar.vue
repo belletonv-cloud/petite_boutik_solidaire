@@ -44,7 +44,7 @@ onMounted(() => {
 <style scoped>
 .sticky-bar {
   position: fixed;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0);
   left: 0;
   right: 0;
   z-index: 700;
@@ -53,6 +53,8 @@ onMounted(() => {
   box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  will-change: transform;
+  touch-action: manipulation;
 }
 
 /* When modal is open, ensure sticky bar does not intercept pointer events */
@@ -65,6 +67,7 @@ body.modal-open .sticky-bar { pointer-events: none; }
   max-width: 800px;
   margin: 0 auto;
   padding: 8px 12px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
   gap: 6px;
   font-size: 0.78em;
 }
