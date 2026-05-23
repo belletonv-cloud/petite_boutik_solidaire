@@ -325,14 +325,16 @@ const onPointerDown = (e) => {
   const now = Date.now()
   if (now - lastTapTime.value < 300) {
     // double tap: toggle zoom
-      const imgRect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
+      const imageRect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
       const container = imgWrap.value ? imgWrap.value.getBoundingClientRect() : null
-      const cx = imgRect ? e.clientX : 0
-      const cy = imgRect ? e.clientY : 0
+      const cx = imageRect ? e.clientX : 0
+      const cy = imageRect ? e.clientY : 0
       if (zoomFactor.value === 1) {
         const next = Math.min(zoomMax, 1.8)
-        const offsetX = imgRect ? cx - imgRect.left : 0
-        const offsetY = imgRect ? cy - imgRect.top : 0
+        const baseW = modalImg.value ? modalImg.value.offsetWidth || 0 : 0
+        const baseH = modalImg.value ? modalImg.value.offsetHeight || 0 : 0
+        const offsetX = imageRect ? cx - imageRect.left : 0
+        const offsetY = imageRect ? cy - imageRect.top : 0
         const prev = zoomFactor.value
         const ratio = next / prev
         // transformX/Y are visual pixels. Compute new visual translate to keep point stable:
@@ -340,9 +342,9 @@ const onPointerDown = (e) => {
         const V_oldY = transformY.value
         const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
         const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
-        // compute new image size (imgRect is current scaled width at prev)
-        const newImgWidth = imgRect ? imgRect.width * (next / prev) : 0
-        const newImgHeight = imgRect ? imgRect.height * (next / prev) : 0
+        // compute new image size from base (untransformed) dimensions
+        const newImgWidth = baseW * next
+        const newImgHeight = baseH * next
         const minVisX2 = container ? Math.min(0, container.width - newImgWidth) : 0
         const minVisY2 = container ? Math.min(0, container.height - newImgHeight) : 0
         zoomFactor.value = next
@@ -407,17 +409,19 @@ let _capturedPointerId = null
     const next = clamp(prev + (delta > 0 ? -step : step), zoomMin, zoomMax)
     if (next === prev) return
     // keep cursor point stable while zooming — compute using visual translate units
-    const imgRect = modalImg.value.getBoundingClientRect()
+    const imageRect = modalImg.value.getBoundingClientRect()
     const container = imgWrap.value.getBoundingClientRect()
-    const offsetX = e.clientX - imgRect.left
-    const offsetY = e.clientY - imgRect.top
+    const baseW = modalImg.value.offsetWidth || 0
+    const baseH = modalImg.value.offsetHeight || 0
+    const offsetX = e.clientX - imageRect.left
+    const offsetY = e.clientY - imageRect.top
     const ratio = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
     const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
     const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
-    const newImgW = imgRect.width * ratio
-    const newImgH = imgRect.height * ratio
+    const newImgW = baseW * next
+    const newImgH = baseH * next
     const minVisX2 = Math.min(0, container.width - newImgW)
     const minVisY2 = Math.min(0, container.height - newImgH)
     zoomFactor.value = next
@@ -465,19 +469,21 @@ const toggleEnableMagnifier = () => {
     const prev = zoomFactor.value
     const next = Math.min(zoomMax, prev + 0.2)
     if (next === prev) return
-    const imgRect = modalImg.value.getBoundingClientRect()
+    const imageRect = modalImg.value.getBoundingClientRect()
     const container = imgWrap.value.getBoundingClientRect()
-    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imgRect.left + imgRect.width / 2)
-    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imgRect.top + imgRect.height / 2)
-    const offsetX = cx - imgRect.left
-    const offsetY = cy - imgRect.top
+    const baseW = modalImg.value.offsetWidth || 0
+    const baseH = modalImg.value.offsetHeight || 0
+    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imageRect.left + imageRect.width / 2)
+    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imageRect.top + imageRect.height / 2)
+    const offsetX = cx - imageRect.left
+    const offsetY = cy - imageRect.top
     const ratio = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
     const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
     const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
-    const newImgW = imgRect.width * ratio
-    const newImgH = imgRect.height * ratio
+    const newImgW = baseW * next
+    const newImgH = baseH * next
     const minVisX2 = Math.min(0, container.width - newImgW)
     const minVisY2 = Math.min(0, container.height - newImgH)
     zoomFactor.value = next
@@ -489,19 +495,21 @@ const zoomOut = () => {
   const prev = zoomFactor.value
   const next = Math.max(zoomMin, prev - 0.2)
   if (next === prev) return
-  const rect = modalImg.value.getBoundingClientRect()
-  const cx = lastPointer.value ? lastPointer.value.x : Math.round(rect.left + rect.width / 2)
-  const cy = lastPointer.value ? lastPointer.value.y : Math.round(rect.top + rect.height / 2)
-  const offsetX = cx - rect.left
-  const offsetY = cy - rect.top
+    const imageRect = modalImg.value.getBoundingClientRect()
+    const baseW = modalImg.value.offsetWidth || 0
+    const baseH = modalImg.value.offsetHeight || 0
+    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imageRect.left + imageRect.width / 2)
+    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imageRect.top + imageRect.height / 2)
+    const offsetX = cx - imageRect.left
+    const offsetY = cy - imageRect.top
     const ratio3 = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
     const V_newX = V_oldX * ratio3 + offsetX * (1 - ratio3)
     const V_newY = V_oldY * ratio3 + offsetY * (1 - ratio3)
     zoomFactor.value = next
-    const newW = rect.width * ratio3
-    const newH = rect.height * ratio3
+    const newW = baseW * next
+    const newH = baseH * next
     const minVisX3 = Math.min(0, imgWrap.value.getBoundingClientRect().width - newW)
     const minVisY3 = Math.min(0, imgWrap.value.getBoundingClientRect().height - newH)
     transformX.value = clamp(V_newX, minVisX3, 0)
