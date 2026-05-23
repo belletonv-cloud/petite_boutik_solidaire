@@ -47,9 +47,21 @@
         } catch (e) { /* ignore */ }
       }
 
-      window.addEventListener('resize', function(){ window.__defineViewportHeight(); enforceMobileViewportZoom(); });
+      window.addEventListener('resize', function(){ window.__defineViewportHeight(); maybeShowResetZoomControl(); });
       window.addEventListener('orientationchange', function(){
-        setTimeout(function(){ window.__defineViewportHeight(); enforceMobileViewportZoom(); }, 120);
+        // After orientation change, recalc --vh and if the visual viewport reports a scale != 1
+        // attempt a gentle reset so the layout adapts. We do this only for orientation events
+        // (not for arbitrary pinch-zooms), to preserve user zoom preferences.
+        setTimeout(function(){
+          window.__defineViewportHeight();
+          try {
+            if (window.visualViewport && Math.round(window.visualViewport.scale * 100) / 100 !== 1) {
+              resetZoomTemporarily();
+            } else {
+              maybeShowResetZoomControl();
+            }
+          } catch (e) { maybeShowResetZoomControl(); }
+        }, 120);
       });
       // initial run
       window.__defineViewportHeight();
