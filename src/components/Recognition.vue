@@ -3,15 +3,10 @@
     <h3>Ils nous font confiance</h3>
     <div class="badges">
       <template v-for="(r, i) in items" :key="i">
-        <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r,i)" :aria-label="r.alt || r.text || 'Badge'">
-          <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
+        <button class="badge" type="button" :data-recognition-index="i" @click="openModal(r,i)" :aria-label="r.alt || r.text || 'Badge'">
           <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
           <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
-        <div v-else class="badge" :aria-label="r.alt || 'Badge'">
-          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-        </div>
       </template>
     </div>
 
@@ -73,8 +68,9 @@ const onModalClose = () => {
 <style scoped>
 .recognition { margin-top: 35px; text-align: center }
 .badges { display:flex; justify-content:center; gap:15px; flex-wrap:wrap }
-.badge { display:inline-flex; align-items:center; gap:8px; background:white; border:2px solid var(--primary-teal); color:var(--primary-teal); padding:10px 18px; border-radius:30px; font-weight:600; cursor:pointer }
-.badge-image { width:56px; height:56px; object-fit:cover; border-radius:8px }
+.badge { display:inline-flex; align-items:center; gap:10px; background:white; border:2px solid var(--primary-teal); color:var(--primary-teal); padding:10px 16px; border-radius:28px; font-weight:600; cursor:pointer }
+.badge-icon { font-size:1.25em }
+.badge-image { display:none }
 @media (max-width:600px) { .badge{ padding:8px 12px } .badge-image{ width:42px; height:42px } }
 
 /* modal styles (same pattern as MentionsLegales.vue) */
