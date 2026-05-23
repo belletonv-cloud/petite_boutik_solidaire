@@ -15,6 +15,11 @@
       // - We DO NOT disable pinch/double-tap zoom globally (to preserve accessibility).
       // - When the browser reports a non-1 scale after rotation, we show a small reset control
       //   letting the user restore the default zoom/view (this is explicit and optional).
+      // configuration
+      var ORIENTATION_RESET_SCREEN_MAX = 420; // px: only auto-reset on small screens
+      var ORIENTATION_RESET_DELAY = 300; // ms before handling orientation change
+      var RESET_META_DURATION = 300; // ms to keep maximum-scale=1.0 before restoring
+
       function maybeShowResetZoomControl() {
         try {
           if (!window.visualViewport) return;
@@ -24,7 +29,7 @@
           if (scale && scale !== 1) {
             ctrl.style.display = 'block';
             ctrl.setAttribute('aria-hidden', 'false');
-            ctrl.querySelector('button').focus({ preventScroll: true });
+            // Do not forcibly steal focus on mobile; only announce via aria-live toast when needed
           } else {
             ctrl.style.display = 'none';
             ctrl.setAttribute('aria-hidden', 'true');
@@ -32,40 +37,58 @@
         } catch (e) { /* ignore */ }
       }
 
+      function announceAccessibly(message) {
+        try {
+          var live = document.getElementById('reset-zoom-live');
+          if (!live) return;
+          live.textContent = message;
+        } catch(e) { /* ignore */ }
+      }
+
       function resetZoomTemporarily() {
         try {
           var meta = document.querySelector('meta[name="viewport"]');
           if (!meta) return;
           var base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+          // announce before resetting so screen readers are aware
+          announceAccessibly('Réinitialisation de l\'affichage en cours');
           // temporarily set maximum-scale to 1 to force the browser to re-evaluate the zoom
           meta.setAttribute('content', base + ', maximum-scale=1.0');
           // small timeout to allow the browser to apply
           setTimeout(function(){
             meta.setAttribute('content', base);
+            announceAccessibly('Affichage réinitialisé');
             maybeShowResetZoomControl();
-          }, 250);
+          }, RESET_META_DURATION);
         } catch (e) { /* ignore */ }
       }
 
       window.addEventListener('resize', function(){ window.__defineViewportHeight(); maybeShowResetZoomControl(); });
       window.addEventListener('orientationchange', function(){
-        // After orientation change, recalc --vh and if the visual viewport reports a scale != 1
-        // attempt a gentle reset so the layout adapts. We do this only for orientation events
-        // (not for arbitrary pinch-zooms), to preserve user zoom preferences.
+        // Only auto-reset for small screens to avoid surprising tablet/desktop users
         setTimeout(function(){
           window.__defineViewportHeight();
           try {
-            if (window.visualViewport && Math.round(window.visualViewport.scale * 100) / 100 !== 1) {
+            var w = Math.max(window.screen.width || 0, window.innerWidth || 0);
+            if (w <= ORIENTATION_RESET_SCREEN_MAX && window.visualViewport && Math.round(window.visualViewport.scale * 100) / 100 !== 1) {
+              // Inform the user via a visible but subtle toast that we will adapt the view
+              try {
+                var t = document.getElementById('reset-zoom-toast');
+                if (t) {
+                  t.style.display = 'block';
+                  setTimeout(function(){ t.style.display = 'none'; }, 1200);
+                }
+              } catch(e){}
               resetZoomTemporarily();
             } else {
               maybeShowResetZoomControl();
             }
           } catch (e) { maybeShowResetZoomControl(); }
-        }, 120);
+        }, ORIENTATION_RESET_DELAY);
       });
       // initial run
       window.__defineViewportHeight();
-      // create reset zoom control
+      // create reset zoom control + live region + toast
       (function(){
         try {
           var ctrl = document.createElement('div');
@@ -73,7 +96,16 @@
           ctrl.setAttribute('aria-hidden','true');
           ctrl.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99999;display:none;';
           ctrl.innerHTML = '<button style="background:#ffffffcc;border:1px solid #ddd;padding:8px 12px;border-radius:8px;">Réinitialiser l\'affichage</button>';
-          document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(ctrl); });
+          var live = document.createElement('div');
+          live.id = 'reset-zoom-live';
+          live.setAttribute('aria-live','polite');
+          live.setAttribute('aria-atomic','true');
+          live.style.cssText = 'position:fixed;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;';
+          var toast = document.createElement('div');
+          toast.id = 'reset-zoom-toast';
+          toast.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:rgba(0,0,0,0.75);color:white;padding:8px 12px;border-radius:8px;display:none;z-index:100000;font-size:14px;';
+          toast.textContent = 'Réglage de l\'affichage...';
+          document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(ctrl); document.body.appendChild(live); document.body.appendChild(toast); });
           ctrl.addEventListener('click', function(e){ e.preventDefault(); resetZoomTemporarily(); });
           if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', maybeShowResetZoomControl);
