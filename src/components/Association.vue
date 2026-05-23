@@ -393,4 +393,14 @@ const values = [
 /* modal remnants removed */
 
 /* modal styles removed from Association.vue; modal will be reimplemented centrally */
+
+/* Modal image sizing specific to recognition modal */
+.trust-modal-img {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+  margin: 0 auto;
+}
 </style>
