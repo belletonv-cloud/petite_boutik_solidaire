@@ -1152,6 +1152,14 @@ watch(() => modalOpen.value, (open) => {
   box-shadow: 0 6px 18px rgba(17,150,140,0.12);
 }
 
+/* fixed zoom controls for modal overlay */
+.modal .zoom-controls {
+  position: fixed !important;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1200;
+}
+
 .magnifier-indicator {
   position: absolute;
   right: 14px;
