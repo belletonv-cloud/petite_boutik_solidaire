@@ -288,11 +288,15 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
     if (!dragging.value || !modalImg.value || !imgWrap.value) return
     const dx = e.clientX - _startPointer.x
     const dy = e.clientY - _startPointer.y
-    // use container (imgWrap) vs image rect to compute available pan range
+    // use container (imgWrap) vs image natural/display size to compute available pan range
     const container = imgWrap.value.getBoundingClientRect()
-    const imgRect = modalImg.value.getBoundingClientRect()
-    const minVisX = Math.min(0, container.width - imgRect.width)
-    const minVisY = Math.min(0, container.height - imgRect.height)
+    // offsetWidth/offsetHeight reflect the untransformed rendered size (responsive)
+    const dispW = modalImg.value.offsetWidth || 0
+    const dispH = modalImg.value.offsetHeight || 0
+    const scaledW = dispW * zoomFactor.value
+    const scaledH = dispH * zoomFactor.value
+    const minVisX = Math.min(0, container.width - scaledW)
+    const minVisY = Math.min(0, container.height - scaledH)
     // transformX/Y are stored as visual translate (pixels)
     transformX.value = clamp(_startTransform.x + dx, minVisX, 0)
     transformY.value = clamp(_startTransform.y + dy, minVisY, 0)
