@@ -1,7 +1,6 @@
 <template>
   <div v-if="modelValue" class="app-modal-overlay" @click.self="close" role="dialog" aria-modal="true" :aria-label="title || 'Modale'" data-open="true">
     <div class="app-modal-content" ref="content" tabindex="-1">
-      <button class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
       <h2 v-if="title" class="app-modal-title">{{ title }}</h2>
       <div class="app-modal-body">
         <slot />
@@ -9,8 +8,8 @@
       <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
     </div>
   </div>
-  <!-- fixed fallback close button rendered outside overlay stack to avoid pointer interception issues on mobile -->
-  <button v-if="modelValue" class="app-modal-close-fixed" @click="close" aria-label="Fermer la modale">✕</button>
+  <!-- fixed close button rendered outside overlay stack to avoid pointer interception issues on mobile -->
+  <button v-if="modelValue" class="app-modal-close" @click="close" aria-label="Fermer la modale">✕</button>
 </template>
 
 <script setup>
@@ -29,6 +28,8 @@ const close = () => {
 const onKey = (e) => { if (e.key === 'Escape') close() }
 
 let _previousActive = null
+// elements that may intercept pointer events when modal is open (sticky bars, navs)
+let _interceptorEls = []
 watch(() => props.modelValue, async (open) => {
   if (open) {
     // save previous focused element to restore focus on close
@@ -36,6 +37,11 @@ watch(() => props.modelValue, async (open) => {
     document.body.style.overflow = 'hidden'
     try { document.body.classList.add('modal-open') } catch (e) {}
     await nextTick()
+    // disable known page elements that may intercept pointer events on mobile
+    try {
+      _interceptorEls = Array.from(document.querySelectorAll('.sticky-bar, .section-nav, .nav-inner'))
+      _interceptorEls.forEach(el => { try { (el as HTMLElement).style.pointerEvents = 'none' } catch (e) {} })
+    } catch (e) {}
     // focus content for accessibility
     if (content.value && typeof content.value.focus === 'function') content.value.focus()
     window.addEventListener('keydown', onKey)
@@ -47,6 +53,11 @@ watch(() => props.modelValue, async (open) => {
     _previousActive = null
     document.body.style.overflow = ''
     try { document.body.classList.remove('modal-open') } catch (e) {}
+    // restore pointer events on previously-modified interceptors
+    try {
+      _interceptorEls.forEach(el => { try { (el as HTMLElement).style.pointerEvents = '' } catch (e) {} })
+    } catch (e) {}
+    _interceptorEls = []
     window.removeEventListener('keydown', onKey)
   }
 })
