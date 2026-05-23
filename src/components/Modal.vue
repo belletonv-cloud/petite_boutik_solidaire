@@ -9,6 +9,8 @@
       <div v-if="footer" class="app-modal-footer">{{ footer }}</div>
     </div>
   </div>
+  <!-- fixed fallback close button rendered outside overlay stack to avoid pointer interception issues on mobile -->
+  <button v-if="modelValue" class="app-modal-close-fixed" @click="close" aria-label="Fermer la modale">✕</button>
 </template>
 
 <script setup>
@@ -32,6 +34,7 @@ watch(() => props.modelValue, async (open) => {
     // save previous focused element to restore focus on close
     try { _previousActive = document.activeElement } catch (e) { _previousActive = null }
     document.body.style.overflow = 'hidden'
+    try { document.body.classList.add('modal-open') } catch (e) {}
     await nextTick()
     // focus content for accessibility
     if (content.value && typeof content.value.focus === 'function') content.value.focus()
@@ -43,11 +46,14 @@ watch(() => props.modelValue, async (open) => {
     }
     _previousActive = null
     document.body.style.overflow = ''
+    try { document.body.classList.remove('modal-open') } catch (e) {}
     window.removeEventListener('keydown', onKey)
   }
 })
 
 onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.style.overflow = '' })
+// ensure class removed if component destroyed
+try { document.body.classList.remove('modal-open') } catch (e) {}
 </script>
 
 <style scoped>

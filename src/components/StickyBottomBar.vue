@@ -55,6 +55,9 @@ onMounted(() => {
   transform: translateZ(0);
 }
 
+/* When modal is open, ensure sticky bar does not intercept pointer events */
+body.modal-open .sticky-bar { pointer-events: none; }
+
 .bar-inner {
   display: flex;
   align-items: center;
