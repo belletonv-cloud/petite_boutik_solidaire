@@ -74,8 +74,8 @@
               @pointerdown.prevent="onPointerDown"
               @wheel.prevent="onWheel"
               ref="modalImg"
-              :style="{ transform: `translate(${transformX}px, ${transformY}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease' }"
-            />
+            :style="{ transform: `scale(${zoomFactor}) translate(${(transformX/zoomFactor).toFixed(2)}px, ${(transformY/zoomFactor).toFixed(2)}px)`, transition: dragging ? 'none' : 'transform 150ms ease' }"
+          />
           </div>
 
           <!-- elegant zoom controls: toggle + / - -->
@@ -291,12 +291,16 @@ const onPointerMoveWindow = (e) => {
   if (!dragging.value || !modalImg.value) return
   const dx = e.clientX - _startPointer.x
   const dy = e.clientY - _startPointer.y
+  // compute using natural image size and current scale, but translate coordinates scaled properly
   const rect = modalImg.value.getBoundingClientRect()
   const s = zoomFactor.value
+  // rect.width is displayed width; scaled total width = rect.width * s
   const scaledW = rect.width * s
   const scaledH = rect.height * s
-  const minX = Math.min(0, rect.width - scaledW)
-  const minY = Math.min(0, rect.height - scaledH)
+  // allowed translate range in px (when image is scaled, translate is limited so content remains visible)
+  const minX = Math.min(0, (rect.width - scaledW))
+  const minY = Math.min(0, (rect.height - scaledH))
+  // apply delta directly, but keep transform values in pixel-space of the scaled image
   transformX.value = clamp(_startTransform.x + dx, minX, 0)
   transformY.value = clamp(_startTransform.y + dy, minY, 0)
 }
@@ -409,16 +413,22 @@ const updateKnob = (clientX, clientY) => {
   const ndx = Math.max(-max, Math.min(max, dx))
   const ndy = Math.max(-max, Math.min(max, dy))
   joystickKnobStyle.value = { transform: `translate(${ndx}px, ${ndy}px)` }
-  // map knob offset to panning velocity -- small factor to keep control smooth
-  const factor = 0.18
+  // map knob offset to panning delta in pixels (proportional to displayed image size)
   const rect = modalImg.value.getBoundingClientRect()
-  const scaledW = rect.width * zoomFactor.value
-  const scaledH = rect.height * zoomFactor.value
+  const s = zoomFactor.value
+  const scaledW = rect.width * s
+  const scaledH = rect.height * s
   const minX = Math.min(0, rect.width - scaledW)
   const minY = Math.min(0, rect.height - scaledH)
-  // shift transform proportionally
-  transformX.value = clamp(transformX.value + -ndx * factor, minX, 0)
-  transformY.value = clamp(transformY.value + -ndy * factor, minY, 0)
+  // compute normalized knob position (-1..1)
+  const nx = ndx / max
+  const ny = ndy / max
+  // target translate: push to edge depending on knob (we interpret knob as destination direction)
+  const targetX = clamp(-nx * (Math.abs(minX)), minX, 0)
+  const targetY = clamp(-ny * (Math.abs(minY)), minY, 0)
+  // ease towards target for smooth motion
+  transformX.value = clamp(transformX.value + (targetX - transformX.value) * 0.25, minX, 0)
+  transformY.value = clamp(transformY.value + (targetY - transformY.value) * 0.25, minY, 0)
 }
 
 // track captured pointer id for touch
