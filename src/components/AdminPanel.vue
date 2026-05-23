@@ -755,11 +755,11 @@ const siteBlocs = ref([
     id: 'hero', icon: '🎨', label: "Bandeau d'accueil", open: false, saved: false,
     desc: 'Grande accroche, dégradé de fond et boutons',
     fields: [
-      { id: 'hero_tagline', label: 'Texte accroche', multiline: true, default: "Vêtements enfants, chaussures et puériculture à prix mini dans un esprit de partage et de convivialité" },
+      { id: 'hero_tagline', label: 'Texte accroche', multiline: true, default: "Vêtements & puériculture à petits prix — esprit solidaire" },
       { id: 'hero_gradient_start', label: 'Couleur de début du dégradé', type: 'color', default: '#1BA9A8' },
       { id: 'hero_gradient_end', label: 'Couleur de fin du dégradé', type: 'color', default: '#E95E5E' },
       { id: 'hero_gradient_angle', label: 'Angle du dégradé (°)', type: 'number', default: 135 },
-      { id: 'hero_btn1_label', label: 'Bouton 1 — texte', type: 'text', default: 'Voir les horaires' },
+      { id: 'hero_btn1_label', label: 'Bouton 1 — texte', type: 'text', default: 'Horaires' },
       { id: 'hero_btn1_visible', label: 'Bouton 1 — visible', type: 'toggle', default: true },
       { id: 'hero_btn2_label', label: 'Bouton 2 — texte', type: 'text', default: 'Nous contacter' },
       { id: 'hero_btn2_visible', label: 'Bouton 2 — visible', type: 'toggle', default: true },

@@ -33,11 +33,11 @@ import { ref, computed, onMounted } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
 
-const tagline = ref("Vêtements enfants, chaussures et puériculture à prix mini dans un esprit de partage et de convivialité")
+const tagline = ref("Vêtements & puériculture à petits prix — esprit solidaire")
 const gradientStart = ref('#1BA9A8')
 const gradientEnd = ref('#E95E5E')
 const gradientAngle = ref(135)
-const btn1Label = ref('Voir les horaires')
+const btn1Label = ref('Horaires')
 const btn1Visible = ref(true)
 const btn2Label = ref('Nous contacter')
 const btn2Visible = ref(true)
@@ -104,14 +104,15 @@ onMounted(() => {
 .hero-left { text-align:left }
 .hero-right { display:flex; align-items:center; justify-content:center }
 
-.contact-card { background: rgba(255,255,255,0.06); padding:18px; border-radius:12px; text-align:left }
-.contact-title { font-weight:700; color:white; margin-bottom:6px }
-.contact-desc { color: rgba(255,255,255,0.9); font-size:0.95em; margin-bottom:12px }
+.contact-card { background: rgba(255,255,255,0.04); padding:12px; border-radius:10px; text-align:left; max-width:320px }
+.contact-title { font-weight:700; color:white; margin-bottom:6px; font-size:1em }
+.contact-desc { color: rgba(255,255,255,0.9); font-size:0.95em; margin-bottom:10px; line-height:1.4 }
 
-.contact-actions { display:flex; gap:10px }
-.card-btn { background: white; color: var(--primary-teal); padding:10px 12px; border-radius:8px; display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-weight:700 }
-.card-icon svg { width:18px; height:18px }
-.card-text { font-size:0.95em }
+.contact-actions { display:flex; gap:8px }
+.card-btn { background: rgba(255,255,255,0.06); color: white; padding:8px 10px; border-radius:8px; display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-weight:700; font-size:0.95em; border:1px solid rgba(255,255,255,0.12) }
+.card-btn:hover { background: white; color: var(--primary-teal); border-color: rgba(255,255,255,0.92) }
+.card-icon svg { width:16px; height:16px }
+.card-text { font-size:0.92em }
 
 .hero-overlay { position:absolute; inset:0; border-radius:15px; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); pointer-events:none }
 
