@@ -42,6 +42,7 @@
           var base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
           // announce before resetting so screen readers are aware
           announceAccessibly('Réinitialisation de l\'affichage en cours');
+          console.debug('[zoom-reset] start: applying temporary meta to force zoom-out');
           // temporarily set maximum-scale=1 and disable user scaling to force a full "zoom out" state
           // (this is intentional and temporary; we restore the original meta shortly after)
           meta.setAttribute('content', base + ', maximum-scale=1.0, user-scalable=0');
@@ -57,6 +58,7 @@
           var poller = setInterval(function(){
             try {
               var s = window.visualViewport ? Math.round(window.visualViewport.scale * 100) / 100 : 1;
+              console.debug('[zoom-reset] poll scale=', s, 'elapsed=', Date.now()-start);
               if (s === 1 || (Date.now() - start) > maxWait) {
                 clearInterval(poller);
                 // restore original viewport meta
@@ -64,16 +66,21 @@
                 // small additional reflow nudge
                 try { var sx2 = window.scrollX || 0, sy2 = window.scrollY || 0; window.scrollTo(sx2, sy2 + 1); setTimeout(function(){ window.scrollTo(sx2, sy2); }, 50); } catch(e) {}
                 announceAccessibly('Affichage réinitialisé');
+                console.debug('[zoom-reset] finished: scale=', s, 'total_ms=', Date.now()-start);
                 maybeShowResetZoomControl();
               }
             } catch (e) {
               clearInterval(poller);
               try { meta.setAttribute('content', base); } catch(e) {}
+              console.debug('[zoom-reset] error during poll, restored meta');
               maybeShowResetZoomControl();
             }
           }, pollInterval);
         } catch (e) { /* ignore */ }
       }
+
+      // Expose a manual trigger for debugging/testing
+      try { window.__forceResetZoom = resetZoomTemporarily } catch (e) {}
 
       window.addEventListener('resize', function(){ window.__defineViewportHeight(); maybeShowResetZoomControl(); });
       window.addEventListener('orientationchange', function(){
