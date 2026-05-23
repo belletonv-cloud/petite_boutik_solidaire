@@ -54,13 +54,13 @@
     </div>
 
     <Modal v-model:modelValue="modalOpen" title="Ils nous font confiance" @close="onModalClose">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+      <div class="modal-body">
         <img
           class="trust-modal-img"
           :src="modalImage"
           :alt="modalAlt"
         />
-        <div v-if="debugEnabled" style="font-size:12px;color:#fff;background:rgba(0,0,0,0.45);padding:6px 8px;border-radius:6px;max-width:90vw;word-break:break-all">{{ modalImage }}</div>
+        <div v-if="debugEnabled" class="modal-debug">{{ modalImage }}</div>
       </div>
     </Modal>
   </section>
@@ -390,5 +390,24 @@ const values = [
   max-height: 80vh;
   object-fit: contain;
   border-radius: 8px;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 80vh;
+  overflow: auto;
+  gap: 8px;
+}
+
+.modal-debug {
+  font-size: 12px;
+  color: #fff;
+  background: rgba(0,0,0,0.45);
+  padding: 6px 8px;
+  border-radius: 6px;
+  max-width: 90vw;
+  word-break: break-all;
 }
 </style>
