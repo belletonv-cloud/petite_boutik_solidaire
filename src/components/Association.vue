@@ -209,7 +209,14 @@ const values = [
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
 .dons-accepted { background: #F7FFF9; border: 1px solid #CFF3E3; padding: 12px; border-radius: 8px }
-.dons-rejected { background: #FFECEC; border: 1px solid #F2B8B8; padding: 12px; border-radius: 8px; box-shadow: 0 4px 8px rgba(242,184,184,0.15) }
+.dons-rejected {
+  background: #fff;
+  border: 2px solid var(--primary-coral);
+  color: var(--text-dark);
+  padding: 14px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
 
 .recognition h3 {
   color: var(--primary-teal);
@@ -256,18 +263,11 @@ const values = [
   font-size: 1.2em;
 }
 
-.badge-image {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
+.badge-image { display: none }
 
 @media (max-width: 600px) {
   .badge { padding: 8px 12px; gap: 6px }
-  .badge-image { width: 42px; height: 42px }
+  .badge-image { display: none }
   .badge-text { font-size: 0.85em }
 }
 
