@@ -11,20 +11,39 @@
         document.documentElement.style.setProperty('--vh', t + 'px');
       };
 
-      // If the device supports touch, enforce a maximum-scale to avoid accidental pinch/double-tap zoom.
-      // This makes the UI more stable on mobile orientation changes. We only apply it on touch devices.
-      function enforceMobileViewportZoom() {
+      // Accessibility-friendly approach to accidental zoom:
+      // - We DO NOT disable pinch/double-tap zoom globally (to preserve accessibility).
+      // - When the browser reports a non-1 scale after rotation, we show a small reset control
+      //   letting the user restore the default zoom/view (this is explicit and optional).
+      function maybeShowResetZoomControl() {
         try {
-          var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+          if (!window.visualViewport) return;
+          var scale = Math.round(window.visualViewport.scale * 100) / 100;
+          var ctrl = document.getElementById('reset-zoom-control');
+          if (!ctrl) return;
+          if (scale && scale !== 1) {
+            ctrl.style.display = 'block';
+            ctrl.setAttribute('aria-hidden', 'false');
+            ctrl.querySelector('button').focus({ preventScroll: true });
+          } else {
+            ctrl.style.display = 'none';
+            ctrl.setAttribute('aria-hidden', 'true');
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function resetZoomTemporarily() {
+        try {
           var meta = document.querySelector('meta[name="viewport"]');
           if (!meta) return;
           var base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-          if (isTouch) {
-            // Prevent pinch/double-tap zoom which often breaks layout on orientation change
-            meta.setAttribute('content', base + ', maximum-scale=1.0, user-scalable=0');
-          } else {
+          // temporarily set maximum-scale to 1 to force the browser to re-evaluate the zoom
+          meta.setAttribute('content', base + ', maximum-scale=1.0');
+          // small timeout to allow the browser to apply
+          setTimeout(function(){
             meta.setAttribute('content', base);
-          }
+            maybeShowResetZoomControl();
+          }, 250);
         } catch (e) { /* ignore */ }
       }
 
@@ -34,7 +53,24 @@
       });
       // initial run
       window.__defineViewportHeight();
-      enforceMobileViewportZoom();
+      // create reset zoom control
+      (function(){
+        try {
+          var ctrl = document.createElement('div');
+          ctrl.id = 'reset-zoom-control';
+          ctrl.setAttribute('aria-hidden','true');
+          ctrl.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99999;display:none;';
+          ctrl.innerHTML = '<button style="background:#ffffffcc;border:1px solid #ddd;padding:8px 12px;border-radius:8px;">Réinitialiser l\'affichage</button>';
+          document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(ctrl); });
+          ctrl.addEventListener('click', function(e){ e.preventDefault(); resetZoomTemporarily(); });
+          if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', maybeShowResetZoomControl);
+            window.visualViewport.addEventListener('scroll', maybeShowResetZoomControl);
+            // initial check after load
+            setTimeout(maybeShowResetZoomControl, 200);
+          }
+        } catch(e){ /* ignore */ }
+      })();
     </script>
     <meta name="color-scheme" content="light only" />
     <meta name="theme-color" content="#FAFAFA" />
