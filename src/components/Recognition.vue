@@ -15,17 +15,22 @@
       </template>
     </div>
 
-    <Modal v-model:modelValue="modalOpen" :title="modalAlt" @close="onModalClose">
-      <div style="display:flex;align-items:center;justify-content:center;">
-        <img :src="modalImage" :alt="modalAlt" class="trust-modal-img" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;display:block;margin:0 auto" />
+    <div class="mentions-modal" v-if="modalOpen" role="dialog" aria-modal="true" :aria-label="modalAlt" @click.self="modalOpen=false">
+      <div class="mentions-content">
+        <button class="mentions-close" @click="modalOpen=false" aria-label="Fermer">✕</button>
+        <h2 v-if="modalAlt">{{ modalAlt }}</h2>
+        <div class="mentions-body">
+          <div style="display:flex;align-items:center;justify-content:center;">
+            <img :src="modalImage" :alt="modalAlt" class="trust-modal-img" style="max-width:100%;object-fit:contain;border-radius:8px;display:block;margin:0 auto" />
+          </div>
+        </div>
       </div>
-    </Modal>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
-import Modal from './Modal.vue'
+import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 
 const props = defineProps({ items: { type: Array, default: () => [] } })
 const emit = defineEmits([])
@@ -51,14 +56,24 @@ const sanitizeIconSafe = (html) => {
   return String(html).replace(/<[^>]*>/g, '')
 }
 
+const onKey = (e) => { if (e.key === 'Escape') modalOpen.value = false }
+
 const openModal = async (r, idx) => {
   if (!r || !r.src) return
   try { _lastBadgeEl = document.querySelector(`.badge[data-recognition-index="${idx}"]`) } catch (e) { _lastBadgeEl = null }
   try { modalImage.value = r.src ? new URL(r.src, window.location.href).href : r.src } catch (e) { modalImage.value = r.src }
   modalAlt.value = r.alt || r.text || r.title || 'Article'
   modalOpen.value = true
+  // lock body scroll and add key listener
+  document.body.style.overflow = 'hidden'
+  window.addEventListener('keydown', onKey)
   await nextTick()
 }
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKey)
+  document.body.style.overflow = ''
+})
 
 const onModalClose = () => {
   try {
@@ -67,6 +82,9 @@ const onModalClose = () => {
       _lastBadgeEl = null
     }
   } catch (e) {}
+  // restore
+  document.body.style.overflow = ''
+  window.removeEventListener('keydown', onKey)
 }
 </script>
 
