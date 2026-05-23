@@ -121,7 +121,7 @@ const sanitizeIconSafe = (html) => {
 }
 
 let _lastBadgeEl = null
-const openModal = (r, idx) => {
+const openModal = async (r, idx) => {
   if (!r || !r.src) return
   // try to find the badge element by index (more robust on mobile)
   let el = null
