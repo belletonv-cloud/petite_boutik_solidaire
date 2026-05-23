@@ -4,7 +4,10 @@
       <p class="hero-tagline">{{ tagline }}</p>
       <div class="hero-actions" v-if="btn1Visible || btn2Visible">
         <a v-if="btn1Visible" href="#calendrier" class="btn btn-primary" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
-        <a v-if="btn2Visible" href="#contact" class="btn btn-secondary" @click="scrollTo('contact')">{{ btn2Label }}</a>
+        <a v-if="btn2Visible" href="#contact" class="btn btn-secondary" @click="scrollTo('contact')">
+          <span class="btn-icon" aria-hidden="true" v-html="mailSvg"></span>
+          <span class="btn-text">{{ btn2Label }}</span>
+        </a>
       </div>
     </div>
   </section>
@@ -23,6 +26,9 @@ const btn1Label = ref('Voir les horaires')
 const btn1Visible = ref(true)
 const btn2Label = ref('Nous contacter')
 const btn2Visible = ref(true)
+
+// small inline SVG for envelope icon (kept in JS so template stays tidy)
+const mailSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H19.5C20.3284 5 21 5.67157 21 6.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 6.5L12 12.5L3 6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 
 const heroStyle = computed(() => ({
   background: `linear-gradient(${gradientAngle.value}deg, ${gradientStart.value} 0%, ${gradientEnd.value} 100%)`
@@ -111,18 +117,24 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: rgba(255,255,255,0.06);
+  background: var(--primary-coral);
   color: white;
-  border: 2px solid rgba(255,255,255,0.95);
-  padding: 10px 24px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  border: none;
+  padding: 12px 22px;
+  box-shadow: 0 6px 18px rgba(233,94,94,0.18);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .btn-secondary:hover {
-  background: white;
-  color: var(--primary-teal);
-  border-color: white;
+  opacity: 0.95;
 }
+
+.btn-icon { display:inline-flex; align-items:center; justify-content:center }
+.btn-icon svg { display:block; width:16px; height:16px }
+
+.btn-text { display:inline-block }
 
 @media (max-width: 600px) {
   .hero {
