@@ -48,14 +48,13 @@ const btn2Visible = ref(true)
 const contactTitle = ref("Besoin d'aide ?")
 const contactDesc = ref("Nous sommes là pour répondre à vos questions et vous accueillir à la boutique.")
 // iconHtml is editable via admin (hero_btn2_icon in config.textes) and defaults to envelope SVG
-const iconHtml = ref(mailSvg)
 
 // small inline SVGs for default icons
 const mailSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H19.5C20.3284 5 21 5.67157 21 6.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 6.5L12 12.5L3 6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 const clockSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.2"/><path d="M12 7v6l4 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 // admin-editable icons (defaults set above)
-const iconHtml = ref(mailSvg)
 const btn1IconHtml = ref(clockSvg)
+const iconHtml = ref(mailSvg)
 
 const heroStyle = computed(() => ({
   background: `linear-gradient(${gradientAngle.value}deg, ${gradientStart.value} 0%, ${gradientEnd.value} 100%)`
