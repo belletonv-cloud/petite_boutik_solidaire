@@ -281,8 +281,9 @@ const magnifierStyle = ref({})
 const imgWrap = ref(null)
 const modalImg = ref(null)
 
-const zoomMin = 1
-const zoomMax = 2.6
+// allow significant zoom-out (user requested ability to zoom out much more)
+const zoomMin = 0.3
+const zoomMax = 4.0
 const zoomDuration = 6000 // ms to reach max
 const zoomStepMs = 100
 const zoomStep = (zoomMax - zoomMin) / (zoomDuration / zoomStepMs)
