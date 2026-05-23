@@ -54,11 +54,14 @@
     </div>
 
     <Modal v-model:modelValue="modalOpen" title="Ils nous font confiance" @close="onModalClose">
-      <img
-        class="trust-modal-img"
-        :src="modalImage"
-        :alt="modalAlt"
-      />
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <img
+          class="trust-modal-img"
+          :src="modalImage"
+          :alt="modalAlt"
+        />
+        <div v-if="debugEnabled" style="font-size:12px;color:#fff;background:rgba(0,0,0,0.45);padding:6px 8px;border-radius:6px;max-width:90vw;word-break:break-all">{{ modalImage }}</div>
+      </div>
     </Modal>
   </section>
 </template>
@@ -81,6 +84,8 @@ const sanitizeIcon = (html) => {
 const modalOpen = ref(false)
 const modalImage = ref('')
 const modalAlt = ref('')
+// enable debug display when ?debug=1 is present in the URL
+const debugEnabled = typeof window !== 'undefined' && window.location && window.location.search && window.location.search.indexOf('debug=1') !== -1
 
 
 const titreAssociation = ref("L'Association Bras Ouverts")
@@ -135,6 +140,8 @@ const openModal = async (r, idx) => {
   } catch (e) {
     modalImage.value = r.src
   }
+  // debug log to help tracing broken images
+  try { console.log('RECO_MODAL:', { rSrc: r.src, resolved: modalImage.value }) } catch (e) {}
   modalAlt.value = r.alt || r.text || r.title || 'Article'
   modalOpen.value = true
   // wait a tick for the modal to render and then ensure content is visible and image sizing fixed
@@ -142,11 +149,11 @@ const openModal = async (r, idx) => {
   const mod = document.querySelector('.app-modal-content')
   if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
   const img = mod?.querySelector('img')
-  if (img) {
-    if (img.complete) img.style.maxWidth = '100%'
-    else img.addEventListener('load', () => { img.style.maxWidth = '100%' }, { once: true })
+    if (img) {
+      if (img.complete) img.style.maxWidth = '100%'
+      else img.addEventListener('load', () => { img.style.maxWidth = '100%' }, { once: true })
+    }
   }
-}
 
 const onModalClose = () => {
   // after closing the modal, scroll to the recognition section so the user
