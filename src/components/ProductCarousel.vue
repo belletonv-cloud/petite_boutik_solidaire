@@ -74,7 +74,7 @@
               @pointerdown.prevent="onPointerDown"
               @wheel.prevent="onWheel"
               ref="modalImg"
-            :style="{ transform: `scale(${zoomFactor}) translate(${(transformX/zoomFactor).toFixed(2)}px, ${(transformY/zoomFactor).toFixed(2)}px)`, transition: dragging ? 'none' : 'transform 150ms ease' }"
+            :style="{ transform: `scale(${zoomFactor}) translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px)`, transition: dragging ? 'none' : 'transform 150ms ease' }"
           />
           </div>
 
@@ -284,27 +284,19 @@ const _startTransform = { x: 0, y: 0 }
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
-const onPointerMoveWindow = (e) => {
-  if (!dragging.value || !modalImg.value) return
-  const dx = e.clientX - _startPointer.x
-  const dy = e.clientY - _startPointer.y
-  // compute using displayed image size and current scale
-  const rect = modalImg.value.getBoundingClientRect()
-  const s = zoomFactor.value
-  // rect.width is displayed width; scaled total width = rect.width * s
-  const scaledW = rect.width * s
-  const scaledH = rect.height * s
-  // allowed visual translate range (in CSS-visible pixels)
-  const minVisX = Math.min(0, (rect.width - scaledW))
-  const minVisY = Math.min(0, (rect.height - scaledH))
-  // internal transformX/Y values are stored in "internal" units where
-  // the CSS uses translate(transformX/zoom). To move the visible image by dx pixels
-  // we must update internal value by dx * zoom.
-  const minInternalX = minVisX * s
-  const minInternalY = minVisY * s
-  transformX.value = clamp(_startTransform.x + dx * s, minInternalX, 0)
-  transformY.value = clamp(_startTransform.y + dy * s, minInternalY, 0)
-}
+  const onPointerMoveWindow = (e) => {
+    if (!dragging.value || !modalImg.value || !imgWrap.value) return
+    const dx = e.clientX - _startPointer.x
+    const dy = e.clientY - _startPointer.y
+    // use container (imgWrap) vs image rect to compute available pan range
+    const container = imgWrap.value.getBoundingClientRect()
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const minVisX = Math.min(0, container.width - imgRect.width)
+    const minVisY = Math.min(0, container.height - imgRect.height)
+    // transformX/Y are stored as visual translate (pixels)
+    transformX.value = clamp(_startTransform.x + dx, minVisX, 0)
+    transformY.value = clamp(_startTransform.y + dy, minVisY, 0)
+  }
 
 const onPointerUpWindow = (e) => {
   dragging.value = false
@@ -323,39 +315,40 @@ const onPointerUpWindow = (e) => {
 
 const lastTapTime = ref(0)
 const onPointerDown = (e) => {
-  if (!enableMagnifier.value) return
+  // allow pointer down when magnifier is enabled OR when image is already zoomed
+  if (!enableMagnifier.value && zoomFactor.value === 1) return
   // double-tap support for touch
   const now = Date.now()
   if (now - lastTapTime.value < 300) {
     // double tap: toggle zoom
-    const rect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
-    const cx = rect ? e.clientX : 0
-    const cy = rect ? e.clientY : 0
-    if (zoomFactor.value === 1) {
-      const next = Math.min(zoomMax, 1.8)
-      const offsetX = rect ? cx - rect.left : 0
-      const offsetY = rect ? cy - rect.top : 0
-      // adjust transforms so the tapped point stays under the finger
-      const prev = zoomFactor.value
-      const V_oldX = prev ? transformX.value / prev : 0
-      const V_oldY = prev ? transformY.value / prev : 0
-      const ratio = next / prev
-      // V_new = V_old * ratio + offset * (1 - ratio)
-      const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
-      const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
-      zoomFactor.value = next
-      // clamp using new zoom
-      const scaledW2 = rect.width * zoomFactor.value
-      const scaledH2 = rect.height * zoomFactor.value
-      const minVisX2 = Math.min(0, rect.width - scaledW2)
-      const minVisY2 = Math.min(0, rect.height - scaledH2)
-      transformX.value = clamp(V_newX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
-      transformY.value = clamp(V_newY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
-    } else {
-      zoomFactor.value = 1
-      transformX.value = 0
-      transformY.value = 0
-    }
+      const imgRect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
+      const container = imgWrap.value ? imgWrap.value.getBoundingClientRect() : null
+      const cx = imgRect ? e.clientX : 0
+      const cy = imgRect ? e.clientY : 0
+      if (zoomFactor.value === 1) {
+        const next = Math.min(zoomMax, 1.8)
+        const offsetX = imgRect ? cx - imgRect.left : 0
+        const offsetY = imgRect ? cy - imgRect.top : 0
+        const prev = zoomFactor.value
+        const ratio = next / prev
+        // transformX/Y are visual pixels. Compute new visual translate to keep point stable:
+        const V_oldX = transformX.value
+        const V_oldY = transformY.value
+        const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
+        const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
+        // compute new image size (imgRect is current scaled width at prev)
+        const newImgWidth = imgRect ? imgRect.width * (next / prev) : 0
+        const newImgHeight = imgRect ? imgRect.height * (next / prev) : 0
+        const minVisX2 = container ? Math.min(0, container.width - newImgWidth) : 0
+        const minVisY2 = container ? Math.min(0, container.height - newImgHeight) : 0
+        zoomFactor.value = next
+        transformX.value = clamp(V_newX, minVisX2, 0)
+        transformY.value = clamp(V_newY, minVisY2, 0)
+      } else {
+        zoomFactor.value = 1
+        transformX.value = 0
+        transformY.value = 0
+      }
     lastTapTime.value = 0
     return
   }
@@ -401,32 +394,32 @@ const updateKnob = (clientX, clientY) => {
 // track captured pointer id for touch
 let _capturedPointerId = null
 
-const onWheel = (e) => {
-  if (!enableMagnifier.value || !modalImg.value) return
-  e.preventDefault()
-  const delta = e.deltaY
-  const prev = zoomFactor.value
-  const step = 0.15
-  const next = clamp(prev + (delta > 0 ? -step : step), zoomMin, zoomMax)
-  if (next === prev) return
-  // keep cursor point stable while zooming — compute using visual -> internal units
-  const rect = modalImg.value.getBoundingClientRect()
-  const offsetX = e.clientX - rect.left
-  const offsetY = e.clientY - rect.top
-  const V_oldX = prev ? transformX.value / prev : 0
-  const V_oldY = prev ? transformY.value / prev : 0
-  const ratio2 = next / prev
-  const V_newX = V_oldX * ratio2 + offsetX * (1 - ratio2)
-  const V_newY = V_oldY * ratio2 + offsetY * (1 - ratio2)
-  zoomFactor.value = next
-  // clamp using new zoom
-  const scaledW2 = rect.width * zoomFactor.value
-  const scaledH2 = rect.height * zoomFactor.value
-  const minVisX2 = Math.min(0, rect.width - scaledW2)
-  const minVisY2 = Math.min(0, rect.height - scaledH2)
-  transformX.value = clamp(V_newX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
-  transformY.value = clamp(V_newY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
-}
+  const onWheel = (e) => {
+    if (!enableMagnifier.value || !modalImg.value || !imgWrap.value) return
+    e.preventDefault()
+    const delta = e.deltaY
+    const prev = zoomFactor.value
+    const step = 0.15
+    const next = clamp(prev + (delta > 0 ? -step : step), zoomMin, zoomMax)
+    if (next === prev) return
+    // keep cursor point stable while zooming — compute using visual translate units
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const container = imgWrap.value.getBoundingClientRect()
+    const offsetX = e.clientX - imgRect.left
+    const offsetY = e.clientY - imgRect.top
+    const ratio = next / prev
+    const V_oldX = transformX.value
+    const V_oldY = transformY.value
+    const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
+    const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
+    const newImgW = imgRect.width * ratio
+    const newImgH = imgRect.height * ratio
+    const minVisX2 = Math.min(0, container.width - newImgW)
+    const minVisY2 = Math.min(0, container.height - newImgH)
+    zoomFactor.value = next
+    transformX.value = clamp(V_newX, minVisX2, 0)
+    transformY.value = clamp(V_newY, minVisY2, 0)
+  }
 
 const startZoomRamp = () => {
   if (_zoomTimer) return
@@ -463,30 +456,30 @@ const toggleEnableMagnifier = () => {
   transformY.value = 0
 }
 
-const zoomIn = () => {
-  if (!modalImg.value) { zoomFactor.value = Math.min(zoomMax, zoomFactor.value + 0.2); return }
-  const prev = zoomFactor.value
-  const next = Math.min(zoomMax, prev + 0.2)
-  if (next === prev) return
-  const rect = modalImg.value.getBoundingClientRect()
-  const cx = lastPointer.value ? lastPointer.value.x : Math.round(rect.left + rect.width / 2)
-  const cy = lastPointer.value ? lastPointer.value.y : Math.round(rect.top + rect.height / 2)
-  const offsetX = cx - rect.left
-  const offsetY = cy - rect.top
-  // adjust transforms so the point remains under the cursor (visual -> internal units)
-  const tvisOldX = prev ? transformX.value / prev : 0
-  const tvisOldY = prev ? transformY.value / prev : 0
-  const tvisNewX = tvisOldX + offsetX * (prev - next)
-  const tvisNewY = tvisOldY + offsetY * (prev - next)
-  zoomFactor.value = next
-  // clamp using new zoom
-  const scaledW = rect.width * zoomFactor.value
-  const scaledH = rect.height * zoomFactor.value
-  const minVisX2 = Math.min(0, rect.width - scaledW)
-  const minVisY2 = Math.min(0, rect.height - scaledH)
-  transformX.value = clamp(tvisNewX * zoomFactor.value, minVisX2 * zoomFactor.value, 0)
-  transformY.value = clamp(tvisNewY * zoomFactor.value, minVisY2 * zoomFactor.value, 0)
-}
+  const zoomIn = () => {
+    if (!modalImg.value || !imgWrap.value) { zoomFactor.value = Math.min(zoomMax, zoomFactor.value + 0.2); return }
+    const prev = zoomFactor.value
+    const next = Math.min(zoomMax, prev + 0.2)
+    if (next === prev) return
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const container = imgWrap.value.getBoundingClientRect()
+    const cx = lastPointer.value ? lastPointer.value.x : Math.round(imgRect.left + imgRect.width / 2)
+    const cy = lastPointer.value ? lastPointer.value.y : Math.round(imgRect.top + imgRect.height / 2)
+    const offsetX = cx - imgRect.left
+    const offsetY = cy - imgRect.top
+    const ratio = next / prev
+    const V_oldX = transformX.value
+    const V_oldY = transformY.value
+    const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
+    const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
+    const newImgW = imgRect.width * ratio
+    const newImgH = imgRect.height * ratio
+    const minVisX2 = Math.min(0, container.width - newImgW)
+    const minVisY2 = Math.min(0, container.height - newImgH)
+    zoomFactor.value = next
+    transformX.value = clamp(V_newX, minVisX2, 0)
+    transformY.value = clamp(V_newY, minVisY2, 0)
+  }
 const zoomOut = () => {
   if (!modalImg.value) { zoomFactor.value = Math.max(zoomMin, zoomFactor.value - 0.2); return }
   const prev = zoomFactor.value
@@ -497,18 +490,19 @@ const zoomOut = () => {
   const cy = lastPointer.value ? lastPointer.value.y : Math.round(rect.top + rect.height / 2)
   const offsetX = cx - rect.left
   const offsetY = cy - rect.top
-  const V_oldX = prev ? transformX.value / prev : 0
-  const V_oldY = prev ? transformY.value / prev : 0
-  const ratio3 = next / prev
-  const V_newX = V_oldX * ratio3 + offsetX * (1 - ratio3)
-  const V_newY = V_oldY * ratio3 + offsetY * (1 - ratio3)
-  zoomFactor.value = next
-  const scaledW3 = rect.width * zoomFactor.value
-  const scaledH3 = rect.height * zoomFactor.value
-  const minVisX3 = Math.min(0, rect.width - scaledW3)
-  const minVisY3 = Math.min(0, rect.height - scaledH3)
-  transformX.value = clamp(V_newX * zoomFactor.value, minVisX3 * zoomFactor.value, 0)
-  transformY.value = clamp(V_newY * zoomFactor.value, minVisY3 * zoomFactor.value, 0)
+    const ratio3 = next / prev
+    const V_oldX = transformX.value
+    const V_oldY = transformY.value
+    const V_newX = V_oldX * ratio3 + offsetX * (1 - ratio3)
+    const V_newY = V_oldY * ratio3 + offsetY * (1 - ratio3)
+    zoomFactor.value = next
+    const newW = rect.width * ratio3
+    const newH = rect.height * ratio3
+    const minVisX3 = Math.min(0, imgWrap.value.getBoundingClientRect().width - newW)
+    const minVisY3 = Math.min(0, imgWrap.value.getBoundingClientRect().height - newH)
+    transformX.value = clamp(V_newX, minVisX3, 0)
+    transformY.value = clamp(V_newY, minVisY3, 0)
+  }
 }
 
 // pointer move handler for circular magnifier (deprecated) - kept for reference
