@@ -11,164 +11,30 @@
         document.documentElement.style.setProperty('--vh', t + 'px');
       };
 
-      // Accessibility-friendly approach to accidental zoom:
-      // - We DO NOT disable pinch/double-tap zoom globally (to preserve accessibility).
-      // - When the browser reports a non-1 scale after rotation, we show a small reset control
-      //   letting the user restore the default zoom/view (this is explicit and optional).
-      // configuration
-      var ORIENTATION_RESET_SCREEN_MAX = 420; // px: only auto-reset on small screens
-      var ORIENTATION_RESET_DELAY = 300; // ms before handling orientation change
-      var RESET_META_DURATION = 300; // ms to keep maximum-scale=1.0 before restoring
-
-      function maybeShowResetZoomControl() {
+      // If the device supports touch, enforce a maximum-scale to avoid accidental pinch/double-tap zoom.
+      // This makes the UI more stable on mobile orientation changes. We only apply it on touch devices.
+      function enforceMobileViewportZoom() {
         try {
-          if (!window.visualViewport) return;
-          // control/button removed — no visual control shown. Keep function for compatibility.
-        } catch (e) { /* ignore */ }
-      }
-
-      function announceAccessibly(message) {
-        try {
-          var live = document.getElementById('reset-zoom-live');
-          if (!live) return;
-          live.textContent = message;
-        } catch(e) { /* ignore */ }
-      }
-
-      function resetZoomTemporarily() {
-        try {
+          var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
           var meta = document.querySelector('meta[name="viewport"]');
           if (!meta) return;
           var base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-          // announce before resetting so screen readers are aware
-          announceAccessibly('Réinitialisation de l\'affichage en cours');
-          console.debug('[zoom-reset] start: applying temporary meta to force zoom-out');
-          // temporarily set maximum-scale=1 and disable user scaling to force a full "zoom out" state
-          // (this is intentional and temporary; we restore the original meta shortly after)
-          meta.setAttribute('content', base + ', maximum-scale=1.0, user-scalable=0');
-          // nudge focus/scroll to encourage reflow on some browsers
-          try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(e) {}
-          try { var sx = window.scrollX || 0, sy = window.scrollY || 0; window.scrollTo(sx, sy + 1); setTimeout(function(){ window.scrollTo(sx, sy); }, 50); } catch(e) {}
-
-          // Poll visualViewport.scale until it reports 1 (or until timeout) then restore the meta tag.
-          var start = Date.now();
-          var timedOut = false;
-          var pollInterval = 50;
-          var maxWait = RESET_META_DURATION + 400; // allow a bit more time for devices
-          var poller = setInterval(function(){
-            try {
-              var s = window.visualViewport ? Math.round(window.visualViewport.scale * 100) / 100 : 1;
-              console.debug('[zoom-reset] poll scale=', s, 'elapsed=', Date.now()-start);
-              if (s === 1 || (Date.now() - start) > maxWait) {
-                clearInterval(poller);
-                // restore original viewport meta
-                try { meta.setAttribute('content', base); } catch(e) {}
-                // small additional reflow nudge
-                try { var sx2 = window.scrollX || 0, sy2 = window.scrollY || 0; window.scrollTo(sx2, sy2 + 1); setTimeout(function(){ window.scrollTo(sx2, sy2); }, 50); } catch(e) {}
-                announceAccessibly('Affichage réinitialisé');
-                console.debug('[zoom-reset] finished: scale=', s, 'total_ms=', Date.now()-start);
-                // If after timeout scale is still not 1, apply visual fallback (CSS transform) as a last resort
-                if (s !== 1) {
-                  try { applyVisualFallback(s); console.debug('[zoom-reset] applied visual fallback for scale=', s); } catch(e) { console.debug('[zoom-reset] failed to apply visual fallback', e); }
-                }
-                maybeShowResetZoomControl();
-              }
-            } catch (e) {
-              clearInterval(poller);
-              try { meta.setAttribute('content', base); } catch(e) {}
-              console.debug('[zoom-reset] error during poll, restored meta');
-              // attempt visual fallback on error if visualViewport available
-              try { if (window.visualViewport && window.visualViewport.scale && window.visualViewport.scale !== 1) applyVisualFallback(window.visualViewport.scale); } catch(e) {}
-              maybeShowResetZoomControl();
-            }
-          }, pollInterval);
+          if (isTouch) {
+            // Prevent pinch/double-tap zoom which often breaks layout on orientation change
+            meta.setAttribute('content', base + ', maximum-scale=1.0, user-scalable=0');
+          } else {
+            meta.setAttribute('content', base);
+          }
         } catch (e) { /* ignore */ }
       }
 
-      // Visual fallback: simulate a browser "zoom out" by scaling the #app wrapper.
-      function applyVisualFallback(scale) {
-        try {
-          if (!scale || scale === 1) return;
-          var app = document.getElementById('app');
-          if (!app) return;
-          var factor = 1 / scale;
-          // store previous inline styles for undo
-          app.__prevStyle = app.__prevStyle || { transform: app.style.transform || '', transformOrigin: app.style.transformOrigin || '', width: app.style.width || '' };
-          app.style.transformOrigin = '0 0';
-          app.style.transition = 'transform 120ms ease';
-          app.style.transform = 'scale(' + factor + ')';
-          // compensate width so layout fits the viewport after scaling
-          try { app.style.width = (100 * scale) + '%'; } catch(e) {}
-          // adjust scroll to keep viewport roughly stable
-          try { var sx = window.scrollX || 0, sy = window.scrollY || 0; window.scrollTo(Math.round(sx * factor), Math.round(sy * factor)); } catch(e) {}
-          document.documentElement.setAttribute('data-visual-fallback', '1');
-        } catch (e) { console.debug('[zoom-fallback] error', e); }
-      }
-
-      function removeVisualFallback() {
-        try {
-          var app = document.getElementById('app');
-          if (!app) return;
-          if (app.__prevStyle) {
-            app.style.transform = app.__prevStyle.transform || '';
-            app.style.transformOrigin = app.__prevStyle.transformOrigin || '';
-            app.style.width = app.__prevStyle.width || '';
-            delete app.__prevStyle;
-          } else {
-            app.style.transform = '';
-            app.style.transformOrigin = '';
-            app.style.width = '';
-          }
-          document.documentElement.removeAttribute('data-visual-fallback');
-        } catch (e) { console.debug('[zoom-fallback] remove error', e); }
-      }
-
-      try { window.__applyVisualFallback = applyVisualFallback; window.__removeVisualFallback = removeVisualFallback; } catch (e) {}
-
-      // Expose a manual trigger for debugging/testing
-      try { window.__forceResetZoom = resetZoomTemporarily } catch (e) {}
-
-      window.addEventListener('resize', function(){ window.__defineViewportHeight(); maybeShowResetZoomControl(); });
+      window.addEventListener('resize', function(){ window.__defineViewportHeight(); enforceMobileViewportZoom(); });
       window.addEventListener('orientationchange', function(){
-        // Only auto-reset for small screens to avoid surprising tablet/desktop users
-        setTimeout(function(){
-          window.__defineViewportHeight();
-          try {
-            var w = Math.max(window.screen.width || 0, window.innerWidth || 0);
-            if (w <= ORIENTATION_RESET_SCREEN_MAX && window.visualViewport && Math.round(window.visualViewport.scale * 100) / 100 !== 1) {
-              // auto-reset on small screens when scale != 1
-              resetZoomTemporarily();
-            } else {
-              maybeShowResetZoomControl();
-            }
-          } catch (e) { maybeShowResetZoomControl(); }
-        }, ORIENTATION_RESET_DELAY);
+        setTimeout(function(){ window.__defineViewportHeight(); enforceMobileViewportZoom(); }, 120);
       });
       // initial run
       window.__defineViewportHeight();
-      // register visualViewport listeners to allow possible future behaviour
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', maybeShowResetZoomControl);
-        window.visualViewport.addEventListener('scroll', maybeShowResetZoomControl);
-        // initial check after load
-        setTimeout(maybeShowResetZoomControl, 200);
-      }
-
-      // On page show / load (including refresh), ensure small screens are shown at correct zoom
-      function checkAndResetOnLoad() {
-        try {
-          var w = Math.max(window.screen.width || 0, window.innerWidth || 0);
-          if (w <= ORIENTATION_RESET_SCREEN_MAX && window.visualViewport && Math.round(window.visualViewport.scale * 100) / 100 !== 1) {
-            // perform the gentle reset on load so the page renders correctly after refresh
-            resetZoomTemporarily();
-          } else {
-            maybeShowResetZoomControl();
-          }
-        } catch (e) { try { maybeShowResetZoomControl(); } catch (e){} }
-      }
-
-      document.addEventListener('DOMContentLoaded', function(){ setTimeout(checkAndResetOnLoad, 200); });
-      window.addEventListener('pageshow', function(){ setTimeout(checkAndResetOnLoad, 200); });
+      enforceMobileViewportZoom();
     </script>
     <meta name="color-scheme" content="light only" />
     <meta name="theme-color" content="#FAFAFA" />
