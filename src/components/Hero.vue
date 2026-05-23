@@ -13,10 +13,16 @@
         <div class="contact-card">
           <div class="contact-title">{{ contactTitle }}</div>
           <div class="contact-desc">{{ contactDesc }}</div>
-          <a href="#contact" class="btn btn-outline" @click="scrollTo('contact')">
-            <span class="btn-icon" aria-hidden="true" v-html="iconHtml"></span>
-            <span class="btn-text">{{ btn2Label }}</span>
-          </a>
+          <div class="contact-actions">
+            <a href="#contact" class="card-btn" @click="scrollTo('contact')">
+              <span class="card-icon" aria-hidden="true" v-html="iconHtml"></span>
+              <span class="card-text">{{ btn2Label }}</span>
+            </a>
+            <a href="#calendrier" class="card-btn" @click="scrollTo('calendrier')">
+              <span class="card-icon" aria-hidden="true" v-html="btn1IconHtml"></span>
+              <span class="card-text">{{ btn1Label }}</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -44,8 +50,12 @@ const contactDesc = ref("Nous sommes là pour répondre à vos questions et vous
 // iconHtml is editable via admin (hero_btn2_icon in config.textes) and defaults to envelope SVG
 const iconHtml = ref(mailSvg)
 
-// small inline SVG for envelope icon (kept in JS so template stays tidy)
+// small inline SVGs for default icons
 const mailSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H19.5C20.3284 5 21 5.67157 21 6.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 6.5L12 12.5L3 6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+const clockSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.2"/><path d="M12 7v6l4 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+// admin-editable icons (defaults set above)
+const iconHtml = ref(mailSvg)
+const btn1IconHtml = ref(clockSvg)
 
 const heroStyle = computed(() => ({
   background: `linear-gradient(${gradientAngle.value}deg, ${gradientStart.value} 0%, ${gradientEnd.value} 100%)`
@@ -73,6 +83,7 @@ onMounted(() => {
     if (d.hero_contact_title) contactTitle.value = d.hero_contact_title
     if (d.hero_contact_desc) contactDesc.value = d.hero_contact_desc
     if (d.hero_btn2_icon) iconHtml.value = d.hero_btn2_icon
+    if (d.hero_btn1_icon) btn1IconHtml.value = d.hero_btn1_icon
   })
 })
 </script>
@@ -100,6 +111,11 @@ onMounted(() => {
 .contact-card { background: rgba(255,255,255,0.06); padding:18px; border-radius:12px; text-align:left }
 .contact-title { font-weight:700; color:white; margin-bottom:6px }
 .contact-desc { color: rgba(255,255,255,0.9); font-size:0.95em; margin-bottom:12px }
+
+.contact-actions { display:flex; gap:10px }
+.card-btn { background: white; color: var(--primary-teal); padding:10px 12px; border-radius:8px; display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-weight:700 }
+.card-icon svg { width:18px; height:18px }
+.card-text { font-size:0.95em }
 
 .hero-overlay { position:absolute; inset:0; border-radius:15px; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); pointer-events:none }
 
