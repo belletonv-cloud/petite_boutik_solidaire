@@ -9,13 +9,15 @@
         <p>{{ value.description }}</p>
       </div>
     </div>
-    <div class="donate-callout" v-if="donsVisible">
-      <h3>Vous souhaitez donner ?</h3>
+    <div class="donate-callout" v-if="donsVisible" tabindex="0">
+      <div class="donate-head">
+        <h3>Vous souhaitez donner ?</h3>
+      </div>
       <p>{{ donsTexte }}</p>
       <p>{{ donsTexte2 }}</p>
 
       <div class="dons-grid">
-        <div class="dons-accepted">
+        <div class="dons-accepted" tabindex="0">
           <h4>Acceptés</h4>
           <ul>
             <li>👕 Vêtements enfants (0-10 ans) en bon état</li>
@@ -24,7 +26,7 @@
             <li>🤰 Vêtements maternité</li>
           </ul>
         </div>
-        <div class="dons-rejected">
+        <div class="dons-rejected" tabindex="0">
           <h4>Non acceptés</h4>
           <ul>
             <li>🧥 Vêtements très usés ou tâchés</li>
@@ -176,11 +178,15 @@ const values = [
 }
 
 .donate-callout {
-  background: linear-gradient(180deg, #F8FFFE, #F3FBFA);
-  border: 1px solid rgba(6,128,122,0.08);
-  padding: 22px;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  will-change: transform, box-shadow;
 }
 
 .donate-callout h3 {
@@ -196,12 +202,33 @@ const values = [
   text-align: center;
 }
 
+.donate-head { display:flex; align-items:center; gap:10px }
+.dons-grid { display:flex; gap:10px; flex-wrap:wrap }
 .dons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px }
 .dons-grid h4 { color: var(--primary-teal); margin-bottom: 8px }
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
-.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(6,128,122,0.06); padding: 12px; border-radius: 8px }
-.dons-rejected { background: #fff7f6; border-color: rgba(220,80,80,0.06) }
+.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(0,0,0,0.04); padding: 12px; border-radius: 8px; transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease }
+
+/* Hover / focus style for individual accept/reject cards */
+.dons-accepted:hover,
+.dons-accepted:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(27,169,168,0.12);
+  background: linear-gradient(180deg, #f7fffe 0%, #e6fffd 100%);
+  border-color: rgba(14,169,167,0.18);
+}
+
+.dons-rejected:hover,
+.dons-rejected:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(255,90,90,0.08);
+  background: linear-gradient(180deg, #fff6f6 0%, #ffecec 100%);
+  border-color: rgba(255,90,90,0.12);
+}
+
+.dons-accepted h4 { color: var(--primary-teal) }
+.dons-rejected h4 { color: #d9534f }
 
 .recognition h3 {
   color: var(--primary-teal);
