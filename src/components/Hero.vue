@@ -108,8 +108,10 @@ onMounted(() => {
 .full-btn.primary { color: var(--primary-coral); background: transparent; border-color: rgba(233,94,94,0.18); font-weight:800 }
 .full-btn:not(.primary) { background: transparent; color: rgba(255,255,255,0.95); font-weight:700; border-color: rgba(255,255,255,0.08) }
 .full-btn .btn-icon svg { width:18px; height:18px }
+.full-btn { transition: transform 140ms ease, background 140ms ease, color 140ms ease, border-color 140ms ease }
 .full-btn:focus-visible { outline: 3px solid rgba(255,255,255,0.12); outline-offset: 3px }
-.full-btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.06) }
+.full-btn:hover { transform: translateY(-2px) }
+.full-btn.primary:hover { background: linear-gradient(180deg, var(--primary-coral), #e64f4f); color: white; border-color: rgba(233,94,94,0.26) }
 
   .contact-card { display:none }
   .contact-title { display:none }
