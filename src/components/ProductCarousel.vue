@@ -60,7 +60,10 @@
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
-        <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" loading="lazy" />
+        <div class="modal-img-wrap">
+          <div v-if="modalLoading" class="modal-spinner"></div>
+          <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" :class="{ hidden: modalLoading }" @load="modalLoading = false" @error="modalLoading = false" />
+        </div>
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
         <button class="modal-close-bottom" @click="closeModal" aria-label="Fermer">Fermer ✕</button>
@@ -163,7 +166,7 @@ const baseImages = computed(() =>
       : (p.removeBg !== true)
     ))
     .map(p => ({
-      fullSrc: p.url?.includes('cloudinary') ? p.url.replace('/upload/', '/upload/f_auto,q_auto/') : p.url,
+      fullSrc: cloudinaryFullUrl(p.url, p.removeBg),
       src: cloudinaryCardUrl(p.url, p.removeBg),
       thumb: thumbFor(p.url, p.removeBg),
       alt: p.alt || '',
@@ -174,6 +177,13 @@ const baseImages = computed(() =>
 function cloudinaryCardUrl(url, removeBg) {
   if (!url || !url.includes('/upload/')) return url
   const baseTransform = 'w_600,c_limit,f_auto,q_auto'
+  if (removeBg) return url.replace('/upload/', `/upload/e_background_removal,${baseTransform}/`)
+  return url.replace('/upload/', `/upload/${baseTransform}/`)
+}
+
+function cloudinaryFullUrl(url, removeBg) {
+  if (!url || !url.includes('/upload/')) return url
+  const baseTransform = 'w_1200,c_limit,f_auto,q_auto'
   if (removeBg) return url.replace('/upload/', `/upload/e_background_removal,${baseTransform}/`)
   return url.replace('/upload/', `/upload/${baseTransform}/`)
 }
@@ -223,6 +233,7 @@ const modalOpen = ref(false)
 const modalIndex = ref(0)
 const currentIndex = ref(0)
 const gridOpen = ref(false)
+const modalLoading = ref(false)
 
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
@@ -276,6 +287,7 @@ const openModal = (idx) => {
   modalIndex.value = idx
   currentIndex.value = idx
   modalOpen.value = true
+  modalLoading.value = true
   document.body.style.overflow = 'hidden'
   preloadAdjacent(idx, images.value)
 }
@@ -301,12 +313,14 @@ const closeModal = () => {
 const prevModal = () => {
   modalIndex.value = (modalIndex.value - 1 + images.value.length) % images.value.length
   currentIndex.value = modalIndex.value
+  modalLoading.value = true
   preloadAdjacent(modalIndex.value, images.value)
 }
 
 const nextModal = () => {
   modalIndex.value = (modalIndex.value + 1) % images.value.length
   currentIndex.value = modalIndex.value
+  modalLoading.value = true
   preloadAdjacent(modalIndex.value, images.value)
 }
 
@@ -323,6 +337,15 @@ const onSlideChange = (e) => {
   const s = e && e.realIndex !== undefined ? e : swiperInstance.value
   if (!s) return
   currentIndex.value = typeof s.realIndex !== 'undefined' ? s.realIndex : (typeof s.activeIndex !== 'undefined' ? s.activeIndex : 0)
+  // preload full resolution of current and next slides for modal
+  const imgs = images.value
+  if (imgs && imgs.length) {
+    const idx = currentIndex.value
+    for (const offset of [0, 1, -1]) {
+      const i = (idx + offset + imgs.length) % imgs.length
+      if (imgs[i]?.fullSrc) preloadImage(imgs[i].fullSrc)
+    }
+  }
 }
 </script>
 
@@ -541,12 +564,40 @@ const onSlideChange = (e) => {
 .modal-prev { left: 12px; }
 .modal-next { right: 12px; }
 
+.modal-img-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  width: 100%;
+}
+
+.modal-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255,255,255,0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  position: absolute;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .modal-image {
   max-width: 100%;
   max-height: calc(var(--vh, 1vh) * 80);
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+.modal-image.hidden {
+  visibility: hidden;
+  position: absolute;
 }
 
 .modal-caption {
