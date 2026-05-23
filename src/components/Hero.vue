@@ -1,6 +1,7 @@
 <template>
   <section class="hero" :style="heroStyle">
     <div class="hero-content hero-grid">
+      <div class="hero-overlay"></div>
       <div class="hero-left">
         <p class="hero-tagline">{{ tagline }}</p>
         <div class="hero-actions" v-if="btn1Visible">
@@ -33,9 +34,9 @@ const tagline = ref("Vêtements enfants, chaussures et puériculture à prix min
 const gradientStart = ref('#1BA9A8')
 const gradientEnd = ref('#E95E5E')
 const gradientAngle = ref(135)
-const btn1Label = ref('Voir les horaires')
+const btn1Label = ref('Horaires')
 const btn1Visible = ref(true)
-const btn2Label = ref('Nous contacter')
+const btn2Label = ref('Contact')
 const btn2Visible = ref(true)
 
 // small inline SVG for envelope icon (kept in JS so template stays tidy)
@@ -75,7 +76,8 @@ onMounted(() => {
   text-align: center;
   border-radius: 15px;
   margin-bottom: 40px;
-  box-shadow: 0 4px 20px rgba(27, 169, 168, 0.2);
+  box-shadow: 0 4px 20px rgba(27, 169, 168, 0.12);
+  position: relative;
 }
 
 .hero-content {
@@ -90,6 +92,8 @@ onMounted(() => {
 .contact-card { background: rgba(255,255,255,0.06); padding:18px; border-radius:12px; text-align:left }
 .contact-title { font-weight:700; color:white; margin-bottom:6px }
 .contact-desc { color: rgba(255,255,255,0.9); font-size:0.95em; margin-bottom:12px }
+
+.hero-overlay { position:absolute; inset:0; border-radius:15px; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); pointer-events:none }
 
 .hero-tagline {
   font-size: 1.15em;
@@ -129,23 +133,22 @@ onMounted(() => {
 .btn-cta {
   background: var(--primary-coral);
   color: white;
-  padding: 14px 22px;
-  border-radius: 12px;
-  font-size: 1.05em;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 1em;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 10px 24px rgba(233,94,94,0.18);
 }
 
-.btn-cta:hover { opacity: 0.98 }
+.btn-cta:hover { transform: translateY(-2px); }
 
 .btn-ghost {
   display: block;
   margin-top: 12px;
   color: white;
-  opacity: 0.95;
+  opacity: 0.9;
   text-decoration: underline;
   font-weight: 600;
 }
