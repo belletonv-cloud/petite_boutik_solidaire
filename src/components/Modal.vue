@@ -40,7 +40,7 @@ watch(() => props.modelValue, async (open) => {
     // disable known page elements that may intercept pointer events on mobile
     try {
       _interceptorEls = Array.from(document.querySelectorAll('.sticky-bar, .section-nav, .nav-inner'))
-      _interceptorEls.forEach(el => { try { (el as HTMLElement).style.pointerEvents = 'none' } catch (e) {} })
+      _interceptorEls.forEach(el => { try { el.style.pointerEvents = 'none' } catch (e) {} })
     } catch (e) {}
     // focus content for accessibility
     if (content.value && typeof content.value.focus === 'function') content.value.focus()
@@ -55,7 +55,7 @@ watch(() => props.modelValue, async (open) => {
     try { document.body.classList.remove('modal-open') } catch (e) {}
     // restore pointer events on previously-modified interceptors
     try {
-      _interceptorEls.forEach(el => { try { (el as HTMLElement).style.pointerEvents = '' } catch (e) {} })
+      _interceptorEls.forEach(el => { try { el.style.pointerEvents = '' } catch (e) {} })
     } catch (e) {}
     _interceptorEls = []
     window.removeEventListener('keydown', onKey)
