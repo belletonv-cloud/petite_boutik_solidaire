@@ -52,19 +52,36 @@
           var base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
           // announce before resetting so screen readers are aware
           announceAccessibly('Réinitialisation de l\'affichage en cours');
-          // temporarily set maximum-scale to 1 to force the browser to re-evaluate the zoom
-          meta.setAttribute('content', base + ', maximum-scale=1.0');
-          // try to nudge browsers that don't react immediately to meta changes:
+          // temporarily set maximum-scale=1 and disable user scaling to force a full "zoom out" state
+          // (this is intentional and temporary; we restore the original meta shortly after)
+          meta.setAttribute('content', base + ', maximum-scale=1.0, user-scalable=0');
+          // nudge focus/scroll to encourage reflow on some browsers
           try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(e) {}
           try { var sx = window.scrollX || 0, sy = window.scrollY || 0; window.scrollTo(sx, sy + 1); setTimeout(function(){ window.scrollTo(sx, sy); }, 50); } catch(e) {}
-          // small timeout to allow the browser to apply the meta change, then restore
-          setTimeout(function(){
-            meta.setAttribute('content', base);
-            // small additional reflow nudge
-            try { var sx2 = window.scrollX || 0, sy2 = window.scrollY || 0; window.scrollTo(sx2, sy2 + 1); setTimeout(function(){ window.scrollTo(sx2, sy2); }, 50); } catch(e) {}
-            announceAccessibly('Affichage réinitialisé');
-            maybeShowResetZoomControl();
-          }, RESET_META_DURATION);
+
+          // Poll visualViewport.scale until it reports 1 (or until timeout) then restore the meta tag.
+          var start = Date.now();
+          var timedOut = false;
+          var pollInterval = 50;
+          var maxWait = RESET_META_DURATION + 400; // allow a bit more time for devices
+          var poller = setInterval(function(){
+            try {
+              var s = window.visualViewport ? Math.round(window.visualViewport.scale * 100) / 100 : 1;
+              if (s === 1 || (Date.now() - start) > maxWait) {
+                clearInterval(poller);
+                // restore original viewport meta
+                try { meta.setAttribute('content', base); } catch(e) {}
+                // small additional reflow nudge
+                try { var sx2 = window.scrollX || 0, sy2 = window.scrollY || 0; window.scrollTo(sx2, sy2 + 1); setTimeout(function(){ window.scrollTo(sx2, sy2); }, 50); } catch(e) {}
+                announceAccessibly('Affichage réinitialisé');
+                maybeShowResetZoomControl();
+              }
+            } catch (e) {
+              clearInterval(poller);
+              try { meta.setAttribute('content', base); } catch(e) {}
+              maybeShowResetZoomControl();
+            }
+          }, pollInterval);
         } catch (e) { /* ignore */ }
       }
 
