@@ -67,7 +67,6 @@
         </div>
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
-        <button class="modal-close-bottom" @click="closeModal" aria-label="Fermer">Fermer ✕</button>
       </div>
     </div>
 
@@ -548,22 +547,7 @@ const onSlideChange = (e) => {
   transform: scale(1.1);
 }
 
-.modal-close-bottom {
-  margin-top: 16px;
-  background: rgba(255,255,255,0.15);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 24px;
-  padding: 12px 32px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-family: inherit;
-}
-
-.modal-close-bottom:hover {
-  background: rgba(255,255,255,0.25);
-}
+/* bottom close button removed — only top close (✕) remains in modal */
 
 .modal-nav {
   position: absolute;
