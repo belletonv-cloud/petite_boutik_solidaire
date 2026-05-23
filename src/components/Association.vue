@@ -36,30 +36,15 @@
       </div>
     </div>
 
-    <div class="recognition" v-if="recognition && recognition.length">
-      <h3>Ils nous font confiance</h3>
-      <div class="badges">
-        <template v-for="(r, i) in recognition" :key="i">
-          <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r, i)" :aria-label="r.alt || r.text || 'Badge'">
-            <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
-            <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-            <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-          </button>
-          <div v-else class="badge" :aria-label="r.alt || 'Badge'">
-            <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-            <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-          </div>
-        </template>
-      </div>
-    </div>
+    <Recognition :items="recognition" />
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
-import Modal from './Modal.vue'
+import Recognition from './Recognition.vue'
 let purifier = null
 const sanitizeIcon = (html) => {
   if (!html) return ''
@@ -70,9 +55,6 @@ const sanitizeIcon = (html) => {
   return String(html).replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-const modalOpen = ref(false)
-const modalImage = ref('')
-const modalAlt = ref('')
 
 
 const titreAssociation = ref("L'Association Bras Ouverts")
@@ -112,42 +94,7 @@ const sanitizeIconSafe = (html) => {
   return String(html).replace(/<[^>]*>/g, '')
 }
 
-let _lastBadgeEl = null
-const openModal = async (r, idx) => {
-  if (!r || !r.src) return
-  // remember which element opened the modal to restore focus later
-  let el = null
-  try { el = document.querySelector(`.badge[data-recognition-index="${idx}"]`) } catch (e) { el = null }
-  _lastBadgeEl = el || null
-  // resolve relative paths safely
-  try { modalImage.value = r.src ? new URL(r.src, window.location.href).href : r.src } catch (e) { modalImage.value = r.src }
-  modalAlt.value = r.alt || r.text || r.title || 'Article'
-  // open modal; Modal.vue will handle body overflow and focus
-  modalOpen.value = true
-  // wait a tick so Modal content is rendered
-  await nextTick()
-}
-
-const onModalClose = () => {
-  // after closing the modal, scroll to the recognition section so the user
-  // returns to "Ils nous font confiance"
-  try {
-    const el = document.querySelector('.recognition')
-    if (el && typeof el.scrollIntoView === 'function') {
-      // scroll to a comfortable offset so the heading isn't jammed to the top
-      const y = el.getBoundingClientRect().top + window.scrollY - 80
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
-    }
-    // return focus to the badge that opened the modal (accessibility)
-    if (_lastBadgeEl && typeof _lastBadgeEl.focus === 'function') {
-      _lastBadgeEl.focus()
-      _lastBadgeEl = null
-    }
-  } catch (e) { /* ignore */ }
-}
-
-
-// modal behavior removed; opening badges will use direct links for now
+// Recognition modal handled by src/components/Recognition.vue
 
 const values = [
   {
