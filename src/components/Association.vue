@@ -40,12 +40,11 @@
       <h3>Ils nous font confiance</h3>
       <div class="badges">
         <template v-for="(r, i) in recognition" :key="i">
-          <!-- Simplified: open badge image in a new tab to avoid modal complexity. Keeps text and icon. -->
-          <a v-if="r.src" class="badge" :href="r.src" target="_blank" rel="noopener noreferrer" :aria-label="r.alt || r.text || 'Badge'">
+          <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r, i)" :aria-label="r.alt || r.text || 'Badge'">
             <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
             <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
             <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-          </a>
+          </button>
           <div v-else class="badge" :aria-label="r.alt || 'Badge'">
             <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
             <span class="badge-text">{{ r.text || r.title || r.name }}</span>
@@ -57,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import Modal from './Modal.vue'
@@ -114,32 +113,19 @@ const sanitizeIconSafe = (html) => {
 }
 
 let _lastBadgeEl = null
-const openModal = (r, idx) => {
+const openModal = async (r, idx) => {
   if (!r || !r.src) return
-  // try to find the badge element by index (more robust on mobile)
+  // remember which element opened the modal to restore focus later
   let el = null
-  try {
-    el = document.querySelector(`.badge[data-recognition-index="${idx}"]`)
-  } catch (e) { el = null }
+  try { el = document.querySelector(`.badge[data-recognition-index="${idx}"]`) } catch (e) { el = null }
   _lastBadgeEl = el || null
-  // resolve relative paths to absolute so production paths work the same as dev
-  try {
-    modalImage.value = r.src ? new URL(r.src, window.location.href).href : r.src
-  } catch (e) {
-    modalImage.value = r.src
-  }
+  // resolve relative paths safely
+  try { modalImage.value = r.src ? new URL(r.src, window.location.href).href : r.src } catch (e) { modalImage.value = r.src }
   modalAlt.value = r.alt || r.text || r.title || 'Article'
+  // open modal; Modal.vue will handle body overflow and focus
   modalOpen.value = true
-  // lock body scroll early to avoid touch scrolling interfering with modal display on mobile
-  try { document.body.style.overflow = 'hidden' } catch (e) {}
-  // ensure modal is scrolled into view so users see it regardless of where they clicked
-  setTimeout(() => {
-    const mod = document.querySelector('.app-modal-content')
-    if (mod && typeof mod.scrollIntoView === 'function') mod.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    // on mobile WebKit some elements with no explicit height can collapse; ensure image inside modal has natural size
-    const img = document.querySelector('.app-modal-content img')
-    if (img) img.style.maxWidth = '100%'
-  }, 30)
+  // wait a tick so Modal content is rendered
+  await nextTick()
 }
 
 const onModalClose = () => {
