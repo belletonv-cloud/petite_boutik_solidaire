@@ -158,6 +158,17 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* Primary small action (Horaires) - ensure border is visible */
+.btn-primary {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.95);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.btn-primary:hover { background: white; color: var(--primary-teal); transform: translateY(-2px); }
+
 .btn-icon { display:inline-flex; align-items:center; justify-content:center }
 .btn-icon svg { display:block; width:18px; height:18px }
 
