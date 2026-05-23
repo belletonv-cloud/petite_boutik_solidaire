@@ -41,6 +41,7 @@
     <div class="badges">
       <template v-for="(r, i) in recognition" :key="i">
         <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r, i)" :aria-label="r.alt || 'Badge'">
+          <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
           <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
           <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
@@ -317,6 +318,21 @@ const values = [
 
 .badge-icon {
   font-size: 1.2em;
+}
+
+.badge-image {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+@media (max-width: 600px) {
+  .badge { padding: 8px 12px; gap: 6px }
+  .badge-image { width: 42px; height: 42px }
+  .badge-text { font-size: 0.85em }
 }
 
 
