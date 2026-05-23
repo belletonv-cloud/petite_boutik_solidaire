@@ -63,16 +63,19 @@
     <div class="modal-img-wrap" ref="imgWrap">
           <div v-if="modalLoading" class="modal-spinner"></div>
           <div class="modal-image-outer">
-            <img
-              :src="images[modalIndex].fullSrc"
+              <img
+                :src="images[modalIndex].fullSrc"
               :alt="images[modalIndex].alt"
               class="modal-image"
-            :class="{ loading: modalLoading, interactive: enableMagnifier, zoomed: zoomFactor > 1 }"
+              :class="{ loading: modalLoading, interactive: enableMagnifier, zoomed: zoomFactor > 1 }"
               decoding="async"
               @load="modalLoading = false"
               @error="modalLoading = false"
               @pointerdown.prevent="onPointerDown"
               @wheel.prevent="onWheel"
+              @touchstart.passive="onTouchStart"
+              @touchmove.passive="onTouchMove"
+              @touchend.passive="onTouchEnd"
               ref="modalImg"
             :style="{ transform: `translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease' }"
           />
@@ -286,6 +289,15 @@ const zoomStep = (zoomMax - zoomMin) / (zoomDuration / zoomStepMs)
 const zoomFactor = ref(1)
 let _zoomTimer = null
 
+// pinch-to-zoom state for touch (two-finger gestures)
+const pinchActive = ref(false)
+let _pinchStartDistance = 0
+let _pinchStartZoom = 1
+let _pinchStartTransformX = 0
+let _pinchStartTransformY = 0
+let _pinchOffsetX = 0
+let _pinchOffsetY = 0
+
 // transform / pan state for full-image zoom (not circular lens)
 const transformX = ref(0)
 const transformY = ref(0)
@@ -319,6 +331,16 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
     lastPointer.value = { x: e.clientX, y: e.clientY }
   }
 
+// handle pointermove at image level to detect pinch gestures (two pointers)
+const onPointerMoveImage = (e) => {
+  // if pinch active, ignore single-pointer drag
+  if (!modalImg.value) return
+  if (pinchActive.value && e.touches) {
+    // touches branch will be handled in touch handlers below
+    return
+  }
+}
+
 const onPointerUpWindow = (e) => {
   dragging.value = false
   // release pointer capture if present
@@ -335,7 +357,7 @@ const onPointerUpWindow = (e) => {
 }
 
 const lastTapTime = ref(0)
-const onPointerDown = (e) => {
+  const onPointerDown = (e) => {
   if (!enableMagnifier.value && zoomFactor.value === 1) return
   const now = Date.now()
   if (now - lastTapTime.value < 300) {
@@ -380,8 +402,74 @@ const onPointerDown = (e) => {
   _startTransform.y = transformY.value
   window.addEventListener('pointermove', onPointerMoveWindow)
   window.addEventListener('pointerup', onPointerUpWindow)
+  // also listen at image for pointercancel to support touch pinch end
+  modalImg.value?.addEventListener('pointercancel', onPointerUpWindow)
   try { if (modalImg.value) modalImg.value.setPointerCapture?.(e.pointerId); _capturedPointerId = e.pointerId } catch (err) {}
   try { if (modalImg.value) modalImg.value.style.touchAction = 'none' } catch (e) {}
+}
+
+// touch handlers for pinch-to-zoom
+const onTouchStart = (ev) => {
+  if (!modalImg.value || !imgWrap.value) return
+  if (ev.touches && ev.touches.length === 2) {
+    pinchActive.value = true
+    const t0 = ev.touches[0]
+    const t1 = ev.touches[1]
+    const dx = t1.clientX - t0.clientX
+    const dy = t1.clientY - t0.clientY
+    _pinchStartDistance = Math.hypot(dx, dy)
+    _pinchStartZoom = zoomFactor.value
+    _pinchStartTransformX = transformX.value
+    _pinchStartTransformY = transformY.value
+    // compute pinch center relative to image center
+    const imgRect = modalImg.value.getBoundingClientRect()
+    const centerX = (t0.clientX + t1.clientX) / 2
+    const centerY = (t0.clientY + t1.clientY) / 2
+    _pinchOffsetX = centerX - (imgRect.left + imgRect.width / 2)
+    _pinchOffsetY = centerY - (imgRect.top + imgRect.height / 2)
+    // prevent native gestures
+    ev.preventDefault()
+  }
+}
+
+const onTouchMove = (ev) => {
+  if (!pinchActive.value || !modalImg.value) return
+  if (ev.touches && ev.touches.length === 2) {
+    const t0 = ev.touches[0]
+    const t1 = ev.touches[1]
+    const dx = t1.clientX - t0.clientX
+    const dy = t1.clientY - t0.clientY
+    const dist = Math.hypot(dx, dy)
+    const ratio = dist / _pinchStartDistance
+    const next = clamp(_pinchStartZoom * ratio, zoomMin, zoomMax)
+    // compute new transform to keep pinch center stable
+    const V_oldX = _pinchStartTransformX
+    const V_oldY = _pinchStartTransformY
+    const offsetX = _pinchOffsetX
+    const offsetY = _pinchOffsetY
+    const r = next / _pinchStartZoom
+    const V_newX = V_oldX * r + offsetX * (1 - r)
+    const V_newY = V_oldY * r + offsetY * (1 - r)
+    // compute bounds
+    const baseW = modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0
+    const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
+    const wrapRect = imgWrap.value.getBoundingClientRect()
+    const newW = baseW * next
+    const newH = baseH * next
+    const halfX = Math.abs(wrapRect.width - newW) / 2
+    const halfY = Math.abs(wrapRect.height - newH) / 2
+    zoomFactor.value = next
+    transformX.value = clamp(V_newX, -halfX, halfX)
+    transformY.value = clamp(V_newY, -halfY, halfY)
+    ev.preventDefault()
+  }
+}
+
+const onTouchEnd = (ev) => {
+  if (pinchActive.value) {
+    pinchActive.value = false
+    _pinchStartDistance = 0
+  }
 }
 
 // prevent the browser's touch scrolling when dragging the image
@@ -720,7 +808,8 @@ const onSlideChange = (e) => {
 }
 
 // Debug overlay: live stats to validate bounds in real conditions
-const debugOverlay = ref(true)
+// debug overlay only enabled for test environment
+const debugOverlay = ref(process.env.NODE_ENV === 'test')
 const debugStats = computed(() => {
   if (!modalImg.value || !imgWrap.value) return {
     wrapW: 0, wrapH: 0, baseW: 0, baseH: 0, scaledW: 0, scaledH: 0, halfX: 0, halfY: 0, transformX: 0, transformY: 0, zoom: zoomFactor.value
