@@ -176,48 +176,32 @@ const values = [
 }
 
 .donate-callout {
-  background: linear-gradient(135deg, #E95E5E15, #E95E5E08);
-  border: 2px solid var(--primary-coral);
+  background: linear-gradient(180deg, #F8FFFE, #F3FBFA);
+  border: 1px solid rgba(6,128,122,0.08);
+  padding: 22px;
   border-radius: 12px;
-  padding: 25px;
-  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
 }
 
 .donate-callout h3 {
-  color: var(--primary-coral);
-  margin-bottom: 12px;
-  font-size: 1.2em;
+  color: var(--primary-teal);
+  margin-bottom: 10px;
+  font-weight: 700;
 }
 
-.donate-callout p {
-  color: var(--text-dark);
-  line-height: 1.6;
-  margin-bottom: 8px;
-}
+.donate-callout p { color: var(--text-dark); line-height: 1.6; margin-bottom: 8px }
 
 .recognition {
   margin-top: 35px;
   text-align: center;
 }
 
-.dons-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-top: 14px;
-}
+.dons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px }
 .dons-grid h4 { color: var(--primary-teal); margin-bottom: 8px }
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
-.dons-accepted { background: #F7FFF9; border: 1px solid #CFF3E3; padding: 12px; border-radius: 8px }
-.dons-rejected {
-  background: #fff8f8; /* very soft pink */
-  border: 1px solid rgba(242,184,184,0.45); /* light coral border */
-  color: var(--text-dark);
-  padding: 12px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-}
+.dons-accepted, .dons-rejected { background: #ffffff; border: 1px solid rgba(6,128,122,0.06); padding: 12px; border-radius: 8px }
+.dons-rejected { background: #fff7f6; border-color: rgba(220,80,80,0.06) }
 
 .recognition h3 {
   color: var(--primary-teal);
