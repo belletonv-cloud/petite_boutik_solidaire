@@ -4,7 +4,6 @@
     <div class="badges">
       <template v-for="(r, i) in items" :key="i">
         <button class="badge" type="button" :data-recognition-index="i" @click="openModal(r,i)" :aria-label="r.alt || r.text || 'Badge'">
-          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
           <span class="badge-text">{{ r.text || r.title || r.name }}</span>
         </button>
       </template>
@@ -68,9 +67,10 @@ const onModalClose = () => {
 <style scoped>
 .recognition { margin-top: 35px; text-align: center }
 .badges { display:flex; justify-content:center; gap:15px; flex-wrap:wrap }
-.badge { display:inline-flex; align-items:center; gap:10px; background:white; border:2px solid var(--primary-teal); color:var(--primary-teal); padding:10px 16px; border-radius:28px; font-weight:600; cursor:pointer }
-.badge-icon { font-size:1.25em }
+.badge { display:inline-flex; align-items:center; gap:6px; background:white; border:2px solid var(--primary-teal); color:var(--primary-teal); padding:8px 14px; border-radius:24px; font-weight:600; cursor:pointer }
+.badge-icon { display:none }
 .badge-image { display:none }
+.badge-text { display:block }
 @media (max-width:600px) { .badge{ padding:8px 12px } .badge-image{ width:42px; height:42px } }
 
 /* modal styles (same pattern as MentionsLegales.vue) */
