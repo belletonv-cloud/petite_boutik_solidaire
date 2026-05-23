@@ -41,7 +41,7 @@
     >
       <swiper-slide v-for="(img, idx) in images" :key="idx">
         <div class="slide-frame" @click="openModal(idx)">
-          <img :src="img.src" :alt="img.alt" class="slide-image" :fetchpriority="idx === 0 ? 'high' : 'auto'" loading="lazy" @error="($event.target).src = '/placeholder.jpg'" />
+          <img :src="img.src" :alt="img.alt" class="slide-image" :fetchpriority="idx === 0 ? 'high' : 'auto'" loading="lazy" decoding="async" width="600" height="500" @error="($event.target).src = '/placeholder.jpg'" />
         </div>
       </swiper-slide>
     </swiper>
@@ -62,7 +62,7 @@
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
         <div class="modal-img-wrap">
           <div v-if="modalLoading" class="modal-spinner"></div>
-          <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" :class="{ hidden: modalLoading }" @load="modalLoading = false" @error="modalLoading = false" />
+          <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" :class="{ hidden: modalLoading }" decoding="async" @load="modalLoading = false" @error="modalLoading = false" />
         </div>
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
@@ -90,7 +90,7 @@
           </template>
           <template v-else-if="baseImagesFiltered && baseImagesFiltered.length">
             <div class="grid-item" v-for="(img, i) in baseImagesFiltered" :key="i" @click="openFromGrid(i)">
-              <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" width="320" height="240" />
+              <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" decoding="async" width="320" height="240" />
               <div class="grid-caption">{{ img.alt }}</div>
             </div>
           </template>
@@ -476,7 +476,7 @@ const onSlideChange = (e) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.92);
+  background: rgba(44, 24, 16, 0.95);
   z-index: 1000;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -671,7 +671,7 @@ const onSlideChange = (e) => {
   .grid-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(44, 24, 16, 0.92);
     display: flex;
     align-items: center;
     justify-content: center;

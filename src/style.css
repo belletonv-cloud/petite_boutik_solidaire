@@ -77,3 +77,9 @@ a:hover {
 #association, #calendrier, #horaires, #engagement, #contact, #social {
   scroll-margin-top: 64px;
 }
+
+/* Contenir les sections hors-écran pour améliorer les perfs de rendu */
+#association, #engagement, #contact, #social {
+  content-visibility: auto;
+  contain-intrinsic-size: 400px;
+}
