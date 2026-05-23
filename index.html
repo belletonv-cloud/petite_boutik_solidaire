@@ -67,17 +67,63 @@
                 try { var sx2 = window.scrollX || 0, sy2 = window.scrollY || 0; window.scrollTo(sx2, sy2 + 1); setTimeout(function(){ window.scrollTo(sx2, sy2); }, 50); } catch(e) {}
                 announceAccessibly('Affichage réinitialisé');
                 console.debug('[zoom-reset] finished: scale=', s, 'total_ms=', Date.now()-start);
+                // If after timeout scale is still not 1, apply visual fallback (CSS transform) as a last resort
+                if (s !== 1) {
+                  try { applyVisualFallback(s); console.debug('[zoom-reset] applied visual fallback for scale=', s); } catch(e) { console.debug('[zoom-reset] failed to apply visual fallback', e); }
+                }
                 maybeShowResetZoomControl();
               }
             } catch (e) {
               clearInterval(poller);
               try { meta.setAttribute('content', base); } catch(e) {}
               console.debug('[zoom-reset] error during poll, restored meta');
+              // attempt visual fallback on error if visualViewport available
+              try { if (window.visualViewport && window.visualViewport.scale && window.visualViewport.scale !== 1) applyVisualFallback(window.visualViewport.scale); } catch(e) {}
               maybeShowResetZoomControl();
             }
           }, pollInterval);
         } catch (e) { /* ignore */ }
       }
+
+      // Visual fallback: simulate a browser "zoom out" by scaling the #app wrapper.
+      function applyVisualFallback(scale) {
+        try {
+          if (!scale || scale === 1) return;
+          var app = document.getElementById('app');
+          if (!app) return;
+          var factor = 1 / scale;
+          // store previous inline styles for undo
+          app.__prevStyle = app.__prevStyle || { transform: app.style.transform || '', transformOrigin: app.style.transformOrigin || '', width: app.style.width || '' };
+          app.style.transformOrigin = '0 0';
+          app.style.transition = 'transform 120ms ease';
+          app.style.transform = 'scale(' + factor + ')';
+          // compensate width so layout fits the viewport after scaling
+          try { app.style.width = (100 * scale) + '%'; } catch(e) {}
+          // adjust scroll to keep viewport roughly stable
+          try { var sx = window.scrollX || 0, sy = window.scrollY || 0; window.scrollTo(Math.round(sx * factor), Math.round(sy * factor)); } catch(e) {}
+          document.documentElement.setAttribute('data-visual-fallback', '1');
+        } catch (e) { console.debug('[zoom-fallback] error', e); }
+      }
+
+      function removeVisualFallback() {
+        try {
+          var app = document.getElementById('app');
+          if (!app) return;
+          if (app.__prevStyle) {
+            app.style.transform = app.__prevStyle.transform || '';
+            app.style.transformOrigin = app.__prevStyle.transformOrigin || '';
+            app.style.width = app.__prevStyle.width || '';
+            delete app.__prevStyle;
+          } else {
+            app.style.transform = '';
+            app.style.transformOrigin = '';
+            app.style.width = '';
+          }
+          document.documentElement.removeAttribute('data-visual-fallback');
+        } catch (e) { console.debug('[zoom-fallback] remove error', e); }
+      }
+
+      try { window.__applyVisualFallback = applyVisualFallback; window.__removeVisualFallback = removeVisualFallback; } catch (e) {}
 
       // Expose a manual trigger for debugging/testing
       try { window.__forceResetZoom = resetZoomTemporarily } catch (e) {}
