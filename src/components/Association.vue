@@ -38,26 +38,21 @@
 
     <div class="recognition" v-if="recognition && recognition.length">
       <h3>Ils nous font confiance</h3>
-    <div class="badges">
-      <template v-for="(r, i) in recognition" :key="i">
-        <button v-if="r.src" class="badge" type="button" :data-recognition-index="i" @click="openModal(r, i)" :aria-label="r.alt || 'Badge'">
-          <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
-          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-        </button>
-        <button v-else class="badge" type="button" :data-recognition-index="i" :aria-label="r.alt || 'Badge'">
-          <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
-          <span class="badge-text">{{ r.text || r.title || r.name }}</span>
-        </button>
-      </template>
-    </div>
-    </div>
-
-    <Modal v-model:modelValue="modalOpen" :title="modalAlt" @close="onModalClose">
-      <div style="display:flex;align-items:center;justify-content:center;">
-        <img :src="modalImage" :alt="modalAlt" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px" />
+      <div class="badges">
+        <template v-for="(r, i) in recognition" :key="i">
+          <!-- Simplified: open badge image in a new tab to avoid modal complexity. Keeps text and icon. -->
+          <a v-if="r.src" class="badge" :href="r.src" target="_blank" rel="noopener noreferrer" :aria-label="r.alt || r.text || 'Badge'">
+            <img v-if="r.src" :src="r.src" :alt="r.alt || r.text || r.title || 'Badge'" class="badge-image" loading="lazy" decoding="async" />
+            <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
+            <span class="badge-text">{{ r.text || r.title || r.name }}</span>
+          </a>
+          <div v-else class="badge" :aria-label="r.alt || 'Badge'">
+            <span class="badge-icon" v-if="r.icon" v-html="sanitizeIconSafe(r.icon)"></span>
+            <span class="badge-text">{{ r.text || r.title || r.name }}</span>
+          </div>
+        </template>
       </div>
-    </Modal>
+    </div>
   </section>
 </template>
 
