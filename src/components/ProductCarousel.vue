@@ -1153,11 +1153,12 @@ watch(() => modalOpen.value, (open) => {
 }
 
 /* fixed zoom controls for modal overlay */
-.modal .zoom-controls {
+.modal-img-wrap .zoom-controls {
   position: fixed !important;
   right: 16px;
   bottom: 16px;
   z-index: 1200;
+  pointer-events: auto;
 }
 
 .magnifier-indicator {
