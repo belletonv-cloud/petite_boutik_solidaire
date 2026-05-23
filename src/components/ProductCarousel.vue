@@ -288,18 +288,18 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
     if (!dragging.value || !modalImg.value || !imgWrap.value) return
     const dx = e.clientX - _startPointer.x
     const dy = e.clientY - _startPointer.y
-    // use container (imgWrap) vs image natural/display size to compute available pan range
-    const container = imgWrap.value.getBoundingClientRect()
-    // offsetWidth/offsetHeight reflect the untransformed rendered size (responsive)
-    const dispW = modalImg.value.offsetWidth || 0
-    const dispH = modalImg.value.offsetHeight || 0
-    const scaledW = dispW * zoomFactor.value
-    const scaledH = dispH * zoomFactor.value
-    const minVisX = Math.min(0, container.width - scaledW)
-    const minVisY = Math.min(0, container.height - scaledH)
-    // transformX/Y are stored as visual translate (pixels)
-    transformX.value = clamp(_startTransform.x + dx, minVisX, 0)
-    transformY.value = clamp(_startTransform.y + dy, minVisY, 0)
+    const wrapRect = imgWrap.value.getBoundingClientRect()
+    const baseW = modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0
+    const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
+    const scaledW = baseW * zoomFactor.value
+    const scaledH = baseH * zoomFactor.value
+    const minX = Math.min(0, wrapRect.width - scaledW)
+    const minY = Math.min(0, wrapRect.height - scaledH)
+    const nextX = _startTransform.x + dx
+    const nextY = _startTransform.y + dy
+    transformX.value = clamp(nextX, minX, 0)
+    transformY.value = clamp(nextY, minY, 0)
+    lastPointer.value = { x: e.clientX, y: e.clientY }
   }
 
 const onPointerUpWindow = (e) => {
@@ -319,47 +319,39 @@ const onPointerUpWindow = (e) => {
 
 const lastTapTime = ref(0)
 const onPointerDown = (e) => {
-  // allow pointer down when magnifier is enabled OR when image is already zoomed
   if (!enableMagnifier.value && zoomFactor.value === 1) return
-  // double-tap support for touch
   const now = Date.now()
   if (now - lastTapTime.value < 300) {
-    // double tap: toggle zoom
-      const imageRect = modalImg.value ? modalImg.value.getBoundingClientRect() : null
-      const container = imgWrap.value ? imgWrap.value.getBoundingClientRect() : null
-      const cx = imageRect ? e.clientX : 0
-      const cy = imageRect ? e.clientY : 0
-      if (zoomFactor.value === 1) {
-        const next = Math.min(zoomMax, 1.8)
-        const baseW = modalImg.value ? modalImg.value.offsetWidth || 0 : 0
-        const baseH = modalImg.value ? modalImg.value.offsetHeight || 0 : 0
-        const offsetX = imageRect ? cx - imageRect.left : 0
-        const offsetY = imageRect ? cy - imageRect.top : 0
-        const prev = zoomFactor.value
-        const ratio = next / prev
-        // transformX/Y are visual pixels. Compute new visual translate to keep point stable:
-        const V_oldX = transformX.value
-        const V_oldY = transformY.value
-        const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
-        const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
-        // compute new image size from base (untransformed) dimensions
-        const newImgWidth = baseW * next
-        const newImgHeight = baseH * next
-        const minVisX2 = container ? Math.min(0, container.width - newImgWidth) : 0
-        const minVisY2 = container ? Math.min(0, container.height - newImgHeight) : 0
-        zoomFactor.value = next
-        transformX.value = clamp(V_newX, minVisX2, 0)
-        transformY.value = clamp(V_newY, minVisY2, 0)
-      } else {
-        zoomFactor.value = 1
-        transformX.value = 0
-        transformY.value = 0
-      }
+    // double-tap: toggle zoom centered on the tap (minimal behavior)
+    const wrapRect = imgWrap.value ? imgWrap.value.getBoundingClientRect() : null
+    if (zoomFactor.value === 1) {
+      const next = Math.min(zoomMax, 1.8)
+      const baseW = modalImg.value ? modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0 : 0
+      const baseH = modalImg.value ? modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0 : 0
+      const offsetX = wrapRect ? e.clientX - wrapRect.left : 0
+      const offsetY = wrapRect ? e.clientY - wrapRect.top : 0
+      const prev = zoomFactor.value
+      const ratio = next / prev
+      const V_oldX = transformX.value
+      const V_oldY = transformY.value
+      const V_newX = V_oldX * ratio + offsetX * (1 - ratio)
+      const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
+      const newImgW = baseW * next
+      const newImgH = baseH * next
+      const minX = wrapRect ? Math.min(0, wrapRect.width - newImgW) : 0
+      const minY = wrapRect ? Math.min(0, wrapRect.height - newImgH) : 0
+      zoomFactor.value = next
+      transformX.value = clamp(V_newX, minX, 0)
+      transformY.value = clamp(V_newY, minY, 0)
+    } else {
+      zoomFactor.value = 1
+      transformX.value = 0
+      transformY.value = 0
+    }
     lastTapTime.value = 0
     return
   }
   lastTapTime.value = now
-  // only left button for pointer devices
   if (e.pointerType === 'mouse' && e.button !== 0) return
   dragging.value = true
   _startPointer.x = e.clientX
@@ -368,14 +360,7 @@ const onPointerDown = (e) => {
   _startTransform.y = transformY.value
   window.addEventListener('pointermove', onPointerMoveWindow)
   window.addEventListener('pointerup', onPointerUpWindow)
-  // attempt to capture the pointer on the image so touch moves aren't stolen by scroll
-  try {
-    if (modalImg.value && typeof modalImg.value.setPointerCapture === 'function') {
-      modalImg.value.setPointerCapture(e.pointerId)
-      _capturedPointerId = e.pointerId
-    }
-  } catch (err) { /* ignore */ }
-  // lock touch-action to prevent the browser handling the touch as page scroll while dragging
+  try { if (modalImg.value) modalImg.value.setPointerCapture?.(e.pointerId); _capturedPointerId = e.pointerId } catch (err) {}
   try { if (modalImg.value) modalImg.value.style.touchAction = 'none' } catch (e) {}
 }
 
@@ -408,13 +393,12 @@ let _capturedPointerId = null
     const step = 0.15
     const next = clamp(prev + (delta > 0 ? -step : step), zoomMin, zoomMax)
     if (next === prev) return
-    // keep cursor point stable while zooming — compute using visual translate units
-    const imageRect = modalImg.value.getBoundingClientRect()
-    const container = imgWrap.value.getBoundingClientRect()
-    const baseW = modalImg.value.offsetWidth || 0
-    const baseH = modalImg.value.offsetHeight || 0
-    const offsetX = e.clientX - imageRect.left
-    const offsetY = e.clientY - imageRect.top
+  // keep cursor point stable while zooming — compute using visual translate units
+    const wrapRect = imgWrap.value.getBoundingClientRect()
+    const baseW = modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0
+    const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
+    const offsetX = e.clientX - wrapRect.left
+    const offsetY = e.clientY - wrapRect.top
     const ratio = next / prev
     const V_oldX = transformX.value
     const V_oldY = transformY.value
@@ -422,8 +406,8 @@ let _capturedPointerId = null
     const V_newY = V_oldY * ratio + offsetY * (1 - ratio)
     const newImgW = baseW * next
     const newImgH = baseH * next
-    const minVisX2 = Math.min(0, container.width - newImgW)
-    const minVisY2 = Math.min(0, container.height - newImgH)
+    const minVisX2 = Math.min(0, wrapRect.width - newImgW)
+    const minVisY2 = Math.min(0, wrapRect.height - newImgH)
     zoomFactor.value = next
     transformX.value = clamp(V_newX, minVisX2, 0)
     transformY.value = clamp(V_newY, minVisY2, 0)
@@ -628,8 +612,9 @@ const openModal = (idx) => {
   }
   // ensure modal image fits well on large desktop screens by capping fullSrc transform
   preloadAdjacent(idx, images.value)
-  // enable magnifier on large viewports
-  enableMagnifier.value = window.innerWidth > 900
+  // enable magnifier for modal — allow on mobile too so users can pinch/drag
+  // keep this permissive; users can still toggle it off with the UI
+  enableMagnifier.value = true
   // reset zoom/transform for the new image
   zoomFactor.value = 1
   transformX.value = 0
