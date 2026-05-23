@@ -2,12 +2,14 @@
   <section class="hero" :style="heroStyle">
     <div class="hero-content">
       <p class="hero-tagline">{{ tagline }}</p>
-      <div class="hero-actions" v-if="btn1Visible || btn2Visible">
-        <a v-if="btn1Visible" href="#calendrier" class="btn btn-primary" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
-        <a v-if="btn2Visible" href="#contact" class="btn btn-secondary" @click="scrollTo('contact')">
-          <span class="btn-icon" aria-hidden="true" v-html="mailSvg"></span>
-          <span class="btn-text">{{ btn2Label }}</span>
-        </a>
+      <div class="hero-actions hero-actions-vertical" v-if="btn1Visible || btn2Visible">
+        <div class="cta-wrap">
+          <a v-if="btn2Visible" href="#contact" class="btn btn-cta" @click="scrollTo('contact')">
+            <span class="btn-icon" aria-hidden="true" v-html="mailSvg"></span>
+            <span class="btn-text">{{ btn2Label }}</span>
+          </a>
+          <a v-if="btn1Visible" href="#calendrier" class="btn btn-ghost" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
+        </div>
       </div>
     </div>
   </section>
@@ -107,43 +109,38 @@ onMounted(() => {
   text-decoration: none;
 }
 
-.btn-primary {
-  background: white;
-  color: var(--primary-teal);
-  box-shadow: 0 6px 18px rgba(27,169,168,0.14);
-  padding: 12px 26px;
-}
-
-.btn-primary:hover {
-  background: var(--secondary-cream);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--primary-coral);
-  border: 2px solid var(--primary-coral);
-  padding: 10px 20px;
+.btn-cta {
+  background: var(--primary-coral);
+  color: white;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 1.05em;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  transition: background 0.12s, color 0.12s, transform 0.12s;
+  box-shadow: 0 10px 24px rgba(233,94,94,0.18);
 }
 
-.btn-secondary:hover {
-  background: var(--primary-coral);
+.btn-cta:hover { opacity: 0.98 }
+
+.btn-ghost {
+  display: block;
+  margin-top: 12px;
   color: white;
+  opacity: 0.95;
+  text-decoration: underline;
+  font-weight: 600;
 }
 
 .btn-icon { display:inline-flex; align-items:center; justify-content:center }
-.btn-icon svg { display:block; width:16px; height:16px }
+.btn-icon svg { display:block; width:18px; height:18px }
 
-.btn-text { display:inline-block }
+.cta-wrap { display:flex; flex-direction:column; align-items:center; gap:6px }
 
-/* Mobile: stack buttons full width */
 @media (max-width: 600px) {
-  .hero-actions { flex-direction: column; gap: 12px }
-  .btn { width: 100%; text-align: center }
-  .btn .btn-icon { margin-left: 8px; }
+  .btn-cta { width: 100%; justify-content: center }
+  .btn-ghost { width: 100%; text-align: center }
 }
 
 @media (max-width: 600px) {
