@@ -101,9 +101,46 @@ onMounted(() => {
 .cta-desc { color: rgba(255,255,255,0.95); font-size:0.97em; margin-bottom:12px; line-height:1.4; max-height:3.1em; overflow:hidden }
 
 .cta-actions { display:flex; gap:12px; align-items:center; justify-content:center }
-.btn-primary-cta { display:inline-flex; align-items:center; gap:10px; padding:12px 18px; background: var(--primary-coral); color: white; border-radius:10px; text-decoration:none; font-weight:800 }
-.btn-primary-cta:hover { transform: translateY(-2px) }
-.btn-secondary-link { color: rgba(255,255,255,0.9); text-decoration:underline; font-weight:700 }
+.btn-primary-cta {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 18px;
+  background: linear-gradient(180deg, var(--primary-coral), #e64f4f);
+  color: white;
+  border-radius: 14px;
+  text-decoration:none;
+  font-weight:800;
+  font-size:1rem;
+  box-shadow: 0 8px 20px rgba(233,94,94,0.14);
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+.btn-primary-cta:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 12px 28px rgba(233,94,94,0.18);
+}
+.btn-primary-cta:focus-visible {
+  outline: 3px solid rgba(255,255,255,0.14);
+  outline-offset: 4px;
+}
+.btn-secondary-link {
+  display:inline-flex;
+  align-items:center;
+  padding:8px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.95);
+  text-decoration:none;
+  font-weight:700;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+.btn-secondary-link:hover {
+  background: white;
+  color: var(--primary-coral);
+  transform: translateY(-2px);
+}
+.btn-secondary-link:focus-visible { outline: 3px solid rgba(255,255,255,0.12); outline-offset: 4px }
 
   .contact-card { display:none }
   .contact-title { display:none }
