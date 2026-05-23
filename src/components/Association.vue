@@ -387,7 +387,7 @@ const values = [
 /* Modal image sizing specific to recognition modal */
 .trust-modal-img {
   max-width: 90vw;
-  max-height: 80vh;
+  max-height: 70vh; /* limit image height so modal chrome (close) stays visible */
   object-fit: contain;
   border-radius: 8px;
 }
@@ -397,11 +397,17 @@ const values = [
   flex-direction: column;
   align-items: center;
   max-height: 80vh;
-  overflow: auto;
+  overflow-y: auto; /* ensure modal content scrolls internally */
   gap: 8px;
+  position: relative; /* for absolute-positioned debug */
+  padding-bottom: 48px; /* leave room for debug / close button */
 }
 
 .modal-debug {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 12px;
   color: #fff;
   background: rgba(0,0,0,0.45);
@@ -409,5 +415,6 @@ const values = [
   border-radius: 6px;
   max-width: 90vw;
   word-break: break-all;
+  z-index: 100001;
 }
 </style>
