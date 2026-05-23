@@ -99,9 +99,9 @@ onMounted(() => {
 
 .hero-center { display:flex; align-items:center; justify-content:center; padding: 12px 8px }
 
-.cta-card { background: rgba(255,255,255,0.05); padding:8px 10px; border-radius:10px; max-width:320px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); text-align:center }
-.cta-title { font-weight:800; color:white; margin-bottom:4px; font-size:0.98em }
-.cta-desc { color: rgba(255,255,255,0.95); font-size:0. nineem; margin-bottom:8px; line-height:1.3; max-height:2.6em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
+.cta-card { background: transparent; padding:0; border-radius:0; max-width:100%; box-shadow: none; text-align:left; width:100% }
+.cta-title { font-weight:700; color:white; margin-bottom:2px; font-size:0.95em }
+.cta-desc { color: rgba(255,255,255,0.95); font-size:0. nineem; margin-bottom:6px; line-height:1.25; max-height:2.4em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
 
 .cta-actions { display:flex; gap:10px; align-items:center; justify-content:center; width:100% }
 .full-btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:8px 12px; border-radius:10px; width:100%; text-decoration:none }
