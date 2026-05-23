@@ -17,7 +17,12 @@ const props = defineProps({ modelValue: { type: Boolean, default: false }, title
 const emit = defineEmits(['update:modelValue','close'])
 const content = ref(null)
 
-const close = () => { emit('update:modelValue', false); emit('close') }
+const close = () => {
+  // ensure body scroll is always restored when closing the modal
+  try { document.body.style.overflow = '' } catch (e) {}
+  emit('update:modelValue', false)
+  emit('close')
+}
 
 const onKey = (e) => { if (e.key === 'Escape') close() }
 
