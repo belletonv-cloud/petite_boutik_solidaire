@@ -55,10 +55,14 @@
       </button>
     </div>
 
-    <div class="modal-overlay" v-if="modalOpen" @click="closeModal" role="dialog" aria-modal="true">
+    <div :class="['modal-overlay', overlayVariant === 2 ? 'overlay-variant-2' : 'overlay-variant-1']" v-if="modalOpen" @click="closeModal" role="dialog" aria-modal="true">
       <div class="modal-content" @click.stop>
-        <img v-if="logo" :src="logo" alt="Logo" class="modal-logo" />
+        <img v-if="logo" :src="logo" alt="Logo" :class="['modal-logo', logoSmall ? 'small' : '']" />
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
+        <div class="modal-controls">
+          <button class="modal-toggle" @click.stop.prevent="toggleOverlayVariant" title="Basculer le voile">Voile</button>
+          <button class="modal-toggle" @click.stop.prevent="toggleLogoSize" title="Taille logo">Logo</button>
+        </div>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
         <div class="modal-img-wrap">
@@ -237,6 +241,11 @@ const currentIndex = ref(0)
 const gridOpen = ref(false)
 const modalLoading = ref(false)
 const logo = logoUrl
+const overlayVariant = ref(1) // 1: subtle, 2: stronger coral
+const logoSmall = ref(false)
+
+const toggleOverlayVariant = () => { overlayVariant.value = overlayVariant.value === 1 ? 2 : 1 }
+const toggleLogoSize = () => { logoSmall.value = !logoSmall.value }
 
 // Fallback image for broken links
 const placeholderImage = '/placeholder.jpg'
@@ -534,6 +543,29 @@ const onSlideChange = (e) => {
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   z-index: 12;
 }
+
+.modal-logo.small { width: 36px; opacity: 0.95 }
+
+.modal-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 12;
+}
+
+.modal-toggle {
+  background: rgba(255,255,255,0.12);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.overlay-variant-2 { background: linear-gradient(135deg, rgba(233,94,94,0.12) 0%, rgba(10,10,10,0.92) 100%); }
 
 .modal-close:hover {
   background: #d14545;
