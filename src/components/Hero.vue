@@ -1,14 +1,21 @@
 <template>
   <section class="hero" :style="heroStyle">
-    <div class="hero-content">
-      <p class="hero-tagline">{{ tagline }}</p>
-      <div class="hero-actions hero-actions-vertical" v-if="btn1Visible || btn2Visible">
-        <div class="cta-wrap">
-          <a v-if="btn2Visible" href="#contact" class="btn btn-cta" @click="scrollTo('contact')">
+    <div class="hero-content hero-grid">
+      <div class="hero-left">
+        <p class="hero-tagline">{{ tagline }}</p>
+        <div class="hero-actions" v-if="btn1Visible">
+          <a v-if="btn1Visible" href="#calendrier" class="btn btn-primary" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
+        </div>
+      </div>
+
+      <div class="hero-right" v-if="btn2Visible">
+        <div class="contact-card">
+          <div class="contact-title">Besoin d'aide ?</div>
+          <div class="contact-desc">Nous sommes là pour répondre à vos questions et vous accueillir à la boutique.</div>
+          <a href="#contact" class="btn btn-cta" @click="scrollTo('contact')">
             <span class="btn-icon" aria-hidden="true" v-html="mailSvg"></span>
             <span class="btn-text">{{ btn2Label }}</span>
           </a>
-          <a v-if="btn1Visible" href="#calendrier" class="btn btn-ghost" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
         </div>
       </div>
     </div>
@@ -72,9 +79,17 @@ onMounted(() => {
 }
 
 .hero-content {
-  max-width: 600px;
+  max-width: 1000px;
   margin: 0 auto;
 }
+
+.hero-grid { display:grid; grid-template-columns: 1fr 360px; gap: 22px; align-items:center }
+.hero-left { text-align:left }
+.hero-right { display:flex; align-items:center; justify-content:center }
+
+.contact-card { background: rgba(255,255,255,0.06); padding:18px; border-radius:12px; text-align:left }
+.contact-title { font-weight:700; color:white; margin-bottom:6px }
+.contact-desc { color: rgba(255,255,255,0.9); font-size:0.95em; margin-bottom:12px }
 
 .hero-tagline {
   font-size: 1.15em;
@@ -141,6 +156,9 @@ onMounted(() => {
 .cta-wrap { display:flex; flex-direction:column; align-items:center; gap:6px }
 
 @media (max-width: 600px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero-left { text-align:center }
+  .hero-right { margin-top: 12px }
   .btn-cta { width: 100%; justify-content: center }
   .btn-ghost { width: 100%; text-align: center }
 }
