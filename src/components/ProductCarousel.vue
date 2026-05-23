@@ -898,7 +898,7 @@ const onSlideChange = (e) => {
   min-height: 200px;
   width: 100%;
   max-height: 80vh;
-  overflow: auto;
+  overflow: hidden; /* ensure overflow is clipped so the image can exceed and be panned */
 }
 
   .modal-image-outer { display:flex; align-items:center; justify-content:center; overflow:hidden; width:100%; position:relative }
@@ -990,10 +990,11 @@ const onSlideChange = (e) => {
 
 .modal-image {
   width: auto;
-  max-width: calc(100vw - 80px);
   height: auto;
-  max-height: calc(80vh - 160px);
-  object-fit: contain;
+  /* allow the image to grow beyond the wrapper when zoomed; important to permit pan */
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: unset !important;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   transition: opacity 180ms ease, transform 220ms ease;
