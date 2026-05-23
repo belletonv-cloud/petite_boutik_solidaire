@@ -58,7 +58,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 99999;
   padding: 20px;
 }
 .app-modal-content {
@@ -78,7 +78,23 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
 }
 .app-modal-title { margin: 0 0 8px 0; color: var(--primary-teal) }
 .app-modal-body { overflow: auto; padding-right: 8px; -webkit-overflow-scrolling: touch }
-.app-modal-close { position: absolute; right: 10px; top: 10px; background: var(--primary-coral); color: white; border: none; width:48px; height:48px; border-radius:50%; cursor:pointer; display:flex;align-items:center;justify-content:center; font-size:22px; z-index: 1720 }
+.app-modal-close {
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  background: var(--primary-coral);
+  color: white;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  z-index: 100000;
+}
 
 @media (max-width: 520px) {
   .app-modal-close { width:48px; height:48px; font-size:20px; right:10px; top:10px }
