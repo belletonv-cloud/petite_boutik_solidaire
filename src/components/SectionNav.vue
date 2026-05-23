@@ -3,6 +3,7 @@
     <div class="nav-inner">
       <div class="nav-brand">
         <img src="@/assets/logo.jpg" alt="Logo" class="nav-logo" />
+        <div class="nav-title">{{ siteName }}</div>
       </div>
 
       <div class="nav-links">
@@ -52,6 +53,9 @@ const props = defineProps({
 const open = ref(false)
 const activeId = ref('')
 const touchedId = ref(null)
+
+// derive a short site name from the document title (fallback to default)
+const siteName = ref((typeof document !== 'undefined' && document.title ? document.title.split('—')[0].trim() : "La P'tite Boutik Solidaire"))
 
 let lastClickedId = null
 let clickTimeout = null
@@ -153,6 +157,14 @@ onUnmounted(() => {
   height: 28px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.nav-title {
+  margin-left: 8px;
+  font-weight: 700;
+  color: var(--primary-teal-dark);
+  font-size: 0.95em;
+  white-space: nowrap;
 }
 
 /* ==================== Desktop links ==================== */
