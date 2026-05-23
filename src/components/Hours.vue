@@ -1,5 +1,5 @@
 <template>
-  <div class="hours" id="horaires">
+  <div class="hours" id="horaires" style="scroll-margin-top:64px">
     <h2>{{ titre }}</h2>
     <div class="hours-grid">
       <div class="hours-card" v-for="regle in regles" :key="regle.label" :style="{ borderColor: regle.color || '#1BA9A8' }">

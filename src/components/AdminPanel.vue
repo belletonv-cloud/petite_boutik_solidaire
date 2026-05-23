@@ -281,6 +281,13 @@
                   </span>
                   <span class="toggle-text">{{ isBlocVisible(bloc.id) ? 'Visible' : 'Masqué' }}</span>
                 </label>
+                <label class="nav-toggle" @click.stop v-if="bloc.id !== 'header'">
+                  <input type="checkbox" :checked="isBlocInNav(bloc.id)" @change="toggleBlocNav(bloc.id)" />
+                  <span class="toggle-track sm">
+                    <span class="toggle-thumb"></span>
+                  </span>
+                  <span class="toggle-text">{{ isBlocInNav(bloc.id) ? 'Menu' : '—' }}</span>
+                </label>
                 <span class="bloc-chevron">{{ bloc.open ? '▲' : '▼' }}</span>
               </div>
             </div>
@@ -650,6 +657,17 @@ const toggleBloc = async (id) => {
   await setDoc(doc(db, 'config', 'blocs'), blocsState.value)
 }
 
+const isBlocInNav = (id) => {
+  if (blocsState.value[id] === undefined) return true
+  return blocsState.value[id].showInNav !== false
+}
+
+const toggleBlocNav = async (id) => {
+  const newVal = !isBlocInNav(id)
+  blocsState.value[id] = { ...(blocsState.value[id] || {}), showInNav: newVal }
+  await setDoc(doc(db, 'config', 'blocs'), blocsState.value)
+}
+
 const loadBlocs = () => {
   onSnapshot(doc(db, 'config', 'blocs'), snap => {
     if (snap.exists()) {
@@ -716,6 +734,11 @@ const textesValues = ref({
   products_items: [],
   products_brands: [],
   products_prices: [],
+  // Sticky bottom bar
+  sticky_phone: '06 20 70 54 96',
+  sticky_phone_raw: '0620705496',
+  sticky_address: '2 rue Jean-Monnet, Morlaix',
+  sticky_hours: '1er/3e mer. & sam. 10h-17h30',
 })
 
 // Définition des blocs avec leurs champs éditables
@@ -809,6 +832,16 @@ const siteBlocs = ref([
       { id: 'social_facebook_handle', label: 'Nom affiché Facebook', multiline: false, default: 'La P\'tite Boutik Solidaire' },
       { id: 'social_instagram_url', label: 'URL Instagram', multiline: false, default: 'https://www.instagram.com/la_ptite_boutik_morlaix/' },
       { id: 'social_instagram_handle', label: 'Nom affiché Instagram', multiline: false, default: '@la_ptite_boutik_morlaix' },
+    ]
+  },
+  {
+    id: 'sticky', icon: '⬇️', label: 'Barre en bas', open: false, saved: false,
+    desc: 'Barre fixe tout en bas de l\'écran (téléphone, adresse, horaires)',
+    fields: [
+      { id: 'sticky_phone', label: 'Téléphone (affichage)', multiline: false, default: '06 20 70 54 96' },
+      { id: 'sticky_phone_raw', label: 'Téléphone (pour lien tel:)', multiline: false, default: '0620705496' },
+      { id: 'sticky_address', label: 'Adresse', multiline: false, default: '2 rue Jean-Monnet, Morlaix' },
+      { id: 'sticky_hours', label: 'Horaires', multiline: false, default: '1er/3e mer. & sam. 10h-17h30' },
     ]
   },
 ])
@@ -2428,6 +2461,31 @@ const loadData = () => {
   font-size: 0.8em;
   color: #666;
   white-space: nowrap;
+}
+
+/* Nav toggle (smaller) */
+.nav-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.nav-toggle input[type="checkbox"] { display: none; }
+.toggle-track.sm {
+  width: 30px;
+  height: 18px;
+}
+.toggle-track.sm .toggle-thumb {
+  width: 12px;
+  height: 12px;
+  top: 3px;
+  left: 3px;
+}
+.nav-toggle input:checked + .toggle-track { background: #1BA9A8; }
+.nav-toggle input:checked + .toggle-track .toggle-thumb { left: 15px; }
+.nav-toggle .toggle-text {
+  font-size: 0.75em;
+  min-width: 2em;
 }
 
 .bloc-body {

@@ -60,7 +60,7 @@
         <button class="modal-close" @click="closeModal" aria-label="Fermer">✕</button>
         <button class="modal-nav modal-prev" @click="prevModal" aria-label="Précédente">‹</button>
         <button class="modal-nav modal-next" @click="nextModal" aria-label="Suivante">›</button>
-        <img :src="images[modalIndex].src" :alt="images[modalIndex].alt" class="modal-image" loading="lazy" />
+        <img :src="images[modalIndex].fullSrc" :alt="images[modalIndex].alt" class="modal-image" loading="lazy" />
         <p class="modal-caption">{{ images[modalIndex].alt }}</p>
         <p class="modal-counter">{{ modalIndex + 1 }} / {{ images.length }}</p>
       </div>
@@ -161,8 +161,21 @@ const baseImages = computed(() =>
       // Boutique: the rest (not background removed)
       : (p.removeBg !== true)
     ))
-    .map(p => ({ src: bgRemovalUrl(p.url, p.removeBg), thumb: thumbFor(p.url, p.removeBg), alt: p.alt || '', tags: p.tags || [] }))
+    .map(p => ({
+      fullSrc: p.url?.includes('cloudinary') ? p.url.replace('/upload/', '/upload/f_auto,q_auto/') : p.url,
+      src: cloudinaryCardUrl(p.url, p.removeBg),
+      thumb: thumbFor(p.url, p.removeBg),
+      alt: p.alt || '',
+      tags: p.tags || []
+    }))
 )
+
+function cloudinaryCardUrl(url, removeBg) {
+  if (!url || !url.includes('/upload/')) return url
+  const baseTransform = 'w_600,c_limit,f_auto,q_auto'
+  if (removeBg) return url.replace('/upload/', `/upload/e_background_removal,${baseTransform}/`)
+  return url.replace('/upload/', `/upload/${baseTransform}/`)
+}
 
 const filterQuery = ref('')
 const isFiltering = ref(false)
@@ -290,6 +303,13 @@ const onSlideChange = (e) => {
   border: 2px solid var(--secondary-beige);
 }
 
+@media (max-width: 600px) {
+  .gallery-container {
+    padding: 15px;
+    margin: 12px 0;
+  }
+}
+
 .gallery-container h2 {
   color: var(--primary-teal);
   margin-bottom: 8px;
@@ -309,6 +329,13 @@ const onSlideChange = (e) => {
   max-width: 600px;
   margin: 0 auto;
   padding-bottom: 40px;
+}
+
+@media (max-width: 600px) {
+  .my-swiper {
+    max-width: 100%;
+    padding-bottom: 30px;
+  }
 }
 
 :deep(.swiper-pagination-bullet-active) {
@@ -341,6 +368,13 @@ const onSlideChange = (e) => {
   width: 100%;
   height: 60vh;
   max-height: 500px;
+}
+
+@media (max-width: 600px) {
+  .slide-frame {
+    height: 40vh;
+    max-height: 320px;
+  }
 }
 
 .slide-frame:hover {
@@ -599,14 +633,6 @@ const onSlideChange = (e) => {
 
   .swiper-pagination-fraction::before {
     content: 'Photo ';
-  }
-
-  .slide-image {
-    width: 100%;
-    height: auto;
-    max-height: 60vh;
-    object-fit: contain;
-    border-radius: 8px;
   }
 
   .slide-image[src*="placeholder.jpg"] {

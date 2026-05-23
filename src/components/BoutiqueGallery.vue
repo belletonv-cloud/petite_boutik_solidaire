@@ -67,12 +67,17 @@ onMounted(() => {
 // Business rule: prefer photos that had their background removed (removeBg === true),
 // but also include photos explicitly marked for the boutique gallery (gallery === 'boutique').
 // This keeps the UI tolerant of inconsistent data while prioritising properly processed images.
+function galleryCardUrl(url) {
+  if (!url || !url.includes('/upload/')) return url
+  return url.replace('/upload/', '/upload/w_600,c_limit,f_auto,q_auto/')
+}
+
 const images = computed(() =>
   dynamicPhotos.value
     .filter(p => p && p.active && p.removeBg === false)
     .map(p => ({
       id: p.id,
-      src: (p.url || '').replace('upload/', 'upload/f_auto,q_auto/'),
+      src: galleryCardUrl(p.url),
       alt: p.alt || '',
       fallback: p.fallback || '/placeholder.jpg'
     }))
@@ -162,6 +167,13 @@ onUnmounted(() => {
   border: 2px solid var(--secondary-beige);
 }
 
+@media (max-width: 600px) {
+  .carousel-container {
+    padding: 15px;
+    margin: 12px 0;
+  }
+}
+
 .carousel-container h2 {
   color: var(--primary-teal);
   margin-bottom: 8px;
@@ -180,6 +192,13 @@ onUnmounted(() => {
   max-width: 600px;
   margin: 0 auto;
   padding-bottom: 40px;
+}
+
+@media (max-width: 600px) {
+  .my-swiper {
+    max-width: 100%;
+    padding-bottom: 30px;
+  }
 }
 
 :deep(.swiper-pagination-bullet-active) {
@@ -207,6 +226,13 @@ onUnmounted(() => {
   max-height: 500px;
   object-fit: contain;
   border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .slide-image {
+    height: 40vh;
+    max-height: 320px;
+  }
 }
 
 .slide-image[src*="placeholder.jpg"] {

@@ -68,3 +68,9 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* Offset pour les ancres sous la nav fixe (48px) */
+#hero, #about, #boutique-gallery, #collection, #carousel,
+#association, #calendrier, #horaires, #engagement, #contact, #social {
+  scroll-margin-top: 64px;
+}

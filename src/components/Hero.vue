@@ -3,8 +3,8 @@
     <div class="hero-content">
       <p class="hero-tagline">{{ tagline }}</p>
       <div class="hero-actions" v-if="btn1Visible || btn2Visible">
-        <a v-if="btn1Visible" href="#horaires" class="btn btn-primary">{{ btn1Label }}</a>
-        <a v-if="btn2Visible" href="#contact" class="btn btn-secondary">{{ btn2Label }}</a>
+        <a v-if="btn1Visible" href="#calendrier" class="btn btn-primary" @click="scrollTo('calendrier')">{{ btn1Label }}</a>
+        <a v-if="btn2Visible" href="#contact" class="btn btn-secondary" @click="scrollTo('contact')">{{ btn2Label }}</a>
       </div>
     </div>
   </section>
@@ -27,6 +27,13 @@ const btn2Visible = ref(true)
 const heroStyle = computed(() => ({
   background: `linear-gradient(${gradientAngle.value}deg, ${gradientStart.value} 0%, ${gradientEnd.value} 100%)`
 }))
+
+function scrollTo(id) {
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'instant', block: 'start' })
+  }
+}
 
 onMounted(() => {
   onSnapshot(doc(db, 'config', 'textes'), snap => {
@@ -106,7 +113,7 @@ onMounted(() => {
 .btn-secondary {
   background: transparent;
   color: white;
-  border: 2px solid white;
+  border-color: white;
 }
 
 .btn-secondary:hover {
