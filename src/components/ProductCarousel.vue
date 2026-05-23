@@ -503,7 +503,6 @@ const zoomOut = () => {
     transformX.value = clamp(V_newX, minVisX3, 0)
     transformY.value = clamp(V_newY, minVisY3, 0)
   }
-}
 
 // pointer move handler for circular magnifier (deprecated) - kept for reference
 const onMagnifierMove = (e) => {
