@@ -209,7 +209,7 @@ const values = [
 .dons-grid ul { list-style: none; padding: 0; margin: 0; color: var(--text-dark) }
 .dons-grid li { padding: 6px 0; display:flex; gap:8px; align-items:flex-start }
 .dons-accepted { background: #F7FFF9; border: 1px solid #CFF3E3; padding: 12px; border-radius: 8px }
-.dons-rejected { background: #FFF7F7; border: 1px solid #F3CFCF; padding: 12px; border-radius: 8px }
+.dons-rejected { background: #FFECEC; border: 1px solid #F2B8B8; padding: 12px; border-radius: 8px; box-shadow: 0 4px 8px rgba(242,184,184,0.15) }
 
 .recognition h3 {
   color: var(--primary-teal);
