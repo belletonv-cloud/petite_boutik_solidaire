@@ -73,9 +73,9 @@
               @error="modalLoading = false"
               @pointerdown.prevent="onPointerDown"
               @wheel.prevent="onWheel"
-              @touchstart.passive="onTouchStart"
-              @touchmove.passive="onTouchMove"
-              @touchend.passive="onTouchEnd"
+              @touchstart="onTouchStart"
+              @touchmove="onTouchMove"
+              @touchend="onTouchEnd"
               ref="modalImg"
             :style="{ transform: `translate(${transformX.toFixed(2)}px, ${transformY.toFixed(2)}px) scale(${zoomFactor})`, transition: dragging ? 'none' : 'transform 150ms ease', outline: panHintActive ? '3px solid rgba(255,255,255,0.06)' : '' }"
           />
@@ -361,9 +361,10 @@ const lastTapTime = ref(0)
   if (!enableMagnifier.value && zoomFactor.value === 1) return
   const now = Date.now()
   if (now - lastTapTime.value < 300) {
-    // double-tap: toggle zoom centered on the tap (minimal behavior)
+    // double-tap: toggle zoom centered on the tap (enable magnifier and zoom)
     const wrapRect = imgWrap.value ? imgWrap.value.getBoundingClientRect() : null
     if (zoomFactor.value === 1) {
+      enableMagnifier.value = true
       const next = Math.min(zoomMax, 1.8)
       const baseW = modalImg.value ? modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0 : 0
       const baseH = modalImg.value ? modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0 : 0
@@ -427,6 +428,8 @@ const onTouchStart = (ev) => {
     const centerY = (t0.clientY + t1.clientY) / 2
     _pinchOffsetX = centerX - (imgRect.left + imgRect.width / 2)
     _pinchOffsetY = centerY - (imgRect.top + imgRect.height / 2)
+    // enable magnifier controls when user pinches
+    enableMagnifier.value = true
     // prevent native gestures
     ev.preventDefault()
   }
@@ -469,6 +472,8 @@ const onTouchEnd = (ev) => {
   if (pinchActive.value) {
     pinchActive.value = false
     _pinchStartDistance = 0
+    // keep magnifier enabled after pinch so + / - buttons are available
+    enableMagnifier.value = true
   }
 }
 
