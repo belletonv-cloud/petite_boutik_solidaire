@@ -82,11 +82,11 @@ onMounted(() => {
 <style scoped>
 .hero {
   color: white;
-  padding: 60px 20px;
+  padding: 30px 12px; /* reduced to make block ~50% smaller */
   text-align: center;
-  border-radius: 15px;
-  margin-bottom: 40px;
-  box-shadow: 0 4px 20px rgba(27, 169, 168, 0.12);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 18px rgba(27, 169, 168, 0.08);
   position: relative;
 }
 
@@ -95,29 +95,29 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-.hero-center { display:flex; align-items:center; justify-content:center; padding: 36px 12px }
+.hero-center { display:flex; align-items:center; justify-content:center; padding: 12px 8px }
 
-.cta-card { background: rgba(255,255,255,0.06); padding:14px 16px; border-radius:12px; max-width:520px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); text-align:center }
-.cta-title { font-weight:800; color:white; margin-bottom:6px; font-size:1.05em }
-.cta-desc { color: rgba(255,255,255,0.95); font-size:0.97em; margin-bottom:12px; line-height:1.4; max-height:3.1em; overflow:hidden }
+.cta-card { background: rgba(255,255,255,0.05); padding:8px 10px; border-radius:10px; max-width:320px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); text-align:center }
+.cta-title { font-weight:800; color:white; margin-bottom:4px; font-size:0.98em }
+.cta-desc { color: rgba(255,255,255,0.95); font-size:0. nineem; margin-bottom:8px; line-height:1.3; max-height:2.6em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
 
-.cta-actions { display:flex; gap:12px; align-items:center; justify-content:center }
+.cta-actions { display:flex; gap:8px; align-items:center; justify-content:center }
 .square-btn {
-  width:56px;
-  height:56px;
+  width:44px;
+  height:44px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
   border-radius:8px;
   background: transparent;
-  border: 2px solid rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,255,255,0.16);
   color: white;
   text-decoration: none;
-  transition: background 140ms ease, transform 140ms ease, border-color 140ms ease;
+  transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
 }
 .square-btn:hover { background: transparent; transform: translateY(-2px); border-color: rgba(255,255,255,0.36) }
 .square-btn:focus-visible { outline: 3px solid rgba(255,255,255,0.12); outline-offset: 3px }
-.square-btn .btn-icon svg { width:20px; height:20px; stroke-width:1.6 }
+.square-btn .btn-icon svg { width:18px; height:18px; stroke-width:1.4 }
 
   .contact-card { display:none }
   .contact-title { display:none }
