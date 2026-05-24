@@ -44,17 +44,16 @@ onMounted(() => {
 <style scoped>
 .sticky-bar {
   position: fixed;
-  bottom: env(safe-area-inset-bottom, 0);
+  bottom: 0;
   left: 0;
   right: 0;
   z-index: 700;
   background: rgba(255, 255, 255, 0.95);
   border-top: 1px solid #e8e8e8;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  will-change: transform;
-  touch-action: manipulation;
+  backface-visibility: hidden;
+  overscroll-behavior: none;
+  touch-action: pan-y;
 }
 
 /* When modal is open, ensure sticky bar does not intercept pointer events */

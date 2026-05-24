@@ -45,6 +45,7 @@ body {
   background-color: var(--bg-light);
   line-height: 1.6;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Forcer le thème clair même sur les navigateurs en dark mode (Opera, Samsung...) */
