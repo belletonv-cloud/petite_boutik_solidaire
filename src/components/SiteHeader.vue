@@ -43,7 +43,7 @@ onMounted(() => {
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
-  max-width: 800px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
 }
 

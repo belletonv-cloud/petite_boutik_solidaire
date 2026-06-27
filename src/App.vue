@@ -109,6 +109,9 @@ onMounted(() => {
 </template>
 
 <style>
+:root {
+  --site-max-width: min(1200px, 100%);
+}
 body {
   padding-top: 48px;
   padding-bottom: 48px;
@@ -124,7 +127,7 @@ body {
 
 <style scoped>
 .container {
-  max-width: 800px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
   padding: 20px;
   background-color: #FAFAFA !important;

@@ -63,7 +63,7 @@ body.modal-open .sticky-bar { pointer-events: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 800px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
   padding: 8px 12px;
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));

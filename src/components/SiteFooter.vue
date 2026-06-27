@@ -50,7 +50,7 @@ export default {
 }
 
 .footer-content {
-  max-width: 800px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
   padding: 40px 20px;
   display: grid;

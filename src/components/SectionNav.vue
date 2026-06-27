@@ -137,7 +137,7 @@ onUnmounted(() => {
 .nav-inner {
   display: flex;
   align-items: center;
-  max-width: 800px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
   padding: 0 8px;
   position: relative;
