@@ -93,7 +93,7 @@ onMounted(() => {
 }
 
 .hero-content {
-  max-width: 900px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
 }
 

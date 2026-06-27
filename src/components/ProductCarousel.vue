@@ -873,14 +873,13 @@ watch(() => modalOpen.value, (open) => {
 
 .my-swiper {
   width: 100%;
-  max-width: 600px;
+  max-width: var(--site-max-width, 800px);
   margin: 0 auto;
   padding-bottom: 40px;
 }
 
 @media (max-width: 600px) {
   .my-swiper {
-    max-width: 100%;
     padding-bottom: 30px;
   }
 }
