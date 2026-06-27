@@ -598,7 +598,7 @@ import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
 } from 'firebase/firestore'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBlob } from 'firebase/storage'
 import { auth, googleProvider, db, storage } from '../firebase.js'
 import { ADMIN_EMAILS } from '../admins.js'
 
@@ -1161,9 +1161,7 @@ const toggleRemoveBg = async (photo) => {
   if (newVal) {
     processingBg.value = true
     try {
-      const resp = await fetch(photo.url)
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const blob = await resp.blob()
+      const blob = await getBlob(storageRef(storage, photo.url))
       const processedBlob = await removeBackground(blob)
       const ext = 'png'
       const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
