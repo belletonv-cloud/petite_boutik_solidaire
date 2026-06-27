@@ -169,34 +169,12 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
 })
 
-function bgRemovalUrl(url, removeBg) {
-  if (!removeBg || !url?.includes('cloudinary')) return url;
-  try {
-    const parsedUrl = new URL(url);
-    if (parsedUrl.pathname.includes('/upload/')) {
-      return url.replace('/upload/', '/upload/e_background_removal,f_auto/');
-    }
-    return url;
-  } catch {
-    return url; // Retourne l'URL originale si invalide
-  }
-}
-
 const filter = ref('boutique') // 'boutique' ou 'articles'
 
 // images before search filtering (respecting boutique/articles)
-function cloudinaryTransform(url, transform) {
-  if (!url || !url.includes('/upload/')) return url
-  return url.replace('/upload/', `/upload/${transform}/`)
-}
-
-function thumbFor(url, removeBg) {
-  if (!url) return url
-  // prefer small, cropped, auto quality thumbnails
-  const baseTransform = 'w_320,h_240,c_fill,f_auto,q_auto'
-  if (removeBg) return cloudinaryTransform(url, `e_background_removal,${baseTransform}`)
-  return cloudinaryTransform(url, baseTransform)
-}
+// Cloudinary transforms removed — cloud diqz414dk is disabled.
+// New uploads use Firebase Storage (no server-side image transforms).
+// The raw URL is used for all sizes.
 
 const baseImages = computed(() =>
   dynamicPhotos.value
@@ -207,27 +185,13 @@ const baseImages = computed(() =>
       : (p.removeBg !== true)
     ))
     .map(p => ({
-      fullSrc: cloudinaryFullUrl(p.url, p.removeBg),
-      src: cloudinaryCardUrl(p.url, p.removeBg),
-      thumb: thumbFor(p.url, p.removeBg),
+      fullSrc: p.url,
+      src: p.url,
+      thumb: p.url,
       alt: p.alt || '',
       tags: p.tags || []
     }))
 )
-
-function cloudinaryCardUrl(url, removeBg) {
-  if (!url || !url.includes('/upload/')) return url
-  const baseTransform = 'w_600,c_limit,f_auto,q_auto'
-  if (removeBg) return url.replace('/upload/', `/upload/e_background_removal,${baseTransform}/`)
-  return url.replace('/upload/', `/upload/${baseTransform}/`)
-}
-
-function cloudinaryFullUrl(url, removeBg) {
-  if (!url || !url.includes('/upload/')) return url
-  const baseTransform = 'w_1200,c_limit,f_auto,q_auto'
-  if (removeBg) return url.replace('/upload/', `/upload/e_background_removal,${baseTransform}/`)
-  return url.replace('/upload/', `/upload/${baseTransform}/`)
-}
 
 const filterQuery = ref('')
 const isFiltering = ref(false)

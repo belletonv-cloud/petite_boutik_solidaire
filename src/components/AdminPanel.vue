@@ -587,7 +587,7 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'
+import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
 } from 'firebase/firestore'
