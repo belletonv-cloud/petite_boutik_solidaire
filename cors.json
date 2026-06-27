@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://petite-boutik-solidaire.pages.dev", "http://localhost:5173"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "responseHeader": ["Content-Type", "Cache-Control", "x-firebase-storage-version", "Content-Disposition"],
+    "maxAgeSeconds": 86400
+  }
+]
