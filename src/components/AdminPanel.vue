@@ -189,7 +189,7 @@
                     <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
                     <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
                   </label>
-                  <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" title="Réafficher le décor">🖼</button>
+                  <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" :disabled="processingBg" title="Réafficher le décor">{{ processingBg ? '⏳' : '🖼' }}</button>
                   <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
                 </div>
                 <div class="thumb-edit-alt">
@@ -231,7 +231,7 @@
                     <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
                     <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
                   </label>
-                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" title="Supprimer le fond">👕</button>
+                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" :disabled="processingBg" title="Supprimer le fond">{{ processingBg ? '⏳' : '👕' }}</button>
                   <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
                 </div>
                 <div class="thumb-edit-alt">
@@ -587,6 +587,7 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import { removeBackground } from '@imgly/background-removal'
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
@@ -1090,6 +1091,8 @@ const photosWithDecorFiltered = computed(() => {
 const fileInput = ref(null)
 const upload = ref({ gallery: 'gallery', files: [], previews: [], alts: [], uploading: false, done: false, error: '' })
 
+const processingBg = ref(false)
+
 const onFileChange = (e) => {
    const files = Array.from(e.target.files)
    if (!files.length) return
@@ -1138,7 +1141,27 @@ const uploadPhoto = async () => {
 }
 
 const toggleRemoveBg = async (photo) => {
-  await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: !photo.removeBg })
+  const newVal = !photo.removeBg
+  if (newVal) {
+    processingBg.value = true
+    try {
+      const resp = await fetch(photo.url)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const blob = await resp.blob()
+      const processedBlob = await removeBackground(blob)
+      const ext = 'png'
+      const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const snapshot = await uploadBytes(storageRef(storage, fileName), processedBlob)
+      const url = await getDownloadURL(snapshot.ref)
+      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
+    } catch (e) {
+      console.error('background removal error', e)
+      alert('Erreur lors de la suppression du fond.')
+    }
+    processingBg.value = false
+  } else {
+    await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false })
+  }
 }
 
 const deleteDynamicPhoto = async (photo) => {
