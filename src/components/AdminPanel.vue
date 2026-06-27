@@ -151,12 +151,18 @@
             <div class="form-block" style="margin-top:14px;">
               <label>Photo</label>
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
-               <div class="upload-previews" v-if="upload.previews.length">
-                 <div v-for="(p, i) in upload.previews" :key="i" class="upload-preview-item">
-                   <img :src="p" alt="Aperçu" />
-                   <input type="text" v-model="upload.alts[i]" :placeholder="'Description ' + (i+1)" class="input-text upload-alt-input" />
-                 </div>
-               </div>
+                <div class="upload-previews" v-if="upload.previews.length">
+                  <div v-for="(p, i) in upload.previews" :key="i" class="upload-preview-item">
+                    <img :src="p" alt="Aperçu" />
+                    <div class="upload-preview-controls">
+                      <input type="text" v-model="upload.alts[i]" :placeholder="'Description ' + (i+1)" class="input-text upload-alt-input" />
+                      <label class="upload-bg-toggle">
+                        <input type="checkbox" v-model="upload.removeBg[i]" />
+                        👕 Sans fond
+                      </label>
+                    </div>
+                  </div>
+                </div>
               <button class="btn-save" @click="uploadPhoto" :disabled="!upload.files.length || upload.uploading">
                 {{ upload.uploading ? '⏳ Upload en cours...' : '⬆️ Envoyer les photos (' + upload.files.length + ')' }}
               </button>
@@ -1089,9 +1095,7 @@ const photosWithDecorFiltered = computed(() => {
 
 // Upload (Firebase Storage)
 const fileInput = ref(null)
-const upload = ref({ gallery: 'gallery', files: [], previews: [], alts: [], uploading: false, done: false, error: '' })
-
-const processingBg = ref(false)
+const upload = ref({ gallery: 'gallery', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '' })
 
 const onFileChange = (e) => {
    const files = Array.from(e.target.files)
@@ -1099,6 +1103,7 @@ const onFileChange = (e) => {
    upload.value.files = files
    upload.value.previews = files.map(f => URL.createObjectURL(f))
    upload.value.alts = files.map(f => f.name.replace(/\.[^/.]+$/, ''))
+   upload.value.removeBg = files.map(() => false)
    upload.value.done = false
    upload.value.error = ''
  }
@@ -1108,32 +1113,43 @@ const uploadPhoto = async () => {
    upload.value.uploading = true
    upload.value.error = ''
    try {
-     for (let i = 0; i < upload.value.files.length; i++) {
-       const file = upload.value.files[i]
-       const ext = file.name.split('.').pop()
-       const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-       const snapshot = await uploadBytes(storageRef(storage, fileName), file)
-       const url = await getDownloadURL(snapshot.ref)
-       await addDoc(collection(db, 'photos'), {
-         url,
-         gallery: upload.value.gallery,
-         alt: upload.value.alts[i],
-         active: true,
-         removeBg: false,
-         createdAt: new Date().toISOString(),
-       })
-     }
-      upload.value.done = true
-      setTimeout(() => { upload.value.done = false }, 4000)
-      upload.value.files = []
-      upload.value.previews = []
-      upload.value.alts = []
-      if (fileInput.value) fileInput.value.value = ''
-    } catch (e) {
-      upload.value.error = 'Erreur lors de l\'envoi vers Firebase Storage.'
-      console.error('upload error', e)
-    }
-    upload.value.uploading = false
+     const tasks = upload.value.files.map(async (file, i) => {
+       const alt = upload.value.alts[i]
+       if (upload.value.removeBg[i]) {
+         const processedBlob = await removeBackground(file)
+         const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.png`
+         const snapshot = await uploadBytes(storageRef(storage, fileName), processedBlob)
+         const url = await getDownloadURL(snapshot.ref)
+         await addDoc(collection(db, 'photos'), {
+           url, gallery: upload.value.gallery, alt,
+           active: true, removeBg: true,
+           createdAt: new Date().toISOString(),
+         })
+       } else {
+         const ext = file.name.split('.').pop()
+         const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+         const snapshot = await uploadBytes(storageRef(storage, fileName), file)
+         const url = await getDownloadURL(snapshot.ref)
+         await addDoc(collection(db, 'photos'), {
+           url, gallery: upload.value.gallery, alt,
+           active: true, removeBg: false,
+           createdAt: new Date().toISOString(),
+         })
+       }
+     })
+     await Promise.all(tasks)
+     upload.value.done = true
+     setTimeout(() => { upload.value.done = false }, 4000)
+     upload.value.files = []
+     upload.value.previews = []
+     upload.value.alts = []
+     upload.value.removeBg = []
+     if (fileInput.value) fileInput.value.value = ''
+   } catch (e) {
+     upload.value.error = 'Erreur lors de l\'envoi vers Firebase Storage.'
+     console.error('upload error', e)
+   }
+   upload.value.uploading = false
   }
 
   const toggleDynamicPhoto = async (photo) => {
@@ -2123,6 +2139,25 @@ const loadData = () => {
     border-radius: 6px;
     font-size: 0.82em;
     line-height: 1.2;
+  }
+  .upload-preview-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  .upload-bg-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82em;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+  }
+  .upload-bg-toggle input {
+    margin: 0;
   }
 
 .thumb-badge {
