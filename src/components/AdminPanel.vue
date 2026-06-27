@@ -208,8 +208,7 @@
             <div class="gallery-section-header">
               <h3>🖼 Photos — avec décor <span class="photo-count">({{ photosWithDecor.length }})</span></h3>
               <div class="gallery-header-actions">
-                <!-- Removed global "Tout supprimer" button for consistency.
-                     Keep per-photo delete controls to avoid accidental mass-deletes. -->
+                <button class="btn-delete-all" @click="deleteAllDynamicPhotos">🗑 Tout supprimer</button>
               </div>
             </div>
             <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
@@ -592,7 +591,8 @@ import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
 } from 'firebase/firestore'
-import { auth, googleProvider, db } from '../firebase.js'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { auth, googleProvider, db, storage } from '../firebase.js'
 import { ADMIN_EMAILS } from '../admins.js'
 
 const user = ref(null)
@@ -935,19 +935,17 @@ const loadTextes = () => {
   })
 }
 
-// Recognition admin helpers (file upload to Cloudinary)
+// Recognition admin helpers (file upload to Firebase Storage)
 const onRecognitionFileChange = async (e, idx) => {
   const f = e.target.files && e.target.files[0]
   if (!f) return
   try {
-    const form = new FormData()
-    form.append('file', f)
-    form.append('upload_preset', 'boutik-upload')
-    const res = await fetch(`https://api.cloudinary.com/v1_1/diqz414dk/image/upload`, { method: 'POST', body: form })
-    if (!res.ok) throw new Error('upload')
-    const data = await res.json()
+    const ext = f.name.split('.').pop()
+    const fileName = `recognition/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const snapshot = await uploadBytes(storageRef(storage, fileName), f)
+    const url = await getDownloadURL(snapshot.ref)
     if (!textesValues.value.recognition_items) textesValues.value.recognition_items = []
-    textesValues.value.recognition_items[idx].src = data.secure_url
+    textesValues.value.recognition_items[idx].src = url
   } catch (err) {
     console.warn('upload recognition image error', err)
   }
@@ -1088,10 +1086,7 @@ const photosWithDecorFiltered = computed(() => {
   })
 })
 
-// Upload
-const CLOUDINARY_CLOUD = 'diqz414dk'
-const CLOUDINARY_PRESET = 'boutik-upload'
-
+// Upload (Firebase Storage)
 const fileInput = ref(null)
 const upload = ref({ gallery: 'gallery', files: [], previews: [], alts: [], uploading: false, done: false, error: '' })
 
@@ -1100,7 +1095,7 @@ const onFileChange = (e) => {
    if (!files.length) return
    upload.value.files = files
    upload.value.previews = files.map(f => URL.createObjectURL(f))
-   upload.value.alts = files.map(f => f.name.replace(/\.[^/.]+$/, '')) // nom sans extension
+   upload.value.alts = files.map(f => f.name.replace(/\.[^/.]+$/, ''))
    upload.value.done = false
    upload.value.error = ''
  }
@@ -1111,23 +1106,19 @@ const uploadPhoto = async () => {
    upload.value.error = ''
    try {
      for (let i = 0; i < upload.value.files.length; i++) {
-       const formData = new FormData()
-       formData.append('file', upload.value.files[i])
-       formData.append('upload_preset', CLOUDINARY_PRESET)
-       const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
-         method: 'POST',
-         body: formData,
+       const file = upload.value.files[i]
+       const ext = file.name.split('.').pop()
+       const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+       const snapshot = await uploadBytes(storageRef(storage, fileName), file)
+       const url = await getDownloadURL(snapshot.ref)
+       await addDoc(collection(db, 'photos'), {
+         url,
+         gallery: upload.value.gallery,
+         alt: upload.value.alts[i],
+         active: true,
+         removeBg: false,
+         createdAt: new Date().toISOString(),
        })
-       if (!res.ok) throw new Error('Erreur Cloudinary')
-       const data = await res.json()
-        await addDoc(collection(db, 'photos'), {
-          url: data.secure_url,
-          gallery: upload.value.gallery,
-          alt: upload.value.alts[i],
-          active: true,
-          removeBg: false,
-          createdAt: new Date().toISOString(),
-        })
      }
       upload.value.done = true
       setTimeout(() => { upload.value.done = false }, 4000)
@@ -1136,7 +1127,8 @@ const uploadPhoto = async () => {
       upload.value.alts = []
       if (fileInput.value) fileInput.value.value = ''
     } catch (e) {
-      upload.value.error = 'Erreur lors de l\'envoi vers Cloudinary.'
+      upload.value.error = 'Erreur lors de l\'envoi vers Firebase Storage.'
+      console.error('upload error', e)
     }
     upload.value.uploading = false
   }
@@ -1155,8 +1147,12 @@ const deleteDynamicPhoto = async (photo) => {
   await deleteDoc(doc(db, 'photos', photo.id))
 }
 
-// remove deleteAllDynamicPhotos: avoid keeping mass-delete code
-// (user requested complete removal)
+const deleteAllDynamicPhotos = async () => {
+  if (!confirm('⚠️ Supprimer TOUTES les photos ? Cette action est irréversible.')) return
+  const snap = await getDocs(collection(db, 'photos'))
+  const deletions = snap.docs.map(d => deleteDoc(doc(db, 'photos', d.id)))
+  await Promise.all(deletions)
+}
 
 const deleteStaticPhoto = async (photoId) => {
   if (!confirm('Supprimer cette photo statique ? Elle pourra être restaurée plus tard.')) return
