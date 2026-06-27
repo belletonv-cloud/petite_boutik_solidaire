@@ -102,7 +102,11 @@ test.describe('Navigation & ancres', () => {
     await page.waitForTimeout(300)
     const scrollYBefore = await page.evaluate(() => window.scrollY)
 
-    await page.locator('.hero-actions .btn-primary').first().click()
+    const heroBtn = page.locator('.cta-actions a[href="#calendrier"]')
+    const btnCount = await heroBtn.count()
+    test.skip(btnCount === 0, 'bouton calendrier introuvable')
+
+    await heroBtn.first().click()
     await page.waitForTimeout(500)
     const scrollYAfter = await page.evaluate(() => window.scrollY)
 

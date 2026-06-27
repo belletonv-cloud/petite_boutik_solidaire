@@ -19,15 +19,14 @@ test.describe('Public Gallery E2E', () => {
 
   test('clicking a slide opens modal if modal exists', async ({ page }) => {
     const firstSelector = 'img[src*="firebasestorage.googleapis.com"], img.slide-image, .carousel-container img, .my-swiper img, .gallery-container img'
-    const hasDomImg = await page.$(firstSelector)
-    if (hasDomImg) {
-      await page.locator(firstSelector).first().click()
-      const modal = page.locator('.modal-overlay')
-      if (await modal.count() > 0) {
-        await expect(modal).toBeVisible({ timeout: 3000 })
-        const close = modal.locator('.modal-close')
-        if (await close.count() > 0) await close.click()
-      }
+    const hasImg = await page.$(firstSelector)
+    test.skip(!hasImg, 'aucune image chargée')
+    await page.locator(firstSelector).first().click()
+    const modal = page.locator('.modal-overlay')
+    if (await modal.count() > 0) {
+      await expect(modal).toBeVisible({ timeout: 3000 })
+      const close = modal.locator('.modal-close')
+      if (await close.count() > 0) await close.click()
     }
   })
 

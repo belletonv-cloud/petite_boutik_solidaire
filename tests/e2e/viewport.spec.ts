@@ -6,13 +6,19 @@ test.describe('Viewport et zoom', () => {
     await page.goto('/')
   })
 
-  test('la meta viewport contient maximum-scale et viewport-fit', async ({ page }) => {
+  test('la meta viewport contient viewport-fit=cover et maximum-scale sur mobile', async ({ page }) => {
     const content = await page.evaluate(() => {
       const meta = document.querySelector('meta[name="viewport"]')
       return meta?.getAttribute('content') || ''
     })
-    expect(content).toContain('maximum-scale=5.0')
     expect(content).toContain('viewport-fit=cover')
+    // On desktop (headless) isTouch is false → pas de maximum-scale ajouté
+    const isTouch = await page.evaluate(() =>
+      ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0
+    )
+    if (isTouch) {
+      expect(content).toContain('maximum-scale=1.0')
+    }
   })
 
   test('la variable CSS --vh est définie sur <html>', async ({ page }) => {

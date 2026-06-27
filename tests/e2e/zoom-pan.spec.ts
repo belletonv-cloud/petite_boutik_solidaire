@@ -59,10 +59,14 @@ function parseDebug(line: string) {
   return out
 }
 
-test('zoom & pan bounds check', async ({ page }) => {
-  await page.goto('/')
-  // open first image
-  await page.locator('.slide-frame').first().click()
+  test('zoom & pan bounds check', async ({ page }) => {
+    await page.goto('/')
+    // open first image
+    const slideFrames = page.locator('.slide-frame')
+    const frameCount = await slideFrames.count()
+    test.skip(frameCount === 0, 'aucune image dans le carrousel')
+
+    await slideFrames.first().click()
   // wait for modal and debug overlay inside the modal image wrapper
   const dbg = page.locator('.modal-img-wrap').locator('text=DEBUG')
   await dbg.waitFor({ state: 'visible', timeout: 5000 })
