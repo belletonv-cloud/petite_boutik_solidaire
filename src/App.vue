@@ -110,7 +110,7 @@ onMounted(() => {
 
 <style>
 :root {
-  --site-max-width: min(1200px, 100%);
+  --site-max-width: 100%;
 }
 body {
   padding-top: 48px;
