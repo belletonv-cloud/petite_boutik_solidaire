@@ -162,7 +162,7 @@
               </div>
               <div class="bg-model-info">
                 <span class="bg-model-label">🤖 Détourage :</span>
-                <select v-model="bgModel" @change="resetBgRemover" class="bg-model-select" :disabled="upload.uploading || bgModelLoading">
+                <select v-model="bgModel" @change="resetBgSession" class="bg-model-select" :disabled="upload.uploading || bgModelLoading">
                   <option v-for="m in BG_MODELS" :key="m.id" :value="m.id">{{ m.label }}</option>
                 </select>
                 <span class="bg-model-loading" v-if="bgModelLoading">⏳ Chargement modèle...</span>
@@ -628,28 +628,27 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { pipeline } from '@huggingface/transformers'
+import { remove as removeBgBunnio, newSession, getAvailableModels } from '@bunnio/rembg-web'
 
 const BG_MODELS = [
-  { id: 'onnx-community/BiRefNet-ONNX', label: 'BiRefNet (qualité max)', desc: 'Meilleure qualité, plus lent' },
-  { id: 'onnx-community/BiRefNet_lite-ONNX', label: 'BiRefNet Lite', desc: 'Bon équilibre qualité/vitesse' },
-  { id: 'briaai/RMBG-1.4', label: 'RMBG 1.4', desc: 'Modèle standard, rapide' },
-  { id: 'onnx-community/BEN2-ONNX', label: 'BEN2', desc: 'Modèle alternatif' },
-  { id: 'Xenova/modnet', label: 'MODNet', desc: 'Très rapide, qualité basique' },
+  { id: 'u2net_cloth_seg', label: '👕 Vêtements', desc: 'Spécialisé tissus et vêtements' },
+  { id: 'u2net_human_seg', label: '👤 Personnes', desc: 'Optimisé pour les silhouettes humaines' },
+  { id: 'u2net', label: '🎯 U2Net général', desc: 'Modèle polyvalent par défaut' },
+  { id: 'isnet_general_use', label: '🧠 ISNet', desc: 'Alternative généraliste' },
 ]
 const bgModel = ref(BG_MODELS[0].id)
 const bgModelLoading = ref(false)
-let bgRemover = null
-async function getBgRemover() {
-  if (!bgRemover) {
+let bgSession = null
+async function getBgSession() {
+  if (!bgSession) {
     bgModelLoading.value = true
-    bgRemover = await pipeline('background-removal', bgModel.value)
+    bgSession = await newSession(bgModel.value)
     bgModelLoading.value = false
   }
-  return bgRemover
+  return bgSession
 }
-function resetBgRemover() {
-  bgRemover = null
+function resetBgSession() {
+  bgSession = null
 }
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
@@ -1204,11 +1203,8 @@ watch(() => upload.value.gallery, (gallery) => {
       const alt = upload.value.alts[i]
       let toUpload = file
       if (upload.value.removeBg[i]) {
-        const segmenter = await getBgRemover()
-        const url = URL.createObjectURL(file)
-        const output = await segmenter(url)
-        URL.revokeObjectURL(url)
-        toUpload = await output[0].toBlob('image/png')
+        const session = await getBgSession()
+        toUpload = await removeBgBunnio(file, { session })
       }
       const url = await uploadToWorker(toUpload)
       await addDoc(collection(db, 'photos'), {
@@ -1275,13 +1271,10 @@ const toggleRemoveBg = async (photo) => {
     try {
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
-      const segmenter = await getBgRemover()
-      const url = URL.createObjectURL(blob)
-      const output = await segmenter(url)
-      URL.revokeObjectURL(url)
-      const processedBlob = await output[0].toBlob('image/png')
-      const url2 = await uploadToWorker(processedBlob)
-      await setDoc(doc(db, 'photos', photo.id), { ...photo, url: url2, removeBg: true })
+      const session = await getBgSession()
+      const processedBlob = await removeBgBunnio(blob, { session })
+      const url = await uploadToWorker(processedBlob)
+      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
     } catch (e) {
       console.error('background removal error', e)
       alert('Erreur lors de la suppression du fond.')
