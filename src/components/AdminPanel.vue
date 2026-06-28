@@ -40,7 +40,8 @@
             {{ showPreview ? '✕ Fermer aperçu' : '👁 Aperçu' }}
           </button>
           <div class="admin-user">
-            <img :src="user.photoURL" :alt="user.displayName" class="user-avatar" v-if="user.photoURL" />
+            <img :src="user.photoURL" :alt="user.displayName" class="user-avatar" v-if="user.photoURL && !avatarLoadError" referrerpolicy="no-referrer" @error="avatarLoadError = true" />
+            <div class="user-avatar user-avatar-initials" v-else aria-hidden="true">{{ (user.displayName || user.email || '?')[0].toUpperCase() }}</div>
             <span>{{ user.displayName }}</span>
             <button class="btn-switch-account" @click="switchAccount" title="Se connecter avec un autre compte Google">↔ Changer</button>
             <button class="btn-logout" @click="logout">Déconnexion</button>
@@ -794,6 +795,7 @@ const user = ref(null)
 const isAdmin = ref(false)
 const loading = ref(false)
 const error = ref('')
+const avatarLoadError = ref(false)
 const tab = ref('fermetures')
 
 // Preview iframe
@@ -1524,14 +1526,24 @@ onMounted(() => {
   getRedirectResult(auth).catch(() => {})
 })
 
+function authErrorMessage(e) {
+  const code = e?.code || ''
+  if (code === 'auth/popup-blocked') {
+    return 'Popup bloquée par votre navigateur. Autorisez les popups pour ce site dans les réglages.'
+  }
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+    return 'Connexion annulée.'
+  }
+  return `Erreur de connexion${e?.message ? ' : ' + e.message : ''}. Réessayez.`
+}
+
 const login = async () => {
   loading.value = true
   error.value = ''
   try {
     await signInWithPopup(auth, googleProvider)
   } catch (e) {
-    // Safari bloque les popups — on guide l'utilisateur
-    error.value = 'Popup bloquée. Vérifiez les paramètres de Safari ou utilisez Chrome/Firefox.'
+    error.value = authErrorMessage(e)
   }
   loading.value = false
 }
@@ -1545,7 +1557,7 @@ const switchAccount = async () => {
   try {
     await signInWithPopup(auth, googleProvider)
   } catch (e) {
-    error.value = 'Popup bloquée. Vérifiez les paramètres de Safari ou utilisez Chrome/Firefox.'
+    error.value = authErrorMessage(e)
   }
   loading.value = false
 }
@@ -1898,6 +1910,16 @@ const loadData = () => {
   font-size: 0.9em;
 }
 .user-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.user-avatar-initials {
+  background: rgba(255,255,255,0.25);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85em;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 
 .btn-logout {
   background: rgba(255,255,255,0.2);
