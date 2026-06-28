@@ -620,7 +620,7 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { removeBackground as removeBgWebgpu } from 'rembg-webgpu'
+import { removeBackground as removeBgQuality, canvasToBlob } from '@unbg/browser-sdk'
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
@@ -1174,11 +1174,8 @@ watch(() => upload.value.gallery, (gallery) => {
       const alt = upload.value.alts[i]
       let toUpload = file
       if (upload.value.removeBg[i]) {
-        const url = URL.createObjectURL(file)
-        const result = await removeBgWebgpu(url)
-        const resp = await fetch(result.blobUrl)
-        toUpload = await resp.blob()
-        URL.revokeObjectURL(url)
+        const result = await removeBgQuality(file, {}, { preset: 'quality-desktop' })
+        toUpload = await canvasToBlob(result.canvas, 'image/png')
       }
       const url = await uploadToWorker(toUpload)
       await addDoc(collection(db, 'photos'), {
@@ -1245,11 +1242,8 @@ const toggleRemoveBg = async (photo) => {
     try {
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
-      const objUrl = URL.createObjectURL(blob)
-      const result = await removeBgWebgpu(objUrl)
-      const processedResp = await fetch(result.blobUrl)
-      const processedBlob = await processedResp.blob()
-      URL.revokeObjectURL(objUrl)
+      const result = await removeBgQuality(blob, {}, { preset: 'quality-desktop' })
+      const processedBlob = await canvasToBlob(result.canvas, 'image/png')
       const url = await uploadToWorker(processedBlob)
       await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
     } catch (e) {
