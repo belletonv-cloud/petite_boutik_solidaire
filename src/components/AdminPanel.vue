@@ -648,9 +648,10 @@ rembgConfig.setBaseUrl('/models')
 // Verified binary ONNX model source for u2net_cloth_seg.
 // The local /models path is kept as default for other models, but this one
 // is hard-pinned to a working binary URL to avoid HTML/404 protobuf failures.
+const BG_MODEL_URL = 'https://huggingface.co/bunnio/dis_anime/resolve/main/u2net_cloth_seg.onnx'
 rembgConfig.setCustomModelPath(
   'u2net_cloth_seg',
-  'https://huggingface.co/bunnio/dis_anime/resolve/main/u2net_cloth_seg.onnx'
+  BG_MODEL_URL
 )
 
 const bgModel = 'u2net_cloth_seg'
@@ -667,15 +668,35 @@ async function createBgSession(options = {}) {
   return newSession(bgModel, undefined, { ...BG_SESSION_OPTIONS, ...options })
 }
 
+let bgModelPreflightPromise = null
+async function verifyBgModelSource() {
+  if (!bgModelPreflightPromise) {
+    bgModelPreflightPromise = (async () => {
+      const res = await fetch(BG_MODEL_URL, { method: 'HEAD', redirect: 'follow' })
+      if (!res.ok) {
+        throw new Error(`Model check failed: HTTP ${res.status} for ${BG_MODEL_URL}`)
+      }
+      const contentType = (res.headers.get('content-type') || '').toLowerCase()
+      if (!contentType.includes('octet-stream') && !contentType.includes('application/onnx')) {
+        throw new Error(`Model check failed: unexpected content-type '${contentType || 'unknown'}' for ${BG_MODEL_URL}`)
+      }
+    })()
+  }
+  return bgModelPreflightPromise
+}
+
 async function getBgSession() {
   if (!bgSession) {
     bgModelLoading.value = true
     try {
+      await verifyBgModelSource()
       bgSession = await createBgSession()
     } catch (error) {
       const message = String(error?.message || error || '')
       if (message.includes('protobuf parsing failed')) {
+        bgModelPreflightPromise = null
         await clearModelCacheForModel(bgModel).catch(() => {})
+        await verifyBgModelSource()
         bgSession = await createBgSession({ bypassModelCache: true })
       } else {
         throw error
