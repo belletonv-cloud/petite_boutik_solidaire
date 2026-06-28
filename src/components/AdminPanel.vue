@@ -160,6 +160,14 @@
                   📦 Articles
                 </label>
               </div>
+              <div class="bg-model-info">
+                <span class="bg-model-label">🤖 Détourage :</span>
+                <select v-model="bgModel" @change="resetBgRemover" class="bg-model-select" :disabled="upload.uploading || bgModelLoading">
+                  <option v-for="m in BG_MODELS" :key="m.id" :value="m.id">{{ m.label }}</option>
+                </select>
+                <span class="bg-model-loading" v-if="bgModelLoading">⏳ Chargement modèle...</span>
+                <span class="bg-model-desc" v-else>{{ BG_MODELS.find(m => m.id === bgModel)?.desc }}</span>
+              </div>
               <label>Photo</label>
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
                 <div class="upload-previews" v-if="upload.previews.length">
@@ -622,12 +630,26 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { pipeline } from '@huggingface/transformers'
 
+const BG_MODELS = [
+  { id: 'onnx-community/BiRefNet-ONNX', label: 'BiRefNet (qualité max)', desc: 'Meilleure qualité, plus lent' },
+  { id: 'onnx-community/BiRefNet_lite-ONNX', label: 'BiRefNet Lite', desc: 'Bon équilibre qualité/vitesse' },
+  { id: 'briaai/RMBG-1.4', label: 'RMBG 1.4', desc: 'Modèle standard, rapide' },
+  { id: 'onnx-community/BEN2-ONNX', label: 'BEN2', desc: 'Modèle alternatif' },
+  { id: 'Xenova/modnet', label: 'MODNet', desc: 'Très rapide, qualité basique' },
+]
+const bgModel = ref(BG_MODELS[0].id)
+const bgModelLoading = ref(false)
 let bgRemover = null
 async function getBgRemover() {
   if (!bgRemover) {
-    bgRemover = await pipeline('background-removal', 'onnx-community/BiRefNet_lite-ONNX')
+    bgModelLoading.value = true
+    bgRemover = await pipeline('background-removal', bgModel.value)
+    bgModelLoading.value = false
   }
   return bgRemover
+}
+function resetBgRemover() {
+  bgRemover = null
 }
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
@@ -2358,6 +2380,26 @@ const loadData = () => {
   .upload-bg-toggle input {
     margin: 0;
   }
+
+  .bg-model-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 0.85em;
+    color: #555;
+    flex-wrap: wrap;
+  }
+  .bg-model-label { font-weight: 600; white-space: nowrap; }
+  .bg-model-select {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.85em;
+    background: white;
+  }
+  .bg-model-loading { color: #1BA9A8; font-style: italic; }
+  .bg-model-desc { color: #888; font-size: 0.85em; }
 
 .thumb-badge {
   position: absolute;
