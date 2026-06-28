@@ -72,9 +72,12 @@ function galleryCardUrl(url) {
   return url.replace('/upload/', '/upload/w_600,c_limit,f_auto,q_auto/')
 }
 
+const isBoutique = (p) =>
+  p.gallery === 'boutique' || (p.gallery === 'gallery' && p.removeBg === false)
+
 const images = computed(() =>
   dynamicPhotos.value
-    .filter(p => p && p.active && p.removeBg === false)
+    .filter(p => p && p.active && isBoutique(p))
     .map(p => ({
       id: p.id,
       src: galleryCardUrl(p.url),

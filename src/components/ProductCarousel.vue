@@ -176,13 +176,16 @@ const filter = ref('boutique') // 'boutique' ou 'articles'
 // New uploads use Firebase Storage (no server-side image transforms).
 // The raw URL is used for all sizes.
 
+const isArticles = (p) =>
+  p.gallery === 'articles' || (p.gallery === 'gallery' && p.removeBg === true)
+
+const isBoutique = (p) =>
+  p.gallery === 'boutique' || (p.gallery === 'gallery' && p.removeBg === false)
+
 const baseImages = computed(() =>
   dynamicPhotos.value
     .filter(p => p.active && (
-      // Articles: only photos that had background removal applied
-      filter.value === 'articles' ? (p.removeBg === true)
-      // Boutique: the rest (not background removed)
-      : (p.removeBg !== true)
+      filter.value === 'articles' ? isArticles(p) : isBoutique(p)
     ))
     .map(p => ({
       fullSrc: p.url,

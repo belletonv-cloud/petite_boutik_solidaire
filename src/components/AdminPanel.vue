@@ -149,6 +149,17 @@
           <div class="upload-block">
             <h3>➕ Ajouter une photo</h3>
             <div class="form-block" style="margin-top:14px;">
+              <label>Type de galerie</label>
+              <div class="gallery-type-select">
+                <label class="radio-label" :class="{ active: upload.gallery === 'boutique' }">
+                  <input type="radio" v-model="upload.gallery" value="boutique" />
+                  🏬 Boutique
+                </label>
+                <label class="radio-label" :class="{ active: upload.gallery === 'articles' }">
+                  <input type="radio" v-model="upload.gallery" value="articles" />
+                  📦 Articles
+                </label>
+              </div>
               <label>Photo</label>
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
                 <div class="upload-previews" v-if="upload.previews.length">
@@ -607,6 +618,12 @@ async function uploadToWorker(file) {
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
   const data = await res.json()
   return data.url
+}
+
+async function deleteFromWorker(url) {
+  const key = url.split('/files/').pop()
+  if (!key) return
+  await fetch(`${STORAGE_WORKER}/files/${key}`, { method: 'DELETE' }).catch(() => {})
 }
 import { auth, googleProvider, db } from '../firebase.js'
 import { ADMIN_EMAILS } from '../admins.js'
@@ -1101,7 +1118,7 @@ const photosWithDecorFiltered = computed(() => {
 // Upload images
 const fileInput = ref(null)
 const processingBg = ref(false)
-const upload = ref({ gallery: 'gallery', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '' })
+const upload = ref({ gallery: 'boutique', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '' })
 
 const onFileChange = (e) => {
    const files = Array.from(e.target.files)
@@ -1126,6 +1143,7 @@ const onFileChange = (e) => {
         await addDoc(collection(db, 'photos'), {
           url, gallery: upload.value.gallery, alt,
           active: true, removeBg: !!upload.value.removeBg[i],
+          tags: [],
           createdAt: new Date().toISOString(),
         })
       })
@@ -1171,13 +1189,18 @@ const toggleRemoveBg = async (photo) => {
 const deleteDynamicPhoto = async (photo) => {
   if (!confirm(`Supprimer "${photo.alt}" ?`)) return
   upload.value.done = false
+  await deleteFromWorker(photo.url)
   await deleteDoc(doc(db, 'photos', photo.id))
 }
 
 const deleteAllDynamicPhotos = async () => {
   if (!confirm('⚠️ Supprimer TOUTES les photos ? Cette action est irréversible.')) return
   const snap = await getDocs(collection(db, 'photos'))
-  const deletions = snap.docs.map(d => deleteDoc(doc(db, 'photos', d.id)))
+  const deletions = snap.docs.map(async d => {
+    const data = d.data()
+    await deleteFromWorker(data.url).catch(() => {})
+    await deleteDoc(doc(db, 'photos', d.id))
+  })
   await Promise.all(deletions)
 }
 
@@ -1915,6 +1938,28 @@ const loadData = () => {
   margin-bottom: 10px;
   font-size: 1em;
 }
+.gallery-type-select {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.15s;
+}
+.radio-label.active {
+  border-color: #1BA9A8;
+  background: #e8f5f5;
+}
+.radio-label input { display: none }
 .upload-tip {
   background: #fffbe6;
   border: 1px solid #f0d060;
