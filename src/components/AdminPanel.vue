@@ -620,17 +620,17 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import { removeBackground as removeBgWebgpu } from 'rembg-webgpu'
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
 } from 'firebase/firestore'
 const STORAGE_WORKER = 'https://petite-boutik-storage.belletonv.workers.dev'
 
-async function uploadToWorker(file, removeBg) {
+async function uploadToWorker(file) {
   const formData = new FormData()
   const f = file instanceof File ? file : new File([file], 'image.png', { type: file.type || 'image/png' })
   formData.append('file', f)
-  if (removeBg) formData.append('removeBg', 'true')
   const res = await fetch(`${STORAGE_WORKER}/upload`, { method: 'POST', body: formData })
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
   const data = await res.json()
@@ -643,16 +643,6 @@ async function deleteFromWorker(url) {
   await fetch(`${STORAGE_WORKER}/files/${key}`, { method: 'DELETE' }).catch(() => {})
 }
 
-async function removeBgFromWorker(imageUrl) {
-  const res = await fetch(`${STORAGE_WORKER}/remove-bg`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageUrl }),
-  })
-  if (!res.ok) throw new Error(`Background removal failed: ${res.status}`)
-  const data = await res.json()
-  return data.url
-}
 import { auth, googleProvider, db } from '../firebase.js'
 import { ADMIN_EMAILS } from '../admins.js'
 
@@ -1182,7 +1172,15 @@ watch(() => upload.value.gallery, (gallery) => {
     const processOne = async (i) => {
       const file = files[i]
       const alt = upload.value.alts[i]
-      const url = await uploadToWorker(file, upload.value.removeBg[i])
+      let toUpload = file
+      if (upload.value.removeBg[i]) {
+        const url = URL.createObjectURL(file)
+        const result = await removeBgWebgpu(url)
+        const resp = await fetch(result.blobUrl)
+        toUpload = await resp.blob()
+        URL.revokeObjectURL(url)
+      }
+      const url = await uploadToWorker(toUpload)
       await addDoc(collection(db, 'photos'), {
         url, gallery: upload.value.gallery, alt,
         active: true, removeBg: !!upload.value.removeBg[i],
@@ -1245,7 +1243,14 @@ const toggleRemoveBg = async (photo) => {
   if (newVal) {
     processingBg.value = true
     try {
-      const url = await removeBgFromWorker(photo.url)
+      const resp = await fetch(photo.url)
+      const blob = await resp.blob()
+      const objUrl = URL.createObjectURL(blob)
+      const result = await removeBgWebgpu(objUrl)
+      const processedResp = await fetch(result.blobUrl)
+      const processedBlob = await processedResp.blob()
+      URL.revokeObjectURL(objUrl)
+      const url = await uploadToWorker(processedBlob)
       await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
     } catch (e) {
       console.error('background removal error', e)
