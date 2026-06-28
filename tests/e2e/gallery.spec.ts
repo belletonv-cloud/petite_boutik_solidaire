@@ -19,6 +19,7 @@ test.describe('Public Gallery E2E', () => {
 
   test('clicking a slide opens modal if modal exists', async ({ page }) => {
     const firstSelector = 'img[src*="firebasestorage.googleapis.com"], img[src*="petite-boutik-storage"], img.slide-image[src], .carousel-container img[src], .my-swiper img[src], .gallery-container img[src]'
+    await page.waitForTimeout(2000)
     const imgCount = await page.locator(firstSelector).count()
     test.skip(imgCount === 0, 'aucune image chargée')
 
