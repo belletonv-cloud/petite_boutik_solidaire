@@ -162,11 +162,10 @@
               </div>
               <div class="bg-model-info">
                 <span class="bg-model-label">🤖 Détourage :</span>
-                <select v-model="bgModel" @change="resetBgSession" class="bg-model-select" :disabled="upload.uploading || bgModelLoading">
-                  <option v-for="m in BG_MODELS" :key="m.id" :value="m.id">{{ m.label }}</option>
-                </select>
+                <span class="bg-model-fixed">👕 Vêtements uniquement</span>
+                <button class="btn-small" type="button" @click="clearBgModelCache" :disabled="bgModelLoading || upload.uploading">Vider le cache ONNX</button>
                 <span class="bg-model-loading" v-if="bgModelLoading">⏳ Chargement modèle...</span>
-                <span class="bg-model-desc" v-else>{{ BG_MODELS.find(m => m.id === bgModel)?.desc }}</span>
+                <span class="bg-model-desc" v-else>Modèle fixé pour le détourage des vêtements</span>
               </div>
               <label>Photo</label>
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
@@ -629,32 +628,71 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 
-// Load ONNX Runtime WASM from CDN (not bundled) to stay under
-// Cloudflare Pages 25 MiB per-file limit.
 import * as ort from 'onnxruntime-web'
-ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
+import {
+  rembgConfig,
+  remove as removeBgBunnio,
+  newSession,
+  clearModelCacheForModel,
+} from '@bunnio/rembg-web'
 
-import { remove as removeBgBunnio, newSession, getAvailableModels } from '@bunnio/rembg-web'
+const ORT_WASM_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
+const THREADS_ENABLED = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated
 
-const BG_MODELS = [
-  { id: 'u2net_cloth_seg', label: '👕 Vêtements', desc: 'Spécialisé tissus et vêtements' },
-  { id: 'u2net_human_seg', label: '👤 Personnes', desc: 'Optimisé pour les silhouettes humaines' },
-  { id: 'u2net', label: '🎯 U2Net général', desc: 'Modèle polyvalent par défaut' },
-  { id: 'isnet_general_use', label: '🧠 ISNet', desc: 'Alternative généraliste' },
-]
-const bgModel = ref(BG_MODELS[0].id)
+ort.env.wasm.wasmPaths = ORT_WASM_CDN
+ort.env.wasm.numThreads = THREADS_ENABLED ? 4 : 1
+ort.env.wasm.proxy = false
+
+const U2NET_CLOTH_SEG_MODEL_URL = import.meta.env.VITE_U2NET_CLOTH_SEG_MODEL_URL?.trim()
+
+rembgConfig.setBaseUrl('/models')
+
+if (U2NET_CLOTH_SEG_MODEL_URL) {
+  rembgConfig.setCustomModelPath('u2net_cloth_seg', U2NET_CLOTH_SEG_MODEL_URL)
+}
+
+const bgModel = 'u2net_cloth_seg'
 const bgModelLoading = ref(false)
 let bgSession = null
+const BG_SESSION_OPTIONS = {
+  executionProviders: ['wasm'],
+  numThreads: THREADS_ENABLED ? 4 : 1,
+  simd: true,
+  proxy: false,
+}
+
+async function createBgSession(options = {}) {
+  return newSession(bgModel, undefined, { ...BG_SESSION_OPTIONS, ...options })
+}
+
 async function getBgSession() {
   if (!bgSession) {
     bgModelLoading.value = true
-    bgSession = await newSession(bgModel.value)
-    bgModelLoading.value = false
+    try {
+      bgSession = await createBgSession()
+    } catch (error) {
+      const message = String(error?.message || error || '')
+      if (message.includes('protobuf parsing failed')) {
+        await clearModelCacheForModel(bgModel).catch(() => {})
+        bgSession = await createBgSession({ bypassModelCache: true })
+      } else {
+        throw error
+      }
+    } finally {
+      bgModelLoading.value = false
+    }
   }
   return bgSession
 }
 function resetBgSession() {
   bgSession = null
+}
+
+async function clearBgModelCache() {
+  await clearModelCacheForModel(bgModel).catch(() => {})
+  resetBgSession()
+  bgModelLoading.value = false
+  alert('Cache ONNX du modèle vêtements vidé.')
 }
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
@@ -2390,12 +2428,13 @@ const loadData = () => {
     flex-wrap: wrap;
   }
   .bg-model-label { font-weight: 600; white-space: nowrap; }
-  .bg-model-select {
-    padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.85em;
-    background: white;
+  .bg-model-fixed {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f5fbfb;
+    border: 1px solid #d5efef;
+    color: #1b5d5d;
+    font-weight: 600;
   }
   .bg-model-loading { color: #1BA9A8; font-style: italic; }
   .bg-model-desc { color: #888; font-size: 0.85em; }
