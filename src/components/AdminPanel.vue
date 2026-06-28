@@ -1157,45 +1157,42 @@ watch(() => upload.value.gallery, (gallery) => {
     const total = files.length
     let done = 0
 
-    const tick = (msg) => {
+    const tick = () => {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0
-      upload.value.progress = { pct, label: `${msg} (${done}/${total})` }
+      upload.value.progress = { pct, label: `Envoi (${done}/${total})` }
+    }
+
+    const processOne = async (i) => {
+      const file = files[i]
+      const alt = upload.value.alts[i]
+      let toUpload = file
+      if (upload.value.removeBg[i]) {
+        toUpload = await removeBackground(file, {
+          model: 'isnet',
+          output: { format: 'image/png' },
+          rescale: false
+        })
+      }
+      const url = await uploadToWorker(toUpload)
+      await addDoc(collection(db, 'photos'), {
+        url, gallery: upload.value.gallery, alt,
+        active: true, removeBg: !!upload.value.removeBg[i],
+        tags: [],
+        createdAt: new Date().toISOString(),
+      })
+      done++
+      tick()
     }
 
     try {
-      for (let i = 0; i < total; i++) {
-        const file = files[i]
-        const alt = upload.value.alts[i]
-
-        let toUpload = file
-        if (upload.value.removeBg[i]) {
-          tick('Suppression fond')
-          toUpload = await removeBackground(file, {
-            model: 'isnet',
-            output: { format: 'image/png' },
-            rescale: false,
-            progress: (step, current, totalSteps) => {
-              if (step !== 'compute') return
-              const pct = Math.round((done / total) * 100 + (current / totalSteps) * (100 / total))
-              upload.value.progress = { pct, label: `Traitement photo ${i + 1}/${total}...` }
-            }
-          })
+      let i = 0
+      const workers = Array(3).fill().map(async () => {
+        while (i < total) {
+          const idx = i++
+          await processOne(idx)
         }
-
-        done++
-        tick('Upload photo')
-        const url = await uploadToWorker(toUpload)
-
-        tick('Sauvegarde')
-        await addDoc(collection(db, 'photos'), {
-          url, gallery: upload.value.gallery, alt,
-          active: true, removeBg: !!upload.value.removeBg[i],
-          tags: [],
-          createdAt: new Date().toISOString(),
-        })
-
-        upload.value.progress = { pct: Math.round(((i + 1) / total) * 100), label: `Photo ${i + 1}/${total} OK` }
-      }
+      })
+      await Promise.all(workers)
 
       upload.value.done = true
       setTimeout(() => { upload.value.done = false }, 4000)
