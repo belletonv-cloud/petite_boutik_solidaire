@@ -5,6 +5,7 @@ const ALLOWED_ORIGINS = [
 ]
 
 const CLEAR_BACKDROP_URL = 'https://clearbackdrop.com/api/v1/remove-background'
+const FREE_AI_URL = 'https://api.free.ai/v1/image/edit/'
 
 function corsHeaders(origin) {
   const allow = ALLOWED_ORIGINS.includes(origin) ? origin : 'https://petite-boutik-solidaire.pages.dev'
@@ -32,12 +33,42 @@ async function storeImage(env, buffer, contentType, originalName) {
   return key
 }
 
-async function removeBgViaClearBackdrop(file, env) {
+async function removeBgViaFreeAi(file, env) {
+  const form = new FormData()
+  form.append('image', file)
+  form.append('operation', 'remove_bg')
+  form.append('tool', 'image-bg-remover')
+  form.append('model', 'BiRefNet')
+  form.append('edge_quality', 'high')
+  const resp = await fetch(FREE_AI_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${env.FREE_AI_API_KEY}` },
+    body: form,
+  })
+  if (!resp.ok) {
+    const text = await resp.text()
+    throw new Error(`free.ai returned ${resp.status}: ${text}`)
+  }
+  return resp.arrayBuffer()
+}
+
+async function removeBgViaClearBackdrop(file) {
   const form = new FormData()
   form.append('image', file)
   const resp = await fetch(CLEAR_BACKDROP_URL, { method: 'POST', body: form })
   if (!resp.ok) throw new Error(`ClearBackdrop returned ${resp.status}`)
   return resp.arrayBuffer()
+}
+
+async function removeBackground(file, env) {
+  if (env.FREE_AI_API_KEY) {
+    try {
+      return await removeBgViaFreeAi(file, env)
+    } catch (e) {
+      console.warn('free.ai failed, falling back to ClearBackdrop:', e.message)
+    }
+  }
+  return await removeBgViaClearBackdrop(file)
 }
 
 export default {
@@ -60,7 +91,7 @@ export default {
         const buffer = await file.arrayBuffer()
 
         if (removeBg) {
-          const processedBuffer = await removeBgViaClearBackdrop(file, env)
+          const processedBuffer = await removeBackground(file, env)
           const key = await storeImage(env, processedBuffer, 'image/png', file.name)
           const publicUrl = `${url.origin}/files/${key}`
           return new Response(JSON.stringify({ url: publicUrl, key }), {
@@ -87,7 +118,7 @@ export default {
         if (!imageResp.ok) return errorResponse(502, 'Failed to fetch original image', origin)
 
         const blob = await imageResp.blob()
-        const processedBuffer = await removeBgViaClearBackdrop(blob, env)
+        const processedBuffer = await removeBackground(blob, env)
         const key = await storeImage(env, processedBuffer, 'image/png', 'processed.png')
         const publicUrl = `${url.origin}/files/${key}`
         return new Response(JSON.stringify({ url: publicUrl, key }), {
