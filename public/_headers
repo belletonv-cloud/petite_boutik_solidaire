@@ -2,11 +2,11 @@
   Cache-Control: no-cache, no-store, must-revalidate
 
 /admin
-  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
   Cross-Origin-Embedder-Policy: require-corp
 
 /admin/*
-  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
   Cross-Origin-Embedder-Policy: require-corp
 
 /assets/*
