@@ -153,7 +153,10 @@
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
                 <div class="upload-previews" v-if="upload.previews.length">
                   <div v-for="(p, i) in upload.previews" :key="i" class="upload-preview-item">
-                    <img :src="p" alt="Aperçu" />
+                    <div class="upload-preview-img-wrap">
+                      <img :src="p" alt="Aperçu" />
+                      <button class="upload-preview-remove" @click="removePreview(i)" title="Retirer cette photo">✕</button>
+                    </div>
                     <div class="upload-preview-controls">
                       <input type="text" v-model="upload.alts[i]" :placeholder="'Description ' + (i+1)" class="input-text upload-alt-input" />
                       <label class="upload-bg-toggle">
@@ -1192,6 +1195,15 @@ const onFileChange = (e) => {
     upload.value.uploading = false
    }
 
+   const removePreview = (i) => {
+    upload.value.files.splice(i, 1)
+    upload.value.previews.splice(i, 1)
+    upload.value.alts.splice(i, 1)
+    upload.value.removeBg.splice(i, 1)
+    upload.value.done = false
+    if (!upload.value.files.length && fileInput.value) fileInput.value.value = ''
+  }
+
    const cancelUpload = () => {
     upload.value.files = []
     upload.value.previews = []
@@ -2218,14 +2230,38 @@ const loadData = () => {
    gap: 10px;
    width: 100%;
  }
-  .upload-preview-item img {
+  .upload-preview-img-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .upload-preview-img-wrap img {
     width: 80px;
     height: 80px;
     object-fit: cover;
     border-radius: 8px;
     border: 2px solid #1BA9A8;
-    flex-shrink: 0;
+    display: block;
   }
+  .upload-preview-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: #e74c3c;
+    color: white;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s;
+  }
+  .upload-preview-remove:hover { background: #c0392b; }
   .upload-alt-input {
     flex: 1;
     min-width: 0;
