@@ -32,7 +32,10 @@ test.describe('Navigation & ancres', () => {
     expect(bgAfter).toBe('rgb(27, 169, 168)')
   })
 
-  test('touchstart ajoute la classe touch-active sur mobile', async ({ page }) => {
+  test('touchstart ajoute la classe touch-active sur mobile', async ({ page, browserName }) => {
+    // Firefox desktop n'expose pas TouchEvent (events tactiles désactivés) :
+    // ce comportement est couvert par les projets WebKit/Chromium/Mobile.
+    test.skip(browserName === 'firefox', 'TouchEvent non disponible sur Firefox desktop')
     await page.setViewportSize({ width: 393, height: 851 })
 
     const burger = page.locator('.nav-burger')
