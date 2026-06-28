@@ -766,7 +766,7 @@ async function clearBgModelCache() {
   bgModelLoading.value = false
   alert('Cache ONNX vidé. Réessayez le détourage.')
 }
-import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
+import { signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
 } from 'firebase/firestore'
@@ -1523,7 +1523,12 @@ const checkAdmin = async (email) => {
 
 // Au chargement, récupère le résultat si on revient d'une redirection
 onMounted(() => {
-  getRedirectResult(auth).catch(() => {})
+  // Finalise une éventuelle connexion par redirection (fallback popup).
+  getRedirectResult(auth).catch((e) => {
+    if (e?.code && e.code !== 'auth/no-current-user') {
+      error.value = authErrorMessage(e)
+    }
+  })
 })
 
 function authErrorMessage(e) {
@@ -1537,11 +1542,36 @@ function authErrorMessage(e) {
   return `Erreur de connexion${e?.message ? ' : ' + e.message : ''}. Réessayez.`
 }
 
+// Erreurs où la popup n'a pas pu communiquer/s'ouvrir : on bascule sur la
+// redirection plein écran, qui ne dépend pas de window.opener (immunisée
+// aux politiques COOP/COEP et aux bloqueurs de popups).
+const POPUP_FALLBACK_CODES = new Set([
+  'auth/popup-blocked',
+  'auth/cancelled-popup-request',
+  'auth/popup-closed-by-user',
+  'auth/web-storage-unsupported',
+  'auth/operation-not-supported-in-this-environment',
+])
+
+const signInWithFallback = async () => {
+  try {
+    await signInWithPopup(auth, googleProvider)
+  } catch (e) {
+    if (POPUP_FALLBACK_CODES.has(e?.code)) {
+      // Redirige la page entière vers Google ; au retour, getRedirectResult
+      // (appelé dans onMounted) finalise la connexion.
+      await signInWithRedirect(auth, googleProvider)
+      return
+    }
+    throw e
+  }
+}
+
 const login = async () => {
   loading.value = true
   error.value = ''
   try {
-    await signInWithPopup(auth, googleProvider)
+    await signInWithFallback()
   } catch (e) {
     error.value = authErrorMessage(e)
   }
@@ -1555,7 +1585,7 @@ const switchAccount = async () => {
   loading.value = true
   error.value = ''
   try {
-    await signInWithPopup(auth, googleProvider)
+    await signInWithFallback()
   } catch (e) {
     error.value = authErrorMessage(e)
   }
