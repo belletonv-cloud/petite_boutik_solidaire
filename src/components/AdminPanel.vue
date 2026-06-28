@@ -620,7 +620,15 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { removeBackground as removeBgQuality, canvasToBlob } from '@unbg/browser-sdk'
+import { pipeline } from '@huggingface/transformers'
+
+let bgRemover = null
+async function getBgRemover() {
+  if (!bgRemover) {
+    bgRemover = await pipeline('background-removal', 'onnx-community/BiRefNet_lite-ONNX')
+  }
+  return bgRemover
+}
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
@@ -1174,8 +1182,11 @@ watch(() => upload.value.gallery, (gallery) => {
       const alt = upload.value.alts[i]
       let toUpload = file
       if (upload.value.removeBg[i]) {
-        const result = await removeBgQuality(file, {}, { preset: 'quality-desktop' })
-        toUpload = await canvasToBlob(result.canvas, 'image/png')
+        const segmenter = await getBgRemover()
+        const url = URL.createObjectURL(file)
+        const output = await segmenter(url)
+        URL.revokeObjectURL(url)
+        toUpload = await output[0].toBlob('image/png')
       }
       const url = await uploadToWorker(toUpload)
       await addDoc(collection(db, 'photos'), {
@@ -1242,10 +1253,13 @@ const toggleRemoveBg = async (photo) => {
     try {
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
-      const result = await removeBgQuality(blob, {}, { preset: 'quality-desktop' })
-      const processedBlob = await canvasToBlob(result.canvas, 'image/png')
-      const url = await uploadToWorker(processedBlob)
-      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
+      const segmenter = await getBgRemover()
+      const url = URL.createObjectURL(blob)
+      const output = await segmenter(url)
+      URL.revokeObjectURL(url)
+      const processedBlob = await output[0].toBlob('image/png')
+      const url2 = await uploadToWorker(processedBlob)
+      await setDoc(doc(db, 'photos', photo.id), { ...photo, url: url2, removeBg: true })
     } catch (e) {
       console.error('background removal error', e)
       alert('Erreur lors de la suppression du fond.')
