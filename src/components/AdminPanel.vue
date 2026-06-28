@@ -1098,8 +1098,9 @@ const photosWithDecorFiltered = computed(() => {
   })
 })
 
-// Upload (Firebase Storage)
+// Upload images
 const fileInput = ref(null)
+const processingBg = ref(false)
 const upload = ref({ gallery: 'gallery', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '' })
 
 const onFileChange = (e) => {
