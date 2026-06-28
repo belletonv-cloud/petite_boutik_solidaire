@@ -149,6 +149,17 @@
           <div class="upload-block">
             <h3>➕ Ajouter une photo</h3>
             <div class="form-block" style="margin-top:14px;">
+              <label>Type de galerie</label>
+              <div class="gallery-type-select">
+                <label class="radio-label" :class="{ active: upload.gallery === 'boutique' }">
+                  <input type="radio" v-model="upload.gallery" value="boutique" />
+                  🏬 Boutique
+                </label>
+                <label class="radio-label" :class="{ active: upload.gallery === 'articles' }">
+                  <input type="radio" v-model="upload.gallery" value="articles" />
+                  📦 Articles
+                </label>
+              </div>
               <label>Photo</label>
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
                 <div class="upload-previews" v-if="upload.previews.length">
@@ -1118,7 +1129,7 @@ const photosWithDecorFiltered = computed(() => {
 // Upload images
 const fileInput = ref(null)
 const processingBg = ref(false)
-const upload = ref({ files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '', progress: { pct: 0, label: '' } })
+const upload = ref({ gallery: 'boutique', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '', progress: { pct: 0, label: '' } })
 
 const onFileChange = (e) => {
    const files = Array.from(e.target.files)
@@ -1126,10 +1137,15 @@ const onFileChange = (e) => {
    upload.value.files = files
    upload.value.previews = files.map(f => URL.createObjectURL(f))
    upload.value.alts = files.map(f => f.name.replace(/\.[^/.]+$/, ''))
-   upload.value.removeBg = files.map(() => false)
+   upload.value.removeBg = files.map(() => upload.value.gallery === 'articles')
    upload.value.done = false
    upload.value.error = ''
  }
+
+watch(() => upload.value.gallery, (gallery) => {
+  if (!upload.value.files.length) return
+  upload.value.removeBg = upload.value.removeBg.map(() => gallery === 'articles')
+})
 
   const uploadPhoto = async () => {
     const files = upload.value.files
@@ -1172,7 +1188,7 @@ const onFileChange = (e) => {
 
         tick('Sauvegarde')
         await addDoc(collection(db, 'photos'), {
-          url, gallery: upload.value.removeBg[i] ? 'articles' : 'boutique', alt,
+          url, gallery: upload.value.gallery, alt,
           active: true, removeBg: !!upload.value.removeBg[i],
           tags: [],
           createdAt: new Date().toISOString(),
@@ -1231,14 +1247,14 @@ const toggleRemoveBg = async (photo) => {
         rescale: false
       })
       const url = await uploadToWorker(processedBlob)
-      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true, gallery: 'articles' })
+      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
     } catch (e) {
       console.error('background removal error', e)
       alert('Erreur lors de la suppression du fond.')
     }
     processingBg.value = false
   } else {
-    await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false, gallery: 'boutique' })
+    await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false })
   }
 }
 
@@ -2035,6 +2051,28 @@ const loadData = () => {
   margin-bottom: 10px;
   font-size: 1em;
 }
+.gallery-type-select {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.15s;
+}
+.radio-label.active {
+  border-color: #1BA9A8;
+  background: #e8f5f5;
+}
+.radio-label input { display: none }
 .upload-tip {
   background: #fffbe6;
   border: 1px solid #f0d060;
