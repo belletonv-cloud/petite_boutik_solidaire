@@ -643,13 +643,7 @@ ort.env.wasm.wasmPaths = ORT_WASM_CDN
 ort.env.wasm.numThreads = THREADS_ENABLED ? 4 : 1
 ort.env.wasm.proxy = false
 
-const U2NET_CLOTH_SEG_MODEL_URL = import.meta.env.VITE_U2NET_CLOTH_SEG_MODEL_URL?.trim()
-
 rembgConfig.setBaseUrl('/models')
-
-if (U2NET_CLOTH_SEG_MODEL_URL) {
-  rembgConfig.setCustomModelPath('u2net_cloth_seg', U2NET_CLOTH_SEG_MODEL_URL)
-}
 
 const bgModel = 'u2net_cloth_seg'
 const bgModelLoading = ref(false)
