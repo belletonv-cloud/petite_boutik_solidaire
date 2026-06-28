@@ -613,7 +613,8 @@ const STORAGE_WORKER = 'https://petite-boutik-storage.belletonv.workers.dev'
 
 async function uploadToWorker(file) {
   const formData = new FormData()
-  formData.append('file', file)
+  const f = file instanceof File ? file : new File([file], 'image.png', { type: file.type || 'image/png' })
+  formData.append('file', f)
   const res = await fetch(`${STORAGE_WORKER}/upload`, { method: 'POST', body: formData })
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
   const data = await res.json()
@@ -1138,7 +1139,11 @@ const onFileChange = (e) => {
     try {
       const tasks = upload.value.files.map(async (file, i) => {
         const alt = upload.value.alts[i]
-        const toUpload = upload.value.removeBg[i] ? await removeBackground(file) : file
+        const toUpload = upload.value.removeBg[i] ? await removeBackground(file, {
+          model: 'isnet',
+          output: { format: 'image/png' },
+          rescale: false
+        }) : file
         const url = await uploadToWorker(toUpload)
         await addDoc(collection(db, 'photos'), {
           url, gallery: upload.value.gallery, alt,
@@ -1173,7 +1178,11 @@ const toggleRemoveBg = async (photo) => {
     try {
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
-      const processedBlob = await removeBackground(blob)
+      const processedBlob = await removeBackground(blob, {
+        model: 'isnet',
+        output: { format: 'image/png' },
+        rescale: false
+      })
       const url = await uploadToWorker(processedBlob)
       await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
     } catch (e) {
