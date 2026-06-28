@@ -628,6 +628,12 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+
+// Load ONNX Runtime WASM from CDN (not bundled) to stay under
+// Cloudflare Pages 25 MiB per-file limit.
+import * as ort from 'onnxruntime-web'
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
+
 import { remove as removeBgBunnio, newSession, getAvailableModels } from '@bunnio/rembg-web'
 
 const BG_MODELS = [
