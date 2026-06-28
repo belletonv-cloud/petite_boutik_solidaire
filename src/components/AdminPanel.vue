@@ -235,7 +235,6 @@
             <div class="gallery-section-header">
               <h3>🖼 Photos — avec décor <span class="photo-count">({{ photosWithDecor.length }})</span></h3>
               <div class="gallery-header-actions">
-                <button class="btn-delete-all" @click="deleteAllDynamicPhotos">🗑 Tout supprimer</button>
               </div>
             </div>
             <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
@@ -271,6 +270,13 @@
               </div>
             </div>
             <p class="empty" v-if="!dynamicPhotos.length">Aucune photo pour l'instant. Ajoutez-en avec le formulaire ci-dessus.</p>
+          </div>
+
+          <!-- Zone de danger : suppression massive -->
+          <div class="danger-zone">
+            <h3>🗑 Zone de danger</h3>
+            <p class="section-desc">Supprimer définitivement toutes les photos de la boutique.</p>
+            <button class="btn-delete-all" @click="deleteAllDynamicPhotos">🔥 Tout supprimer</button>
           </div>
         </section>
 
@@ -2173,6 +2179,23 @@ const loadData = () => {
 }
 .btn-delete-all:hover { background: #E95E5E; color: white; }
 .btn-delete-all:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.danger-zone {
+  margin-top: 32px;
+  padding: 20px;
+  border: 2px dashed #e74c3c;
+  border-radius: 12px;
+  background: #fff5f5;
+}
+.danger-zone h3 {
+  margin: 0 0 6px;
+  color: #c0392b;
+}
+.danger-zone .btn-delete-all {
+  margin-top: 10px;
+  padding: 8px 20px;
+  font-size: 0.95em;
+}
 .gallery-header-actions {
   display: flex;
   gap: 8px;
