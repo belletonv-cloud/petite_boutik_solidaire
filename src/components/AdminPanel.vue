@@ -645,6 +645,14 @@ ort.env.wasm.proxy = false
 
 rembgConfig.setBaseUrl('/models')
 
+// Verified binary ONNX model source for u2net_cloth_seg.
+// The local /models path is kept as default for other models, but this one
+// is hard-pinned to a working binary URL to avoid HTML/404 protobuf failures.
+rembgConfig.setCustomModelPath(
+  'u2net_cloth_seg',
+  'https://huggingface.co/bunnio/dis_anime/resolve/main/u2net_cloth_seg.onnx'
+)
+
 const bgModel = 'u2net_cloth_seg'
 const bgModelLoading = ref(false)
 let bgSession = null
