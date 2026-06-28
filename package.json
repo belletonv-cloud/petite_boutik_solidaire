@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check:assets": "node scripts/check-assets-size.js",
+    "prebuild": "npm run check:assets",
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "wrangler deploy --compatibility-date 2024-12-19",
