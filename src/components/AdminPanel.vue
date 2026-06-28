@@ -149,17 +149,6 @@
           <div class="upload-block">
             <h3>➕ Ajouter une photo</h3>
             <div class="form-block" style="margin-top:14px;">
-              <label>Type de galerie</label>
-              <div class="gallery-type-select">
-                <label class="radio-label" :class="{ active: upload.gallery === 'boutique' }">
-                  <input type="radio" v-model="upload.gallery" value="boutique" />
-                  🏬 Boutique
-                </label>
-                <label class="radio-label" :class="{ active: upload.gallery === 'articles' }">
-                  <input type="radio" v-model="upload.gallery" value="articles" />
-                  📦 Articles
-                </label>
-              </div>
               <label>Photo</label>
               <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
                 <div class="upload-previews" v-if="upload.previews.length">
@@ -174,9 +163,16 @@
                     </div>
                   </div>
                 </div>
-              <button class="btn-save" @click="uploadPhoto" :disabled="!upload.files.length || upload.uploading">
-                {{ upload.uploading ? '⏳ Upload en cours...' : '⬆️ Envoyer les photos (' + upload.files.length + ')' }}
-              </button>
+              <div class="upload-actions" v-if="upload.files.length">
+                <button class="btn-save" @click="uploadPhoto" :disabled="upload.uploading">
+                  {{ upload.uploading ? '⏳ Envoi en cours...' : '⬆️ Envoyer les photos (' + upload.files.length + ')' }}
+                </button>
+                <button class="btn-cancel" @click="cancelUpload" :disabled="upload.uploading">✕ Annuler</button>
+              </div>
+              <div class="upload-progress-bar" v-if="upload.uploading">
+                <div class="upload-progress-fill" :style="{ width: upload.progress.pct + '%' }"></div>
+              </div>
+              <span class="upload-progress-label" v-if="upload.uploading">{{ upload.progress.label }}</span>
               <span class="saved-msg" v-if="upload.done">✓ Photo ajoutée !</span>
               <span class="error-msg" v-if="upload.error">{{ upload.error }}</span>
             </div>
@@ -1119,7 +1115,7 @@ const photosWithDecorFiltered = computed(() => {
 // Upload images
 const fileInput = ref(null)
 const processingBg = ref(false)
-const upload = ref({ gallery: 'boutique', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '' })
+const upload = ref({ files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '', progress: { pct: 0, label: '' } })
 
 const onFileChange = (e) => {
    const files = Array.from(e.target.files)
@@ -1132,27 +1128,56 @@ const onFileChange = (e) => {
    upload.value.error = ''
  }
 
- const uploadPhoto = async () => {
-    if (!upload.value.files.length || upload.value.alts.some(a => !a.trim())) return
+  const uploadPhoto = async () => {
+    const files = upload.value.files
+    if (!files.length || upload.value.alts.some(a => !a.trim())) return
     upload.value.uploading = true
     upload.value.error = ''
+    upload.value.progress = { pct: 0, label: 'Préparation...' }
+
+    const total = files.length
+    let done = 0
+
+    const tick = (msg) => {
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0
+      upload.value.progress = { pct, label: `${msg} (${done}/${total})` }
+    }
+
     try {
-      const tasks = upload.value.files.map(async (file, i) => {
+      for (let i = 0; i < total; i++) {
+        const file = files[i]
         const alt = upload.value.alts[i]
-        const toUpload = upload.value.removeBg[i] ? await removeBackground(file, {
-          model: 'isnet',
-          output: { format: 'image/png' },
-          rescale: false
-        }) : file
+
+        let toUpload = file
+        if (upload.value.removeBg[i]) {
+          tick('Suppression fond')
+          toUpload = await removeBackground(file, {
+            model: 'isnet',
+            output: { format: 'image/png' },
+            rescale: false,
+            progress: (step, current, totalSteps) => {
+              if (step !== 'compute') return
+              const pct = Math.round((done / total) * 100 + (current / totalSteps) * (100 / total))
+              upload.value.progress = { pct, label: `Traitement photo ${i + 1}/${total}...` }
+            }
+          })
+        }
+
+        done++
+        tick('Upload photo')
         const url = await uploadToWorker(toUpload)
+
+        tick('Sauvegarde')
         await addDoc(collection(db, 'photos'), {
-          url, gallery: upload.value.gallery, alt,
+          url, gallery: upload.value.removeBg[i] ? 'articles' : 'boutique', alt,
           active: true, removeBg: !!upload.value.removeBg[i],
           tags: [],
           createdAt: new Date().toISOString(),
         })
-      })
-      await Promise.all(tasks)
+
+        upload.value.progress = { pct: Math.round(((i + 1) / total) * 100), label: `Photo ${i + 1}/${total} OK` }
+      }
+
       upload.value.done = true
       setTimeout(() => { upload.value.done = false }, 4000)
       upload.value.files = []
@@ -1167,7 +1192,17 @@ const onFileChange = (e) => {
     upload.value.uploading = false
    }
 
-  const toggleDynamicPhoto = async (photo) => {
+   const cancelUpload = () => {
+    upload.value.files = []
+    upload.value.previews = []
+    upload.value.alts = []
+    upload.value.removeBg = []
+    upload.value.done = false
+    upload.value.error = ''
+    if (fileInput.value) fileInput.value.value = ''
+  }
+
+   const toggleDynamicPhoto = async (photo) => {
   await setDoc(doc(db, 'photos', photo.id), { ...photo, active: !photo.active })
 }
 
@@ -1184,14 +1219,14 @@ const toggleRemoveBg = async (photo) => {
         rescale: false
       })
       const url = await uploadToWorker(processedBlob)
-      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
+      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true, gallery: 'articles' })
     } catch (e) {
       console.error('background removal error', e)
       alert('Erreur lors de la suppression du fond.')
     }
     processingBg.value = false
   } else {
-    await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false })
+    await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false, gallery: 'boutique' })
   }
 }
 
@@ -1771,6 +1806,47 @@ const loadData = () => {
 }
 .btn-save:hover { background: #158886; }
 
+.upload-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-cancel {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: background 0.2s;
+}
+.btn-cancel:hover { background: #c0392b; }
+.btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.upload-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.upload-progress-fill {
+  height: 100%;
+  background: #1BA9A8;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.upload-progress-label {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 4px;
+  display: block;
+}
+
 .saved-msg { color: #4CAF50; font-size: 0.9em; align-self: center; }
 
 /* LISTE */
@@ -1947,28 +2023,6 @@ const loadData = () => {
   margin-bottom: 10px;
   font-size: 1em;
 }
-.gallery-type-select {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9em;
-  transition: all 0.15s;
-}
-.radio-label.active {
-  border-color: #1BA9A8;
-  background: #e8f5f5;
-}
-.radio-label input { display: none }
 .upload-tip {
   background: #fffbe6;
   border: 1px solid #f0d060;
