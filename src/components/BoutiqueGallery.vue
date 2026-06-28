@@ -36,32 +36,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/autoplay'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
-import { onSnapshot, doc, collection, query, orderBy } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { usePhotos } from '../composables/usePhotos.js'
 
 const modules = [Autoplay, Pagination, Navigation]
-
-
-const boutiqueState = ref({})
-const dynamicPhotos = ref([])
-
-onMounted(() => {
-  onSnapshot(doc(db, 'config', 'galleries'), snap => {
-    if (snap.exists()) boutiqueState.value = snap.data().boutique || {}
-  }, (err) => console.error('[BoutiqueGallery] galleries snapshot error', err))
-
-  onSnapshot(query(collection(db, 'photos'), orderBy('createdAt')), snap => {
-    // populate dynamic photos from Firestore
-    dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  }, (err) => console.error('[BoutiqueGallery] photos snapshot error', err))
-})
+const dynamicPhotos = usePhotos()
 
 // Images computed: select photos that represent Boutique items.
 // Business rule: prefer photos that had their background removed (removeBg === true),

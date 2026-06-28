@@ -81,17 +81,6 @@
           />
           </div>
 
-          <!-- Debug overlay (visible only in modal) -->
-          <div v-if="modalOpen && debugOverlay" style="position:absolute;left:12px;top:12px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:6px;font-size:12px;z-index:2000;pointer-events:none">
-            <div style="font-weight:600;margin-bottom:6px">DEBUG</div>
-            <div>wrap: {{ debugStats.wrapW }} x {{ debugStats.wrapH }}</div>
-            <div>base: {{ debugStats.baseW }} x {{ debugStats.baseH }}</div>
-            <div>scaled: {{ debugStats.scaledW }} x {{ debugStats.scaledH }}</div>
-            <div>half: {{ debugStats.halfX }} x {{ debugStats.halfY }}</div>
-            <div>transform: {{ debugStats.transformX }} x {{ debugStats.transformY }}</div>
-            <div>zoom: {{ debugStats.zoom }}</div>
-          </div>
-
           <!-- elegant zoom controls: toggle + / - with numeric indicator -->
           <div class="zoom-controls">
             <button class="zoom-toggle" aria-hidden="true">🔎</button>
@@ -147,21 +136,15 @@ import 'swiper/css'
 import 'swiper/css/autoplay'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
-import { onSnapshot, collection, query, orderBy } from 'firebase/firestore'
-import { db } from '../firebase.js'
 import logoUrl from '@/assets/logo.jpg'
 import Modal from './Modal.vue'
 import { nextTick } from 'vue'
+import { usePhotos } from '../composables/usePhotos.js'
 
 const modules = [Autoplay, Pagination, Navigation]
-const dynamicPhotos = ref([])
+const dynamicPhotos = usePhotos()
 
 onMounted(() => {
-  onSnapshot(
-    query(collection(db, 'photos'), orderBy('createdAt')),
-    snap => { dynamicPhotos.value = snap.docs.map(d => ({ id: d.id, ...d.data() })) },
-    err => { console.warn('Firestore photos error:', err) }
-  )
   document.addEventListener('keydown', onKeydown)
 })
 
@@ -222,18 +205,8 @@ const baseImagesFiltered = computed(() => {
   })
 })
 
-// final images shown in the carousel / grid — filtered by search (alt or tags)
-const images = computed(() => {
-  const q = (filterQuery.value || '').trim().toLowerCase()
-  if (!q) return baseImages.value
-  return baseImages.value.filter(img => {
-    if ((img.alt || '').toLowerCase().includes(q)) return true
-    const tags = img.tags || []
-    if (Array.isArray(tags)) return tags.some(t => (t || '').toLowerCase().includes(q))
-    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
-    return false
-  })
-})
+// images filtrées — partagées entre le carousel et la grille
+const images = baseImagesFiltered
 
 const swiperInstance = ref(null)
 const isPaused = ref(false)
@@ -242,22 +215,13 @@ const modalIndex = ref(0)
 const currentIndex = ref(0)
 const gridOpen = ref(false)
 const modalLoading = ref(false)
-// magnifier state
-const magnifierVisible = ref(false)
 const enableMagnifier = ref(true)
-const magnifierStyle = ref({})
 const imgWrap = ref(null)
 const modalImg = ref(null)
 
-// allow significant zoom-out (user requested ability to zoom out much more)
 const zoomMin = 0.3
 const zoomMax = 4.0
-const zoomDuration = 6000 // ms to reach max
-const zoomStepMs = 100
-const zoomStep = (zoomMax - zoomMin) / (zoomDuration / zoomStepMs)
 const zoomFactor = ref(1)
-let _zoomTimer = null
-
 // pinch-to-zoom state for touch (two-finger gestures)
 const pinchActive = ref(false)
 let _pinchStartDistance = 0
@@ -300,16 +264,6 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
     transformY.value = clamp(nextY, minY, maxY)
     lastPointer.value = { x: e.clientX, y: e.clientY }
   }
-
-// handle pointermove at image level to detect pinch gestures (two pointers)
-const onPointerMoveImage = (e) => {
-  // if pinch active, ignore single-pointer drag
-  if (!modalImg.value) return
-  if (pinchActive.value && e.touches) {
-    // touches branch will be handled in touch handlers below
-    return
-  }
-}
 
 const onPointerUpWindow = (e) => {
   dragging.value = false
@@ -451,24 +405,6 @@ const onTouchEnd = (ev) => {
   }
 }
 
-// prevent the browser's touch scrolling when dragging the image
-const applyTouchActionLock = (enable) => {
-  try {
-    if (!modalImg.value) return
-    modalImg.value.style.touchAction = enable ? 'none' : ''
-  } catch (e) {}
-}
-
-// Joystick state for mobile panning
-const showJoystick = computed(() => {
-  // only show when zoomed and small viewport
-  return zoomFactor.value > 1 && window.innerWidth <= 700
-})
-// joystick removed; left the function updateKnob earlier to avoid breaking references
-const updateKnob = (clientX, clientY) => {
-  // noop now - joystick removed
-}
-
 // track captured pointer id for touch
 let _capturedPointerId = null
 
@@ -501,43 +437,6 @@ let _capturedPointerId = null
     transformY.value = clamp(V_newY, -halfY2, halfY2)
   }
 
-const startZoomRamp = () => {
-  if (_zoomTimer) return
-  _zoomTimer = setInterval(() => {
-    zoomFactor.value = Math.min(zoomMax, zoomFactor.value + zoomStep)
-    if (zoomFactor.value >= zoomMax && _zoomTimer) { clearInterval(_zoomTimer); _zoomTimer = null }
-  }, zoomStepMs)
-}
-const stopZoomRamp = () => {
-  if (_zoomTimer) { clearInterval(_zoomTimer); _zoomTimer = null }
-  // reset quickly to min for now
-  zoomFactor.value = zoomMin
-}
-
-// Deprecated circular lens handlers
-const showMagnifier = (e) => {}
-const hideMagnifier = (e) => {}
-const toggleMagnifier = (e) => {}
-
-  const toggleEnableMagnifier = () => {
-  enableMagnifier.value = !enableMagnifier.value
-  if (!enableMagnifier.value) {
-    // reset zoom and transform
-    zoomFactor.value = 1
-    transformX.value = 0
-    transformY.value = 0
-    dragging.value = false
-    stopZoomRamp()
-    return
-  }
-  // enabling: initialize zoom to a comfortable level and center image
-  zoomFactor.value = Math.max(1.6, zoomMin)
-  transformX.value = 0
-  transformY.value = 0
-  // when enabling magnifier, trigger a brief pan hint so user knows they can drag
-  panHintActive.value = true
-  setTimeout(() => { panHintActive.value = false }, 700)
-}
 
 // small UX hint: when user first zooms, briefly animate the image to indicate it can be panned
 const panHintActive = ref(false)
@@ -603,61 +502,13 @@ const zoomOut = () => {
     transformY.value = clamp(V_newY, -halfY3, halfY3)
   }
 
-// pointer move handler for circular magnifier (deprecated) - kept for reference
-const onMagnifierMove = (e) => {
-  // no-op: lens behavior replaced by full-image zoom and pan handlers
-}
-
-// store last pointer position so +/- buttons update the lens immediately
+// store last pointer position so +/- buttons peuvent zoomer depuis le dernier point de contact
 const lastPointer = ref(null)
 
-const computeMagnifierAt = (clientX, clientY) => {
-  if (!modalImg.value) return
-  const img = modalImg.value
-  const rect = img.getBoundingClientRect()
-  const x = clientX - rect.left
-  const y = clientY - rect.top
-  const rx = Math.max(0, Math.min(rect.width, x))
-  const ry = Math.max(0, Math.min(rect.height, y))
-  const size = Math.min(160, Math.max(120, Math.floor(window.innerWidth / 12)))
-  const margin = 8
-  const leftRaw = clientX - size / 2
-  const topRaw = clientY - size / 2
-  const left = Math.max(margin, Math.min(window.innerWidth - size - margin, leftRaw))
-  const top = Math.max(margin, Math.min(window.innerHeight - size - margin, topRaw))
-  const zoom = zoomFactor.value || 2
-  const bgWidth = Math.round(rect.width * zoom)
-  const bgHeight = Math.round(rect.height * zoom)
-  const posX = Math.round(-(rx * zoom - size / 2))
-  const posY = Math.round(-(ry * zoom - size / 2))
-  magnifierStyle.value = {
-    width: size + 'px',
-    height: size + 'px',
-    left: left + 'px',
-    top: top + 'px',
-    backgroundImage: `url(${img.src})`,
-    backgroundSize: `${bgWidth}px ${bgHeight}px`,
-    backgroundPosition: `${posX}px ${posY}px`
-  }
-}
-
-// magnifier pane style (a small preview box inside the modal to the right)
-const magnifierPaneStyle = ref({})
-const updateMagnifierPane = (e) => {
-  // deprecated: using lens that follows pointer instead
-}
 const logo = logoUrl
-const overlayVariant = ref(1) // 1: subtle, 2: stronger coral
-const logoSmall = ref(false)
-
-const toggleOverlayVariant = () => { overlayVariant.value = overlayVariant.value === 1 ? 2 : 1 }
-const toggleLogoSize = () => { logoSmall.value = !logoSmall.value }
-
-// Fallback image for broken links
-const placeholderImage = '/placeholder.jpg'
 
 function preloadImage(src) {
-  if (!src || src === placeholderImage) return
+  if (!src || src === '/placeholder.jpg') return
   const img = new Image()
   img.src = src
 }
@@ -717,7 +568,7 @@ const togglePause = () => {
   lastPointer.value = null
 
   // preload image (does not change zoom/transform)
-  const img = images[modalIndex.value]
+  const img = images.value[modalIndex.value]
   if (img && img.fullSrc) {
     const test = new Image()
     test.src = img.fullSrc
@@ -799,49 +650,6 @@ const onSlideChange = (e) => {
   }
 }
 
-// Debug overlay: live stats to validate bounds in real conditions
-// debug overlay only enabled for test environment
-const debugOverlay = ref(process.env.NODE_ENV === 'test')
-const debugStats = computed(() => {
-  if (!modalImg.value || !imgWrap.value) return {
-    wrapW: 0, wrapH: 0, baseW: 0, baseH: 0, scaledW: 0, scaledH: 0, halfX: 0, halfY: 0, transformX: 0, transformY: 0, zoom: zoomFactor.value
-  }
-  const wrapRect = imgWrap.value.getBoundingClientRect()
-  const baseW = modalImg.value.offsetWidth || modalImg.value.naturalWidth || 0
-  const baseH = modalImg.value.offsetHeight || modalImg.value.naturalHeight || 0
-  const scaledW = baseW * zoomFactor.value
-  const scaledH = baseH * zoomFactor.value
-  const halfX = Math.abs(wrapRect.width - scaledW) / 2
-  const halfY = Math.abs(wrapRect.height - scaledH) / 2
-  return {
-    wrapW: Math.round(wrapRect.width),
-    wrapH: Math.round(wrapRect.height),
-    baseW: Math.round(baseW),
-    baseH: Math.round(baseH),
-    scaledW: Math.round(scaledW),
-    scaledH: Math.round(scaledH),
-    halfX: Math.round(halfX),
-    halfY: Math.round(halfY),
-    transformX: Number(transformX.value.toFixed(2)),
-    transformY: Number(transformY.value.toFixed(2)),
-    zoom: Number(zoomFactor.value.toFixed(3))
-  }
-})
-
-// Console logging while modal is open to make it easy to copy the test numbers
-let _debugLogger = null
-watch(() => modalOpen.value, (open) => {
-  if (_debugLogger) { clearInterval(_debugLogger); _debugLogger = null }
-  if (open && debugOverlay.value) {
-    _debugLogger = setInterval(() => {
-      // print a compact single-line snapshot for easy copy/paste
-      try {
-        const d = debugStats.value
-        console.log(`DEBUG_STATS: zoom=${d.zoom} wrap=${d.wrapW}x${d.wrapH} base=${d.baseW}x${d.baseH} scaled=${d.scaledW}x${d.scaledH} half=${d.halfX}x${d.halfY} transform=${d.transformX}x${d.transformY}`)
-      } catch (e) {}
-    }, 800)
-  }
-})
 </script>
 
 <style scoped>
@@ -1010,8 +818,6 @@ watch(() => modalOpen.value, (open) => {
   z-index: 12;
 }
 
-.modal-logo.small { width: 36px; opacity: 0.95 }
-
 .modal-close:hover {
   background: #d14545;
   transform: scale(1.1);
@@ -1082,37 +888,6 @@ watch(() => modalOpen.value, (open) => {
   transition: opacity 220ms ease;
 }
 
-.magnifier {
-  position: fixed;
-  pointer-events: none;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.9);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-color: #fff;
-  z-index: 1700;
-}
-
-.magnifier-pane {
-  position: fixed;
-  background-repeat: no-repeat;
-  background-position: center center;
-}
-
-
-.zoom-btn {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,250,250,0.86));
-  border-radius: 999px;
-  padding: 8px 10px;
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-  cursor: pointer;
-}
-/* removed zoom-btn */
 
 .zoom-controls { position: absolute; right: 8px; bottom: 8px; display:flex; gap:8px; align-items:center }
 .zoom-small { background: rgba(255,255,255,0.95); border-radius:8px; padding:6px 8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer }
@@ -1133,20 +908,6 @@ watch(() => modalOpen.value, (open) => {
   bottom: 16px;
   z-index: 1200;
   pointer-events: auto;
-}
-
-.magnifier-indicator {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  padding: 6px 8px;
-  border-radius: 999px;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
-  backdrop-filter: blur(3px);
 }
 
 .modal-img-wrap:hover .modal-image.interactive { cursor: zoom-in }

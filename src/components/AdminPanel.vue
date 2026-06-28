@@ -168,7 +168,19 @@
                 <span class="bg-model-desc" v-else>Modèle fixé pour le détourage des vêtements</span>
               </div>
               <label>Photo</label>
-              <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file" />
+              <div
+                class="drop-zone"
+                :class="{ 'drag-over': isDragging }"
+                @dragover.prevent="isDragging = true"
+                @dragleave.prevent="isDragging = false"
+                @drop.prevent="onDrop"
+              >
+                <input type="file" ref="fileInput" accept="image/*" multiple @change="onFileChange" class="input-file-hidden" id="file-input-upload" />
+                <label for="file-input-upload" class="drop-label">
+                  <span class="drop-icon">📁</span>
+                  <span>Glisser-déposer des photos ici<br>ou <u>cliquer pour choisir</u></span>
+                </label>
+              </div>
                 <div class="upload-previews" v-if="upload.previews.length">
                   <div v-for="(p, i) in upload.previews" :key="i" class="upload-preview-item">
                     <div class="upload-preview-img-wrap">
@@ -223,7 +235,11 @@
                     <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
                     <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
                   </label>
-                  <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" :disabled="processingBg" title="Réafficher le décor">{{ processingBg ? '⏳' : '🖼' }}</button>
+                  <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
+                    <option value="boutique">🏬 Boutique</option>
+                    <option value="articles">📦 Articles</option>
+                  </select>
+                  <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" :title="photo._raw.originalUrl ? 'Restaurer l\'original' : 'Réafficher le décor'">{{ processingBgId === photo._key ? '⏳' : (photo._raw.originalUrl ? '↩️' : '🖼') }}</button>
                   <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
                 </div>
                 <div class="thumb-edit-alt">
@@ -264,7 +280,11 @@
                     <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
                     <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
                   </label>
-                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" :disabled="processingBg" title="Supprimer le fond">{{ processingBg ? '⏳' : '👕' }}</button>
+                  <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
+                    <option value="boutique">🏬 Boutique</option>
+                    <option value="articles">📦 Articles</option>
+                  </select>
+                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" title="Supprimer le fond">{{ processingBgId === photo._key ? '⏳' : '👕' }}</button>
                   <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
                 </div>
                 <div class="thumb-edit-alt">
@@ -1231,19 +1251,34 @@ const photosWithDecorFiltered = computed(() => {
 
 // Upload images
 const fileInput = ref(null)
-const processingBg = ref(false)
+const processingBgId = ref(null)
+const isDragging = ref(false)
 const upload = ref({ gallery: 'boutique', files: [], previews: [], alts: [], removeBg: [], uploading: false, done: false, error: '', progress: { pct: 0, label: '' } })
 
-const onFileChange = (e) => {
-   const files = Array.from(e.target.files)
-   if (!files.length) return
-   upload.value.files = files
-   upload.value.previews = files.map(f => URL.createObjectURL(f))
-   upload.value.alts = files.map(f => f.name.replace(/\.[^/.]+$/, ''))
-   upload.value.removeBg = files.map(() => upload.value.gallery === 'articles')
-   upload.value.done = false
-   upload.value.error = ''
- }
+const MAX_FILE_SIZE_MB = 15
+
+const handleFiles = (files) => {
+  const images = files.filter(f => f.type.startsWith('image/'))
+  const oversized = images.filter(f => f.size > MAX_FILE_SIZE_MB * 1024 * 1024)
+  if (oversized.length) {
+    upload.value.error = `${oversized.length} fichier(s) trop volumineux (> ${MAX_FILE_SIZE_MB} Mo) : ${oversized.map(f => f.name).join(', ')}`
+    return
+  }
+  if (!images.length) return
+  upload.value.files = images
+  upload.value.previews = images.map(f => URL.createObjectURL(f))
+  upload.value.alts = images.map(f => f.name.replace(/\.[^/.]+$/, '') || 'Photo')
+  upload.value.removeBg = images.map(() => upload.value.gallery === 'articles')
+  upload.value.done = false
+  upload.value.error = ''
+}
+
+const onFileChange = (e) => handleFiles(Array.from(e.target.files))
+
+const onDrop = (e) => {
+  isDragging.value = false
+  handleFiles(Array.from(e.dataTransfer.files))
+}
 
 watch(() => upload.value.gallery, (gallery) => {
   if (!upload.value.files.length) return
@@ -1252,13 +1287,14 @@ watch(() => upload.value.gallery, (gallery) => {
 
   const uploadPhoto = async () => {
     const files = upload.value.files
-    if (!files.length || upload.value.alts.some(a => !a.trim())) return
+    if (!files.length) return
     upload.value.uploading = true
     upload.value.error = ''
     upload.value.progress = { pct: 0, label: 'Préparation...' }
 
     const total = files.length
     let done = 0
+    const errors = []
 
     const tick = () => {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -1267,16 +1303,25 @@ watch(() => upload.value.gallery, (gallery) => {
 
     const processOne = async (i) => {
       const file = files[i]
-      const alt = upload.value.alts[i]
+      const alt = upload.value.alts[i] || file.name.replace(/\.[^/.]+$/, '') || 'Photo'
       let toUpload = file
+      let originalUrl = null
+
       if (upload.value.removeBg[i]) {
+        // Upload de l'original d'abord pour pouvoir restaurer plus tard
+        originalUrl = await uploadToWorker(file)
         const session = await getBgSession()
         toUpload = await removeBgBunnio(file, { session })
       }
+
       const url = await uploadToWorker(toUpload)
       await addDoc(collection(db, 'photos'), {
-        url, gallery: upload.value.gallery, alt,
-        active: true, removeBg: !!upload.value.removeBg[i],
+        url,
+        originalUrl: originalUrl || null,
+        gallery: upload.value.gallery,
+        alt,
+        active: true,
+        removeBg: !!upload.value.removeBg[i],
         tags: [],
         createdAt: new Date().toISOString(),
       })
@@ -1289,20 +1334,30 @@ watch(() => upload.value.gallery, (gallery) => {
       const workers = Array(3).fill().map(async () => {
         while (i < total) {
           const idx = i++
-          await processOne(idx)
+          try {
+            await processOne(idx)
+          } catch (e) {
+            errors.push(`Photo ${idx + 1} : ${e?.message || 'erreur inconnue'}`)
+            done++
+            tick()
+          }
         }
       })
       await Promise.all(workers)
 
-      upload.value.done = true
-      setTimeout(() => { upload.value.done = false }, 4000)
+      if (errors.length) {
+        upload.value.error = errors.join(' | ')
+      } else {
+        upload.value.done = true
+        setTimeout(() => { upload.value.done = false }, 4000)
+      }
       upload.value.files = []
       upload.value.previews = []
       upload.value.alts = []
       upload.value.removeBg = []
       if (fileInput.value) fileInput.value.value = ''
     } catch (e) {
-      upload.value.error = 'Erreur lors de l\'envoi des photos.'
+      upload.value.error = `Erreur : ${e?.message || 'envoi échoué'}`
       console.error('upload error', e)
     }
     upload.value.uploading = false
@@ -1333,23 +1388,41 @@ watch(() => upload.value.gallery, (gallery) => {
 
 const toggleRemoveBg = async (photo) => {
   const newVal = !photo.removeBg
-  if (newVal) {
-    processingBg.value = true
-    try {
+  processingBgId.value = photo.id
+  try {
+    if (newVal) {
+      // Appliquer le détourage
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
       const session = await getBgSession()
       const processedBlob = await removeBgBunnio(blob, { session })
-      const url = await uploadToWorker(processedBlob)
-      await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
-    } catch (e) {
-      console.error('background removal error', e)
-      alert('Erreur lors de la suppression du fond.')
+      const newUrl = await uploadToWorker(processedBlob)
+      // Supprimer l'ancienne URL pour éviter la fuite de stockage
+      await deleteFromWorker(photo.url)
+      await setDoc(doc(db, 'photos', photo.id), {
+        ...photo,
+        url: newUrl,
+        originalUrl: photo.originalUrl || photo.url,
+        removeBg: true,
+      })
+    } else {
+      // Restaurer l'original si disponible
+      if (photo.originalUrl && photo.originalUrl !== photo.url) {
+        await deleteFromWorker(photo.url)
+        await setDoc(doc(db, 'photos', photo.id), {
+          ...photo,
+          url: photo.originalUrl,
+          removeBg: false,
+        })
+      } else {
+        await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false })
+      }
     }
-    processingBg.value = false
-  } else {
-    await setDoc(doc(db, 'photos', photo.id), { ...photo, removeBg: false })
+  } catch (e) {
+    console.error('background removal error', e)
+    alert(`Erreur : ${e?.message || 'détourage échoué'}`)
   }
+  processingBgId.value = null
 }
 
 const deleteDynamicPhoto = async (photo) => {
@@ -1393,6 +1466,10 @@ const loadDynamicPhotos = () => {
 
 const saveDynamicPhotoAlt = async (photo, alt) => {
   await setDoc(doc(db, 'photos', photo.id), { ...photo, alt })
+}
+
+const changePhotoGallery = async (photo, gallery) => {
+  await setDoc(doc(db, 'photos', photo.id), { ...photo, gallery })
 }
 
 // Auth
@@ -2183,6 +2260,49 @@ const loadData = () => {
 .input-file {
   font-size: 0.88em;
   color: #444;
+}
+
+.input-file-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.drop-zone {
+  position: relative;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: #fafafa;
+}
+.drop-zone:hover { border-color: var(--primary-teal); background: #f0fafa; }
+.drop-zone.drag-over { border-color: var(--primary-teal); background: #e6f5f5; }
+
+.drop-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.drop-icon { font-size: 2em; }
+
+.thumb-gallery-select {
+  font-size: 0.78em;
+  padding: 3px 6px;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  cursor: pointer;
 }
  .upload-preview {
    display: flex;

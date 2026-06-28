@@ -6,21 +6,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { onSnapshot, doc } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { computed } from 'vue'
+import { useTextes } from '../composables/useTextes.js'
 
-const titre = ref('À propos')
-const texte = ref("La P'tite Boutik Solidaire ouvre ses portes au 2, rue Jean-Monnet à Morlaix. Portée par l'Association Bras Ouverts de Morlaix, l'objectif de ce nouveau lieu est d'encourager le recyclage, de favoriser la convivialité à travers la mode enfantine responsable et d'aider les familles.")
-
-onMounted(() => {
-  onSnapshot(doc(db, 'config', 'textes'), snap => {
-    if (!snap.exists()) return
-    const d = snap.data()
-    if (d.about_titre) titre.value = d.about_titre
-    if (d.about_texte) texte.value = d.about_texte
-  })
-})
+const textes = useTextes()
+const titre = computed(() => textes.value.about_titre || 'À propos')
+const texte = computed(() => textes.value.about_texte || "La P'tite Boutik Solidaire ouvre ses portes au 2, rue Jean-Monnet à Morlaix. Portée par l'Association Bras Ouverts de Morlaix, l'objectif de ce nouveau lieu est d'encourager le recyclage, de favoriser la convivialité à travers la mode enfantine responsable et d'aider les familles.")
 </script>
 
 <style scoped>

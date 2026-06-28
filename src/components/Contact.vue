@@ -4,15 +4,15 @@
     <div class="contact-grid">
       <div class="contact-info">
         <div class="info-group">
-          <h3>📍 Localisation</h3>
+          <h3><span aria-hidden="true">📍</span> Localisation</h3>
           <p>{{ address }}</p>
         </div>
         <div class="info-group">
-          <h3>📞 Téléphone</h3>
+          <h3><span aria-hidden="true">📞</span> Téléphone</h3>
           <a :href="'tel:' + phoneRaw" class="phone-link">{{ phone }}</a>
         </div>
         <div class="info-group">
-          <h3>🅿️ Parking</h3>
+          <h3><span aria-hidden="true">🅿️</span> Parking</h3>
           <p>Disponible sur place</p>
         </div>
       </div>
@@ -40,29 +40,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { onSnapshot, doc } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { computed } from 'vue'
+import { useTextes } from '../composables/useTextes.js'
 
-const titre = ref('Nous trouver')
-const address = ref('2 rue Jean-Monnet, 29600 Morlaix')
-const phone = ref('06 20 70 54 96')
-const phoneRaw = ref('0620705496')
-const mapUrl = ref('https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2688.5!2d-3.8275!3d48.5775!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2s2+Rue+Jean+Monnet%2C+29600+Morlaix!5e0!3m2!1sfr!2sfr!4v1700000000000')
-const addressEncoded = ref('2+rue+Jean-Monnet+29600+Morlaix')
-
-onMounted(() => {
-  onSnapshot(doc(db, 'config', 'textes'), snap => {
-    if (!snap.exists()) return
-    const d = snap.data()
-    if (d.contact_titre)   titre.value   = d.contact_titre
-    if (d.contact_address) address.value = d.contact_address
-    if (d.contact_phone) phone.value = d.contact_phone
-    if (d.contact_phone_raw) phoneRaw.value = d.contact_phone_raw
-    if (d.contact_map_url) mapUrl.value = d.contact_map_url
-    if (d.contact_address) addressEncoded.value = d.contact_address.replace(/ /g, '+')
-  })
-})
+const textes = useTextes()
+const titre = computed(() => textes.value.contact_titre || 'Nous trouver')
+const address = computed(() => textes.value.contact_address || '2 rue Jean-Monnet, 29600 Morlaix')
+const phone = computed(() => textes.value.contact_phone || '06 20 70 54 96')
+const phoneRaw = computed(() => textes.value.contact_phone_raw || '0620705496')
+const mapUrl = computed(() => textes.value.contact_map_url || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2688.5!2d-3.8275!3d48.5775!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2s2+Rue+Jean+Monnet%2C+29600+Morlaix!5e0!3m2!1sfr!2sfr!4v1700000000000')
+const addressEncoded = computed(() => address.value.replace(/ /g, '+'))
 </script>
 
 <style scoped>

@@ -11,21 +11,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { onSnapshot, doc } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { ref, computed } from 'vue'
+import { useTextes } from '../composables/useTextes.js'
 
-const titre = ref('La P\'tite Boutik Solidaire')
-const tagline = ref('Association Bras Ouverts de Morlaix')
-
-onMounted(() => {
-  onSnapshot(doc(db, 'config', 'textes'), snap => {
-    if (!snap.exists()) return
-    const d = snap.data()
-    if (d.header_titre) titre.value = d.header_titre
-    if (d.header_tagline) tagline.value = d.header_tagline
-  })
-})
+const textes = useTextes()
+const titre = computed(() => textes.value.header_titre || "La P'tite Boutik Solidaire")
+const tagline = computed(() => textes.value.header_tagline || 'Association Bras Ouverts de Morlaix')
 </script>
 
 <style scoped>

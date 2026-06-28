@@ -12,28 +12,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { onSnapshot, doc } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { ref, computed } from 'vue'
+import { useTextes } from '../composables/useTextes.js'
 
-const titre = ref('Notre engagement')
-const quote = ref('Nous voulons que chaque visiteur se sente attendu et bienvenu. Ici, on recycle, on partage, on crée du lien.')
+const textes = useTextes()
+const titre = computed(() => textes.value.engagement_titre || 'Notre engagement')
+const quote = computed(() => textes.value.engagement_quote || 'Nous voulons que chaque visiteur se sente attendu et bienvenu. Ici, on recycle, on partage, on crée du lien.')
 
 const values = ref([
   { emoji: '♻️', label: 'Recycler', desc: 'Donnez une seconde vie aux vêtements de vos enfants' },
   { emoji: '🤝', label: 'Solidarité', desc: 'Des prix accessibles à toutes les familles' },
   { emoji: '🌍', label: 'Écologie', desc: 'Moins de déchets, plus de sens' },
-  { emoji: '👋', label: 'Se rencontrer', desc: 'Un lieu de convivialité et d\'échange' },
+  { emoji: '👋', label: 'Se rencontrer', desc: "Un lieu de convivialité et d'échange" },
 ])
-
-onMounted(() => {
-  onSnapshot(doc(db, 'config', 'textes'), snap => {
-    if (!snap.exists()) return
-    const d = snap.data()
-    if (d.engagement_titre) titre.value = d.engagement_titre
-    if (d.engagement_quote) quote.value = d.engagement_quote
-  })
-})
 </script>
 
 <style scoped>
@@ -52,11 +43,10 @@ onMounted(() => {
   font-size: 1.15em;
   color: var(--text-dark);
   border-left: 5px solid var(--primary-coral);
-  padding-left: 20px;
   margin: 0 0 25px 0;
   line-height: 1.7;
   background: var(--secondary-cream);
-  padding: 20px;
+  padding: 20px 20px 20px 24px;
   border-radius: 8px;
 }
 
