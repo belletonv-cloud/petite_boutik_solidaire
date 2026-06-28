@@ -1,0 +1,11 @@
+{
+  "name": "petite-boutik-storage",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-28",
+  "kv_namespaces": [
+    {
+      "binding": "PETITE_BOUTIK_IMAGES",
+      "id": "8814b7a3ca704b5383bd3c817a136785"
+    }
+  ]
+}

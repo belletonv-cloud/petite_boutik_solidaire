@@ -598,8 +598,17 @@ import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 
 import {
   collection, doc, getDocs, getDoc, addDoc, deleteDoc, setDoc, onSnapshot, query, orderBy
 } from 'firebase/firestore'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBlob } from 'firebase/storage'
-import { auth, googleProvider, db, storage } from '../firebase.js'
+const STORAGE_WORKER = 'https://petite-boutik-storage.belletonv.workers.dev'
+
+async function uploadToWorker(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${STORAGE_WORKER}/upload`, { method: 'POST', body: formData })
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+  const data = await res.json()
+  return data.url
+}
+import { auth, googleProvider, db } from '../firebase.js'
 import { ADMIN_EMAILS } from '../admins.js'
 
 const user = ref(null)
@@ -942,15 +951,11 @@ const loadTextes = () => {
   })
 }
 
-// Recognition admin helpers (file upload to Firebase Storage)
 const onRecognitionFileChange = async (e, idx) => {
   const f = e.target.files && e.target.files[0]
   if (!f) return
   try {
-    const ext = f.name.split('.').pop()
-    const fileName = `recognition/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const snapshot = await uploadBytes(storageRef(storage, fileName), f)
-    const url = await getDownloadURL(snapshot.ref)
+    const url = await uploadToWorker(f)
     if (!textesValues.value.recognition_items) textesValues.value.recognition_items = []
     textesValues.value.recognition_items[idx].src = url
   } catch (err) {
@@ -1108,49 +1113,35 @@ const onFileChange = (e) => {
    upload.value.error = ''
  }
 
-const uploadPhoto = async () => {
-   if (!upload.value.files.length || upload.value.alts.some(a => !a.trim())) return
-   upload.value.uploading = true
-   upload.value.error = ''
-   try {
-     const tasks = upload.value.files.map(async (file, i) => {
-       const alt = upload.value.alts[i]
-       if (upload.value.removeBg[i]) {
-         const processedBlob = await removeBackground(file)
-         const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.png`
-         const snapshot = await uploadBytes(storageRef(storage, fileName), processedBlob)
-         const url = await getDownloadURL(snapshot.ref)
-         await addDoc(collection(db, 'photos'), {
-           url, gallery: upload.value.gallery, alt,
-           active: true, removeBg: true,
-           createdAt: new Date().toISOString(),
-         })
-       } else {
-         const ext = file.name.split('.').pop()
-         const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-         const snapshot = await uploadBytes(storageRef(storage, fileName), file)
-         const url = await getDownloadURL(snapshot.ref)
-         await addDoc(collection(db, 'photos'), {
-           url, gallery: upload.value.gallery, alt,
-           active: true, removeBg: false,
-           createdAt: new Date().toISOString(),
-         })
-       }
-     })
-     await Promise.all(tasks)
-     upload.value.done = true
-     setTimeout(() => { upload.value.done = false }, 4000)
-     upload.value.files = []
-     upload.value.previews = []
-     upload.value.alts = []
-     upload.value.removeBg = []
-     if (fileInput.value) fileInput.value.value = ''
-   } catch (e) {
-     upload.value.error = 'Erreur lors de l\'envoi vers Firebase Storage.'
-     console.error('upload error', e)
+ const uploadPhoto = async () => {
+    if (!upload.value.files.length || upload.value.alts.some(a => !a.trim())) return
+    upload.value.uploading = true
+    upload.value.error = ''
+    try {
+      const tasks = upload.value.files.map(async (file, i) => {
+        const alt = upload.value.alts[i]
+        const toUpload = upload.value.removeBg[i] ? await removeBackground(file) : file
+        const url = await uploadToWorker(toUpload)
+        await addDoc(collection(db, 'photos'), {
+          url, gallery: upload.value.gallery, alt,
+          active: true, removeBg: !!upload.value.removeBg[i],
+          createdAt: new Date().toISOString(),
+        })
+      })
+      await Promise.all(tasks)
+      upload.value.done = true
+      setTimeout(() => { upload.value.done = false }, 4000)
+      upload.value.files = []
+      upload.value.previews = []
+      upload.value.alts = []
+      upload.value.removeBg = []
+      if (fileInput.value) fileInput.value.value = ''
+    } catch (e) {
+      upload.value.error = 'Erreur lors de l\'envoi des photos.'
+      console.error('upload error', e)
+    }
+    upload.value.uploading = false
    }
-   upload.value.uploading = false
-  }
 
   const toggleDynamicPhoto = async (photo) => {
   await setDoc(doc(db, 'photos', photo.id), { ...photo, active: !photo.active })
@@ -1161,12 +1152,10 @@ const toggleRemoveBg = async (photo) => {
   if (newVal) {
     processingBg.value = true
     try {
-      const blob = await getBlob(storageRef(storage, photo.url))
+      const resp = await fetch(photo.url)
+      const blob = await resp.blob()
       const processedBlob = await removeBackground(blob)
-      const ext = 'png'
-      const fileName = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const snapshot = await uploadBytes(storageRef(storage, fileName), processedBlob)
-      const url = await getDownloadURL(snapshot.ref)
+      const url = await uploadToWorker(processedBlob)
       await setDoc(doc(db, 'photos', photo.id), { ...photo, url, removeBg: true })
     } catch (e) {
       console.error('background removal error', e)
