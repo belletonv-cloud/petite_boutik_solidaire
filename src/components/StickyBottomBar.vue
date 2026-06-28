@@ -20,25 +20,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { onSnapshot, doc } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { computed } from 'vue'
+import { useTextes } from '../composables/useTextes.js'
 
-const phone = ref('06 20 70 54 96')
-const phoneRaw = ref('0620705496')
-const address = ref('2 rue Jean-Monnet, Morlaix')
-const hours = ref('1er/3e mer. & sam. 10h-17h30')
-
-onMounted(() => {
-  onSnapshot(doc(db, 'config', 'textes'), snap => {
-    if (!snap.exists()) return
-    const d = snap.data()
-    if (d.sticky_phone) phone.value = d.sticky_phone
-    if (d.sticky_phone_raw) phoneRaw.value = d.sticky_phone_raw
-    if (d.sticky_address) address.value = d.sticky_address
-    if (d.sticky_hours) hours.value = d.sticky_hours
-  })
-})
+const textes = useTextes()
+const phone    = computed(() => textes.value.sticky_phone    || '06 20 70 54 96')
+const phoneRaw = computed(() => textes.value.sticky_phone_raw || '0620705496')
+const address  = computed(() => textes.value.sticky_address  || '2 rue Jean-Monnet, Morlaix')
+const hours    = computed(() => textes.value.sticky_hours    || '1er/3e mer. & sam. 10h-17h30')
 </script>
 
 <style scoped>

@@ -21,11 +21,26 @@ function errorResponse(status, message, origin) {
   })
 }
 
+const MIME_TO_EXT = {
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif',
+  'image/svg+xml': 'svg',
+  'image/jpeg': 'jpg',
+}
+
+const ALLOWED_MIME_TYPES = new Set(Object.keys(MIME_TO_EXT))
+
 async function storeImage(env, buffer, contentType, originalName) {
-  const ext = contentType === 'image/png' ? 'png' : 'jpg'
+  const mime = (contentType || '').split(';')[0].trim().toLowerCase()
+  if (!ALLOWED_MIME_TYPES.has(mime)) {
+    throw new Error(`Type de fichier non autorisé : ${mime || 'inconnu'}`)
+  }
+  const ext = MIME_TO_EXT[mime] || 'jpg'
   const key = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
   await env.PETITE_BOUTIK_IMAGES.put(key, buffer, {
-    metadata: { contentType, originalName },
+    metadata: { contentType: mime, originalName },
   })
   return key
 }

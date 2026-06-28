@@ -705,8 +705,14 @@ async function verifyBgModelSource() {
   return bgModelPreflightPromise
 }
 
+// Singleton promise : plusieurs appels simultanés attendent le même résultat
+let _bgSessionPromise = null
+
 async function getBgSession() {
-  if (!bgSession) {
+  if (bgSession) return bgSession
+  if (_bgSessionPromise) return _bgSessionPromise
+
+  _bgSessionPromise = (async () => {
     bgModelLoading.value = true
     try {
       await verifyBgModelSource()
@@ -714,7 +720,9 @@ async function getBgSession() {
     } catch (error) {
       const message = String(error?.message || error || '')
       if (message.includes('protobuf parsing failed')) {
+        // Cache corrompu — vider et réessayer une fois
         bgModelPreflightPromise = null
+        bgSession = null
         await clearModelCacheForModel(bgModel).catch(() => {})
         await verifyBgModelSource()
         bgSession = await createBgSession({ bypassModelCache: true })
@@ -723,19 +731,39 @@ async function getBgSession() {
       }
     } finally {
       bgModelLoading.value = false
+      _bgSessionPromise = null
     }
-  }
-  return bgSession
+    return bgSession
+  })()
+
+  return _bgSessionPromise
 }
+
 function resetBgSession() {
   bgSession = null
+  _bgSessionPromise = null
+}
+
+// File d'attente pour le détourage : la session ONNX n'est pas réentrante,
+// les appels simultanés doivent être sérialisés.
+let _bgQueue = Promise.resolve()
+
+function queueBgRemoval(file) {
+  const task = _bgQueue.then(async () => {
+    const session = await getBgSession()
+    return removeBgBunnio(file, { session })
+  })
+  // La file continue même si une tâche échoue
+  _bgQueue = task.catch(() => {})
+  return task
 }
 
 async function clearBgModelCache() {
   await clearModelCacheForModel(bgModel).catch(() => {})
   resetBgSession()
+  bgModelPreflightPromise = null
   bgModelLoading.value = false
-  alert('Cache ONNX du modèle vêtements vidé.')
+  alert('Cache ONNX vidé. Réessayez le détourage.')
 }
 import { signInWithPopup, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {
@@ -1211,7 +1239,7 @@ const mergedPhotos = computed(() =>
     id: p.id,
     _raw: p,
     _src: p.url,
-    _srcThumb: (p.url && p.url.includes('/upload/')) ? p.url.replace('/upload/', '/upload/w_320,h_240,c_fill,f_auto,q_auto/') : p.url,
+    _srcThumb: p.url,
     _displayAlt: p.alt,
     _active: p.active,
   }))
@@ -1310,8 +1338,8 @@ watch(() => upload.value.gallery, (gallery) => {
       if (upload.value.removeBg[i]) {
         // Upload de l'original d'abord pour pouvoir restaurer plus tard
         originalUrl = await uploadToWorker(file)
-        const session = await getBgSession()
-        toUpload = await removeBgBunnio(file, { session })
+        // queueBgRemoval sérialise les appels : la session ONNX n'est pas réentrante
+        toUpload = await queueBgRemoval(file)
       }
 
       const url = await uploadToWorker(toUpload)
@@ -1391,11 +1419,10 @@ const toggleRemoveBg = async (photo) => {
   processingBgId.value = photo.id
   try {
     if (newVal) {
-      // Appliquer le détourage
+      // Appliquer le détourage (sérialisé via la file d'attente)
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
-      const session = await getBgSession()
-      const processedBlob = await removeBgBunnio(blob, { session })
+      const processedBlob = await queueBgRemoval(blob)
       const newUrl = await uploadToWorker(processedBlob)
       // Supprimer l'ancienne URL pour éviter la fuite de stockage
       await deleteFromWorker(photo.url)
