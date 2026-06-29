@@ -623,10 +623,16 @@
     <Teleport to="body">
       <div v-if="drawerPhoto" class="photo-drawer-overlay" @click.self="drawerClose">
         <div class="photo-drawer" role="dialog" aria-modal="true">
-          <button class="drawer-close" @click="drawerClose" aria-label="Fermer">✕</button>
+          <div class="drawer-header">
+            <button class="drawer-suggest" @click="suggestFor" :disabled="suggestLoading" title="Suggestions IA (description + tags)">
+              {{ suggestLoading ? '⏳' : '✨' }} Suggérer
+            </button>
+            <button class="drawer-close" @click="drawerClose" aria-label="Fermer">✕</button>
+          </div>
           <div class="drawer-img-wrap">
             <img :src="drawerPhoto._src" :alt="drawerPhoto._displayAlt" class="drawer-img" />
           </div>
+          <div v-if="suggestError" class="drawer-suggest-error">{{ suggestError }}</div>
           <div class="drawer-controls">
             <!-- Visible -->
             <label class="drawer-row toggle-row">
@@ -665,7 +671,7 @@
             <!-- Description -->
             <div class="drawer-row drawer-col">
               <span class="drawer-label">Description</span>
-              <div style="display:flex;gap:6px;align-items:center">
+              <div style="display:flex;gap:6px;align-items:center;width:100%">
                 <input
                   type="text"
                   :value="altDraft[drawerPhoto._key] ?? drawerPhoto._displayAlt"
@@ -689,6 +695,7 @@
                 @blur="onTagSave(drawerPhoto)"
                 class="input-text"
                 placeholder="ex: robe, coton, été"
+                style="width:100%"
               />
             </div>
 
@@ -1176,14 +1183,43 @@ const newAdminEmail = ref('')
 const dynamicPhotos = ref([])
 
 // Édition du texte des photos (draft local avant sauvegarde)
-// Photo drawer
-const drawerPhoto = ref(null)
-const drawerOpen = (photo) => { drawerPhoto.value = photo }
-const drawerClose = () => { drawerPhoto.value = null }
+// Photo drawer — on stocke l'ID pour rester réactif aux mises à jour Firestore
+const drawerPhotoId = ref(null)
+const drawerPhoto = computed(() =>
+  drawerPhotoId.value ? mergedPhotos.value.find(p => p._key === drawerPhotoId.value) ?? null : null
+)
+const drawerOpen = (photo) => { drawerPhotoId.value = photo._key }
+const drawerClose = () => { drawerPhotoId.value = null; suggestError.value = '' }
 const drawerDelete = async () => {
   if (!drawerPhoto.value) return
   await deleteDynamicPhoto(drawerPhoto.value._raw)
-  drawerPhoto.value = null
+  drawerPhotoId.value = null
+}
+
+// Suggestions IA
+const WORKER_URL = 'https://petite-boutik-storage.belletonv.workers.dev'
+const suggestLoading = ref(false)
+const suggestError = ref('')
+const suggestFor = async () => {
+  if (!drawerPhoto.value) return
+  suggestLoading.value = true
+  suggestError.value = ''
+  try {
+    const res = await fetch(`${WORKER_URL}/suggest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: drawerPhoto.value._src }),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    const { description, tags } = await res.json()
+    const key = drawerPhoto.value._key
+    if (description) altDraft.value[key] = description
+    if (tags && Array.isArray(tags)) tagDraft.value[key] = tags.join(', ')
+  } catch (e) {
+    suggestError.value = 'Erreur : ' + e.message
+  } finally {
+    suggestLoading.value = false
+  }
 }
 
 const altDraft = ref({})
@@ -3223,9 +3259,14 @@ const loadData = () => {
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
 }
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
+}
 .drawer-close {
-  align-self: flex-end;
-  margin: 12px 12px 0;
   background: none;
   border: none;
   font-size: 1.3em;
@@ -3235,20 +3276,43 @@ const loadData = () => {
   padding: 4px 8px;
 }
 .drawer-close:hover { color: #333; }
+.drawer-suggest {
+  background: linear-gradient(135deg, #1BA9A8, #0e7776);
+  border: none;
+  color: #fff;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.drawer-suggest:disabled { opacity: 0.6; cursor: default; }
+.drawer-suggest:not(:disabled):hover { opacity: 0.88; }
+.drawer-suggest-error {
+  margin: 6px 16px 0;
+  font-size: 0.82em;
+  color: #e53e3e;
+  flex-shrink: 0;
+}
 .drawer-img-wrap {
   padding: 12px 16px;
   background: #f5f5f5;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 240px;
-  max-height: 50vh;
+  flex-shrink: 0;
+  height: 260px;
 }
 .drawer-img {
   max-width: 100%;
-  max-height: 46vh;
+  max-height: 236px;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 8px;
+  display: block;
 }
 .drawer-controls {
   padding: 16px;

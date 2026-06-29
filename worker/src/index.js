@@ -101,6 +101,44 @@ export default {
       })
     }
 
+    if (method === 'POST' && url.pathname === '/suggest') {
+      try {
+        if (!env.ANTHROPIC_API_KEY) return errorResponse(500, 'API key not configured', origin)
+        const { imageUrl } = await request.json()
+        if (!imageUrl) return errorResponse(400, 'Missing imageUrl', origin)
+
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 200,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'image', source: { type: 'url', url: imageUrl } },
+                { type: 'text', text: 'Tu es un assistant pour une boutique solidaire de vêtements d\'occasion. Regarde cette photo et réponds uniquement en JSON avec deux champs : "description" (une courte phrase en français décrivant le vêtement, max 60 caractères) et "tags" (tableau de 3 à 5 mots-clés en français pertinents pour la recherche, ex: ["robe", "coton", "été"]). Aucun autre texte.' }
+              ]
+            }]
+          })
+        })
+        const data = await res.json()
+        const text = data?.content?.[0]?.text || ''
+        const match = text.match(/\{[\s\S]*\}/)
+        if (!match) return errorResponse(500, 'Unexpected response', origin)
+        const parsed = JSON.parse(match[0])
+        return new Response(JSON.stringify(parsed), {
+          headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
+        })
+      } catch (e) {
+        return errorResponse(500, e.message, origin)
+      }
+    }
+
     return errorResponse(404, 'Not found', origin)
   },
 }
