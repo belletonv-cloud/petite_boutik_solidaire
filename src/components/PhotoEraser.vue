@@ -24,6 +24,9 @@
         <div v-show="showCursor && ready && !isLassoMode" class="brush-cursor" :class="mode"
           :style="{ left: cursorX+'px', top: cursorY+'px', width: dispBrush+'px', height: dispBrush+'px' }"
         />
+        <div v-if="mode === 'maglasso' && ready" class="lasso-banner">
+          Vêtement qui dépasse ? Commencez et terminez votre tracé <b>sur un bord</b> (zone bleue) — l'extérieur est complété tout seul.
+        </div>
         <div v-if="isLassoMode && lassoStatus" class="lasso-hint">{{ lassoStatus }}</div>
         <div v-if="!ready" class="eraser-loading">Chargement…</div>
       </div>
@@ -227,7 +230,7 @@ function magneticPath(x0, y0, x1, y1) {
 }
 
 // ── Snap au bord du canvas ─────────────────────────────────────────────────
-const EDGE_SNAP = 14  // px canvas : distance de snap au bord
+const EDGE_SNAP = 22  // px canvas : distance de snap au bord (zone aimantée généreuse)
 
 function snapToBorder(px, py) {
   const W = canvas.value.width, H = canvas.value.height
@@ -284,6 +287,19 @@ function drawOverlay() {
   const o = overlay.value
   if (!o || !octx) return
   octx.clearRect(0, 0, o.width, o.height)
+
+  // Zones aimantées des bords (toujours visibles en lasso magnétique)
+  if (mode.value === 'maglasso') {
+    const W = o.width, H = o.height
+    const band = EDGE_SNAP
+    octx.save()
+    octx.fillStyle = 'rgba(56,150,255,0.13)'
+    octx.fillRect(0, 0, W, band)               // haut
+    octx.fillRect(0, H-band, W, band)          // bas
+    octx.fillRect(0, 0, band, H)               // gauche
+    octx.fillRect(W-band, 0, band, H)          // droite
+    octx.restore()
+  }
 
   const allPoints = mode.value === 'maglasso'
     ? [...magAnchors.flatMap((a, i) => i === 0 ? [a] : magneticPath(magAnchors[i-1].x, magAnchors[i-1].y, a.x, a.y)), ...magPreview]
@@ -362,6 +378,18 @@ function applyLassoPoints(points) {
   octx.clearRect(0, 0, W, H)
 }
 
+// Projette un point sur le bord le plus proche du canvas, quelle que soit la distance.
+function projectToBorder(pt) {
+  const W = canvas.value.width, H = canvas.value.height
+  const cands = [
+    { x: Math.max(0, Math.min(W, pt.x)), y: 0, d: pt.y },
+    { x: Math.max(0, Math.min(W, pt.x)), y: H, d: H - pt.y },
+    { x: 0, y: Math.max(0, Math.min(H, pt.y)), d: pt.x },
+    { x: W, y: Math.max(0, Math.min(H, pt.y)), d: W - pt.x },
+  ].sort((a, b) => a.d - b.d)[0]
+  return { x: cands.x, y: cands.y }
+}
+
 function closeMagLasso() {
   if (magAnchors.length < 2) { magAnchors = []; magPreview = []; drawOverlay(); return }
   pushUndo()
@@ -371,9 +399,12 @@ function closeMagLasso() {
     fullPath.push(...magneticPath(magAnchors[i-1].x, magAnchors[i-1].y, magAnchors[i].x, magAnchors[i].y))
   }
   const first = magAnchors[0], last = magAnchors[magAnchors.length-1]
-  // Si les deux extrémités sont sur le bord du canvas → longer le périmètre (vêtement qui déborde)
-  if (isOnBorder(first) && isOnBorder(last)) {
-    fullPath.push(...borderPath(last, first, W, H))
+  // Vêtement qui déborde : dès qu'UNE extrémité touche un bord, on complète par le
+  // périmètre. L'autre extrémité est projetée sur le bord le plus proche au besoin.
+  if (isOnBorder(first) || isOnBorder(last)) {
+    const a = isOnBorder(last)  ? last  : projectToBorder(last)
+    const b = isOnBorder(first) ? first : projectToBorder(first)
+    fullPath.push(...borderPath(a, b, W, H))
   } else {
     fullPath.push(...magneticPath(last.x, last.y, first.x, first.y))
   }
@@ -503,8 +534,9 @@ function setMode(m) {
   mode.value = m
   magAnchors = []; magPreview = []; lassoPoints = []; dragAnchorIdx = -1
   if (octx && overlay.value) octx.clearRect(0, 0, overlay.value.width, overlay.value.height)
-  lassoStatus.value = ''
+  lassoStatus.value = m === 'maglasso' ? 'Cliquez pour poser des ancres le long du contour' : ''
   drawing.value = false
+  if (m === 'maglasso') drawOverlay()  // afficher d'emblée les zones aimantées des bords
 }
 
 function onKey(e) {
@@ -763,6 +795,14 @@ function save() {
   padding: 4px 12px; border-radius: 12px; font-size: 0.8em;
   pointer-events: none; white-space: nowrap;
 }
+.lasso-banner {
+  position: absolute; top: 8px; left: 8px; right: 8px;
+  background: rgba(56,150,255,0.92); color: #fff;
+  padding: 5px 12px; border-radius: 10px; font-size: 0.76em; line-height: 1.3;
+  pointer-events: none; text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.lasso-banner b { font-weight: 700; }
 
 .eraser-toolbar {
   padding: 10px 14px; border-top: 1px solid #eee;

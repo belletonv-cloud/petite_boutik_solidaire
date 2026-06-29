@@ -3404,24 +3404,25 @@ const loadData = () => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.95);
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 1.3em;
+  width: 34px;
+  height: 34px;
+  font-size: 1.4em;
   line-height: 1;
   cursor: pointer;
-  color: #555;
+  color: #444;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.2);
   transition: background 0.15s, color 0.15s;
+  z-index: 5;
 }
 .drawer-nav:hover { background: var(--primary-teal); color: #fff; }
-.drawer-nav-prev { left: 8px; }
-.drawer-nav-next { right: 8px; }
+.drawer-nav-prev { left: 6px; }
+.drawer-nav-next { right: 6px; }
 .drawer-counter {
   text-align: center;
   font-size: 0.78em;
