@@ -125,7 +125,7 @@ export default {
           return errorResponse(400, 'Cannot load image: ' + e.message, origin)
         }
 
-        const aiRes = await env.AI.run('@cf/llava-1.5-7b-hf', {
+        const aiRes = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
           image: imgBytes,
           prompt: "You are helping a French second-hand clothing shop. Look at this clothing photo and respond ONLY with a JSON object with two fields: \"description\" (one short French sentence describing the item, max 60 chars, e.g. \"Robe fleurie légère\") and \"tags\" (array of 3-5 French keywords for search, e.g. [\"robe\",\"fleurs\",\"été\"]). No other text.",
           max_tokens: 150,

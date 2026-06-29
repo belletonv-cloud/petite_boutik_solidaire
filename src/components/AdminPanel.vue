@@ -212,67 +212,38 @@
             </div>
           </div>
 
-          <!-- Photos avec fond supprimé (👕) -->
-          <div class="gallery-section" v-if="photosWithBgRemoval.length">
-            <div class="gallery-section-header">
-              <h3>👕 Photos — fond supprimé <span class="photo-count">({{ photosWithBgRemoval.length }})</span></h3>
+          <!-- Recherche + filtre galerie -->
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+            <div class="search-field" style="flex:1;min-width:180px;position:relative">
+              <input type="search" v-model="adminSearch" placeholder="Rechercher par description ou tag" class="input-search" style="width:100%" />
+              <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer">✕</button>
             </div>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;align-items:center">
-              <div class="search-field" style="width:260px;position:relative">
-                <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:100%" />
-                <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
-              </div>
-            </div>
-            <div class="gallery-grid">
-              <div
-                class="gallery-thumb gallery-thumb--clickable"
-                v-for="photo in photosWithBgRemovalFiltered"
-                :key="photo._key"
-                :class="{ inactive: !photo._active }"
-                @click="drawerOpen(photo)"
-                :title="photo._displayAlt || 'Gérer cette photo'"
-              >
-                <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
-                <div class="thumb-badges">
-                  <span class="badge badge-gallery">{{ photo._raw.gallery === 'articles' ? '👕' : '🏬' }}</span>
-                  <span v-if="!photo._active" class="badge badge-hidden">masquée</span>
-                </div>
-              </div>
+            <div class="gallery-tab-filter">
+              <button :class="['gtab', adminGalleryFilter === 'all' ? 'active' : '']" @click="adminGalleryFilter = 'all'">Toutes</button>
+              <button :class="['gtab', adminGalleryFilter === 'boutique' ? 'active' : '']" @click="adminGalleryFilter = 'boutique'">🏬 Boutique</button>
+              <button :class="['gtab', adminGalleryFilter === 'articles' ? 'active' : '']" @click="adminGalleryFilter = 'articles'">👕 Articles</button>
             </div>
           </div>
 
-          <!-- Photos avec décor (🖼) -->
-          <div class="gallery-section">
-            <div class="gallery-section-header">
-              <h3>🖼 Photos — avec décor <span class="photo-count">({{ photosWithDecor.length }})</span></h3>
-              <div class="gallery-header-actions">
+          <!-- Grille unifiée -->
+          <div class="gallery-grid" v-if="mergedPhotosFiltered.length">
+            <div
+              class="gallery-thumb gallery-thumb--clickable"
+              v-for="photo in mergedPhotosFiltered"
+              :key="photo._key"
+              :class="{ inactive: !photo._active }"
+              @click="drawerOpen(photo)"
+              :title="photo._displayAlt || 'Gérer cette photo'"
+            >
+              <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
+              <div class="thumb-badges">
+                <span class="badge badge-gallery">{{ photo._raw.gallery === 'articles' ? '👕' : '🏬' }}</span>
+                <span v-if="photo._raw.removeBg" class="badge badge-nobg">sans fond</span>
+                <span v-if="!photo._active" class="badge badge-hidden">masquée</span>
               </div>
             </div>
-            <p class="section-desc">Cochez/décochez pour afficher ou masquer. Modifiez le texte et cliquez ailleurs pour sauvegarder.</p>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;align-items:center">
-              <div class="search-field" style="width:260px;position:relative">
-                <input type="search" v-model="adminSearch" placeholder="Rechercher par alt ou tag" class="input-search" style="width:100%" />
-                <button v-if="adminSearch" class="search-clear" @click="adminSearch = ''" title="Effacer la recherche">✕</button>
-              </div>
-            </div>
-            <div class="gallery-grid">
-              <div
-                class="gallery-thumb gallery-thumb--clickable"
-                v-for="photo in photosWithDecorFiltered"
-                :key="photo._key"
-                :class="{ inactive: !photo._active }"
-                @click="drawerOpen(photo)"
-                :title="photo._displayAlt || 'Gérer cette photo'"
-              >
-                <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
-                <div class="thumb-badges">
-                  <span class="badge badge-gallery">{{ photo._raw.gallery === 'articles' ? '👕' : '🏬' }}</span>
-                  <span v-if="!photo._active" class="badge badge-hidden">masquée</span>
-                </div>
-              </div>
-            </div>
-            <p class="empty" v-if="!dynamicPhotos.length">Aucune photo pour l'instant. Ajoutez-en avec le formulaire ci-dessus.</p>
           </div>
+          <p class="empty" v-else>{{ dynamicPhotos.length ? 'Aucun résultat.' : 'Aucune photo pour l\'instant.' }}</p>
 
 
           <!-- Zone de danger : suppression massive -->
@@ -702,6 +673,12 @@
               />
             </div>
 
+            <!-- Retouche manuelle -->
+            <div class="drawer-row">
+              <span class="drawer-label">Retouche</span>
+              <button class="drawer-btn btn-outline" @click="eraserOpen = true">✂️ Retoucher manuellement</button>
+            </div>
+
             <!-- Supprimer -->
             <div class="drawer-row drawer-danger">
               <button class="btn-delete-photo" @click="drawerDelete">🗑 Supprimer cette photo</button>
@@ -710,11 +687,22 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Eraser modal -->
+    <Teleport to="body">
+      <PhotoEraser
+        v-if="eraserOpen && drawerPhoto"
+        :src="drawerPhoto._src"
+        @save="onEraserSave"
+        @cancel="eraserOpen = false"
+      />
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import PhotoEraser from './PhotoEraser.vue'
 import { removeBackground } from '@imgly/background-removal'
 
 // Détourage : IMG.LY background-removal (isnet, optimisé ORT-Web, CDN hébergé).
@@ -1191,6 +1179,27 @@ const drawerPhotoId = ref(null)
 const drawerPhoto = computed(() =>
   drawerPhotoId.value ? mergedPhotos.value.find(p => p._key === drawerPhotoId.value) ?? null : null
 )
+const eraserOpen = ref(false)
+const onEraserSave = async (blob) => {
+  eraserOpen.value = false
+  if (!drawerPhoto.value) return
+  processingBgId.value = drawerPhoto.value._key
+  try {
+    const newUrl = await uploadToWorker(blob)
+    const photo = drawerPhoto.value._raw
+    await setDoc(doc(db, 'photos', photo.id), {
+      ...photo,
+      url: newUrl,
+      originalUrl: photo.originalUrl || photo.url,
+      removeBg: true,
+    })
+    await deleteFromWorker(photo.url)
+  } catch (e) {
+    alert('Erreur lors de l\'enregistrement : ' + e.message)
+  }
+  processingBgId.value = null
+}
+
 const drawerOpen = (photo) => { drawerPhotoId.value = photo._key; suggestError.value = '' }
 const drawerClose = () => { drawerPhotoId.value = null; suggestError.value = '' }
 
@@ -1287,6 +1296,22 @@ const mergedPhotos = computed(() =>
     _active: p.active,
   }))
 )
+
+const adminGalleryFilter = ref('all')
+
+const mergedPhotosFiltered = computed(() => {
+  const q = (adminSearch.value || '').trim().toLowerCase()
+  const gf = adminGalleryFilter.value
+  return mergedPhotos.value.filter(p => {
+    if (gf !== 'all' && p._raw.gallery !== gf) return false
+    if (!q) return true
+    if ((p._displayAlt || '').toLowerCase().includes(q)) return true
+    const tags = p._raw.tags
+    if (Array.isArray(tags)) return tags.some(t => (t||'').toLowerCase().includes(q))
+    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
+    return false
+  })
+})
 
 const photosWithBgRemoval = computed(() =>
   mergedPhotos.value.filter(photo => photo._raw.removeBg)
@@ -3259,12 +3284,38 @@ const loadData = () => {
 .badge-gallery {
   background: rgba(255,255,255,0.85);
 }
+.badge-nobg {
+  background: rgba(27,169,168,0.85);
+  color: #fff;
+}
 .badge-hidden {
   background: rgba(0,0,0,0.55);
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.gallery-tab-filter {
+  display: flex;
+  gap: 4px;
+}
+.gtab {
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1.5px solid #ddd;
+  background: #fff;
+  font-size: 0.82em;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  color: #666;
+  transition: all 0.15s;
+}
+.gtab.active {
+  background: var(--primary-teal);
+  color: #fff;
+  border-color: var(--primary-teal);
+}
+.gtab:not(.active):hover { border-color: var(--primary-teal); color: var(--primary-teal); }
 
 /* ── Drawer ── */
 .photo-drawer-overlay {
