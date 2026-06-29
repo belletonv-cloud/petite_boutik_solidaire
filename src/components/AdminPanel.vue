@@ -689,6 +689,7 @@
       <PhotoEraser
         v-if="eraserOpen && drawerPhoto"
         :src="drawerPhoto._src"
+        :original-src="drawerPhoto._raw.originalUrl || null"
         @save="onEraserSave"
         @cancel="eraserOpen = false"
       />

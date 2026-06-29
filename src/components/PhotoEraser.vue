@@ -10,7 +10,12 @@
         @mouseleave="showCursor = false"
         @mouseenter="showCursor = true"
       >
-        <canvas ref="canvas" class="eraser-canvas"
+        <!-- fantôme : ce qui a été retiré (original en transparence) -->
+        <canvas ref="ghost" class="eraser-canvas eraser-ghost"
+          v-show="hasOriginal && showGhost"
+          :style="{ opacity: ghostOpacity }"
+        />
+        <canvas ref="canvas" class="eraser-canvas eraser-main"
           @mousedown="onDown" @mousemove="onMove" @mouseup="onUp" @mouseleave="onUp"
           @touchstart.prevent="onTouchStart" @touchmove.prevent="onTouchMove" @touchend="onUp"
         />
@@ -54,6 +59,15 @@
           </div>
         </div>
 
+        <div class="tool-col" v-if="hasOriginal">
+          <div class="tool-label">Fond retiré</div>
+          <div class="tool-row">
+            <button class="action-btn" :class="showGhost ? 'btn-on' : ''" @click="showGhost = !showGhost">
+              {{ showGhost ? '👁 Visible' : '🚫 Masqué' }}
+            </button>
+          </div>
+        </div>
+
         <div class="tool-col tool-col-actions">
           <div class="tool-row">
             <button class="action-btn" @click="undo" :disabled="!canUndo">↩ Défaire</button>
@@ -72,7 +86,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps({ src: { type: String, required: true } })
+const props = defineProps({
+  src: { type: String, required: true },
+  originalSrc: { type: String, default: null },  // photo avant détourage (pour restaurer le fond)
+})
 const emit  = defineEmits(['save', 'cancel'])
 
 const MODES = [
@@ -80,12 +97,16 @@ const MODES = [
   { id: 'lasso',    icon: '🔵', label: 'Lasso libre',       tip: 'Tracez un contour : tout l\'extérieur sera effacé' },
   { id: 'magic',    icon: '🪄', label: 'Baguette',          tip: 'Efface les pixels de couleur similaire' },
   { id: 'erase',    icon: '🖌',  label: 'Gomme',             tip: 'Efface tout ce que le pinceau touche' },
-  { id: 'restore',  icon: '🔄',  label: 'Restaurer',         tip: 'Remet les pixels originaux' },
+  { id: 'restore',  icon: '🔄',  label: 'Restaurer',         tip: 'Remet les pixels d\'origine (récupère le fond retiré)' },
 ]
 
 const canvas   = ref(null)
 const overlay  = ref(null)
+const ghost    = ref(null)
 const wrapEl   = ref(null)
+const hasOriginal = ref(false)
+const showGhost   = ref(true)
+const ghostOpacity = 0.32
 const ready    = ref(false)
 const mode     = ref('maglasso')
 const brushSize   = ref(30)
@@ -102,7 +123,8 @@ const lassoStatus = ref('')
 const isLassoMode = computed(() => mode.value === 'lasso' || mode.value === 'maglasso')
 
 let ctx = null, octx = null
-let originalData = null
+let originalData = null    // snapshot de l'image chargée (src, déjà détourée)
+let fullData     = null    // photo d'origine complète (originalSrc) pour restaurer le fond
 let workingData  = null
 let edgeMap      = null   // Float32Array des gradients Sobel
 let undoStack    = []
@@ -141,11 +163,31 @@ onMounted(() => {
     edgeMap = computeSobel(originalData)
     refreshScale()
     ready.value = true
+    loadOriginalGhost(c.width, c.height)
   }
   img.onerror = () => { ready.value = true }
   img.src = props.src
   document.addEventListener('keydown', onKey)
 })
+
+// Charge la photo d'origine (avant détourage) dans le calque fantôme et
+// mémorise ses pixels pour pouvoir restaurer le fond retiré.
+function loadOriginalGhost(W, H) {
+  if (!props.originalSrc || props.originalSrc === props.src) return
+  const gImg = new Image()
+  gImg.crossOrigin = 'anonymous'
+  gImg.onload = () => {
+    const g = ghost.value
+    if (!g) return
+    g.width = W; g.height = H
+    const gctx = g.getContext('2d', { willReadFrequently: true })
+    gctx.drawImage(gImg, 0, 0, W, H)
+    fullData = gctx.getImageData(0, 0, W, H)  // pixels d'origine (opaques)
+    hasOriginal.value = true
+  }
+  gImg.onerror = () => {}
+  gImg.src = props.originalSrc
+}
 
 onUnmounted(() => {
   if (rafId) cancelAnimationFrame(rafId)
@@ -484,7 +526,10 @@ function applyErase(px, py) {
 
 function applyRestore(px, py) {
   const W = workingData.width, H = workingData.height
-  const d = workingData.data, o = originalData.data
+  const d = workingData.data
+  // Restaure depuis la photo d'origine complète si dispo (récupère le fond retiré),
+  // sinon depuis l'instantané de départ.
+  const o = (fullData ? fullData : originalData).data
   const r = brushSize.value, rr = r*r
   const x0 = Math.max(0, Math.round(px-r)), y0 = Math.max(0, Math.round(py-r))
   const x1 = Math.min(W-1, Math.round(px+r)), y1 = Math.min(H-1, Math.round(py+r))
@@ -776,10 +821,16 @@ function save() {
   overflow: hidden; position: relative; cursor: none;
 }
 .eraser-canvas { display: block; max-width: 100%; touch-action: none; cursor: none; }
+.eraser-main { position: relative; z-index: 1; }
+.eraser-ghost {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  z-index: 0; pointer-events: none;
+}
 .eraser-overlay {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%,-50%);
-  cursor: crosshair;
+  cursor: crosshair; z-index: 2;
 }
 
 .brush-cursor {
@@ -834,6 +885,7 @@ function save() {
 .action-cancel { color: #888; }
 .action-save { background: var(--primary-teal); color: #fff; border-color: var(--primary-teal); }
 .action-save:hover:not(:disabled) { background: #159897; }
+.btn-on { background: #eef7f7; border-color: var(--primary-teal); color: var(--primary-teal); }
 
 .tool-col-sliders {
   background: #f0f0f0; border-radius: 10px; padding: 7px 10px;
