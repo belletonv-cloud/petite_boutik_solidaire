@@ -1187,13 +1187,17 @@ const onEraserSave = async (blob) => {
   try {
     const newUrl = await uploadToWorker(blob)
     const photo = drawerPhoto.value._raw
+    const originalUrl = photo.originalUrl || photo.url
     await setDoc(doc(db, 'photos', photo.id), {
       ...photo,
       url: newUrl,
-      originalUrl: photo.originalUrl || photo.url,
+      originalUrl,
       removeBg: true,
     })
-    await deleteFromWorker(photo.url)
+    // Ne supprimer l'ancienne URL que si elle n'est pas l'original qu'on vient de conserver
+    if (photo.url !== originalUrl) {
+      await deleteFromWorker(photo.url)
+    }
   } catch (e) {
     alert('Erreur lors de l\'enregistrement : ' + e.message)
   }
@@ -1501,6 +1505,10 @@ const toggleRemoveBg = async (photo) => {
         originalUrl,
         removeBg: true,
       })
+      // Ne supprimer que si l'URL courante n'est pas l'original conservé
+      if (photo.url !== originalUrl) {
+        await deleteFromWorker(photo.url)
+      }
     } else {
       // Restaurer l'original si disponible, supprimer l'image détourée
       if (photo.originalUrl && photo.originalUrl !== photo.url) {

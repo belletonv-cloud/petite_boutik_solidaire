@@ -125,22 +125,25 @@ export default {
           return errorResponse(400, 'Cannot load image: ' + e.message, origin)
         }
 
-        const aiRes = await env.AI.run('@cf/llava-hf/llava-1.5-7b-hf', {
-          image: imgBytes,
-          prompt: "You are helping a French second-hand clothing shop. Look at this clothing photo and respond ONLY with a JSON object with two fields: \"description\" (one short French sentence describing the item, max 60 chars, e.g. \"Robe fleurie légère\") and \"tags\" (array of 3-5 French keywords for search, e.g. [\"robe\",\"fleurs\",\"été\"]). No other text.",
-          max_tokens: 150,
-        })
+        // Deux questions simples — le modèle LLaVA ne suit pas bien les formats JSON
+        const [descRes, tagRes] = await Promise.all([
+          env.AI.run('@cf/llava-hf/llava-1.5-7b-hf', {
+            image: imgBytes,
+            prompt: "Décris ce vêtement en une courte phrase en français (maximum 60 caractères). Réponds uniquement avec la phrase, rien d'autre.",
+            max_tokens: 60,
+          }),
+          env.AI.run('@cf/llava-hf/llava-1.5-7b-hf', {
+            image: imgBytes,
+            prompt: "Liste 4 mots-clés en français qui décrivent ce vêtement, séparés par des virgules. Juste les mots, rien d'autre.",
+            max_tokens: 40,
+          }),
+        ])
 
-        const text = (aiRes?.description || aiRes?.response || '').trim()
-        const match = text.match(/\{[\s\S]*\}/)
-        let parsed = { description: '', tags: [] }
-        if (match) {
-          try { parsed = JSON.parse(match[0]) } catch (_) {}
-        }
-        // Fallback : si le modèle n'a pas suivi le format JSON, extraire quand même
-        if (!parsed.description && text) parsed.description = text.slice(0, 60)
+        const description = (descRes?.description || '').replace(/^["'\s]+|["'\s]+$/g, '').slice(0, 80)
+        const tagsRaw = tagRes?.description || ''
+        const tags = tagsRaw.split(/[,;、\n]+/).map(t => t.trim().toLowerCase().replace(/^["'.\s]+|["'.\s]+$/g, '')).filter(Boolean).slice(0, 5)
 
-        return new Response(JSON.stringify(parsed), {
+        return new Response(JSON.stringify({ description, tags }), {
           headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
         })
       } catch (e) {
