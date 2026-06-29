@@ -37,17 +37,50 @@
         @touchcancel="onTouchEnd"
       >{{ sec.label }}</a>
     </div>
+
+    <!-- Bandeau défilant intégré au menu : ouverture + annonce -->
+    <a class="nav-ticker" :class="{ 'is-open': openToday }" href="#horaires" @click="onClick('calendrier')">
+      <span class="ticker-mask">
+        <span class="ticker-track">
+          <span class="ticker-seg" v-for="n in 3" :key="n">
+            <template v-if="openToday">
+              <span class="ticker-dot" aria-hidden="true"></span>
+              <b>Ouvert aujourd'hui</b> · {{ plage }}
+            </template>
+            <template v-else-if="nextOpening">
+              <span class="ticker-dot" aria-hidden="true"></span>
+              Prochaine ouverture : <b>{{ nextOpening }}</b> · {{ plage }}
+            </template>
+            <template v-if="annonce"><span class="ticker-sep">✦</span>{{ annonce }}</template>
+            <span class="ticker-sep">✦</span>
+          </span>
+        </span>
+      </span>
+    </a>
   </nav>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '../firebase.js'
+import { useOpeningStatus } from '../composables/useOpeningStatus.js'
 
 const props = defineProps({
   sections: {
     type: Array,
     required: true
   }
+})
+
+const { openToday, nextOpening, plage } = useOpeningStatus()
+
+// Annonce optionnelle (actualité) ajoutée au défilé
+const actu = ref({ visible: false, titre: '', message: '', defilant: true })
+let unsubActu = null
+const annonce = computed(() => {
+  if (!actu.value.visible || actu.value.defilant === false) return ''
+  return [actu.value.titre, actu.value.message].filter(Boolean).join(' — ').trim()
 })
 
 const open = ref(false)
@@ -111,12 +144,16 @@ function onScroll() {
 onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true })
   refreshActive()
+  unsubActu = onSnapshot(doc(db, 'config', 'actualite'), snap => {
+    if (snap.exists()) Object.assign(actu.value, snap.data())
+  }, () => {})
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
   if (scrollTick) cancelAnimationFrame(scrollTick)
   if (clickTimeout) clearTimeout(clickTimeout)
+  if (unsubActu) unsubActu()
 })
 </script>
 
@@ -280,6 +317,55 @@ onUnmounted(() => {
 .dropdown-link.touch-active {
   background: var(--primary-teal) !important;
   color: white !important;
+}
+
+/* ==================== Bandeau défilant ==================== */
+.nav-ticker {
+  display: block;
+  overflow: hidden;
+  text-decoration: none;
+  background: #eef6f6;
+  color: var(--primary-teal-dark);
+  border-top: 1px solid #e2efef;
+  font-size: 0.78em;
+  font-weight: 600;
+}
+.nav-ticker.is-open {
+  background: linear-gradient(90deg, var(--primary-teal) 0%, #16937f 100%);
+  color: #fff;
+}
+.ticker-mask { display: block; overflow: hidden; white-space: nowrap; }
+.ticker-track {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 0;
+  animation: tickerScroll 24s linear infinite;
+  will-change: transform;
+}
+.nav-ticker:hover .ticker-track { animation-play-state: paused; }
+.ticker-seg { display: inline-flex; align-items: center; }
+.ticker-seg b { font-weight: 800; }
+.ticker-sep { margin: 0 18px; opacity: 0.55; }
+.ticker-dot {
+  width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0;
+  background: currentColor;
+}
+.nav-ticker.is-open .ticker-dot {
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+  animation: tickerPulse 1.7s infinite;
+}
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.333%); }
+}
+@keyframes tickerPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+  70%  { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; padding-left: 12px; }
 }
 
 /* ==================== Responsive ==================== */
