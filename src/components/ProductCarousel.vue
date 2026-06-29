@@ -156,7 +156,8 @@ const filter = ref('boutique') // 'boutique' | 'articles'
 
 const toImg = (p) => ({ fullSrc: p.url, src: p.url, thumb: p.url, alt: p.alt || '', tags: p.tags || [] })
 
-// Slider : uniquement les photos avec fond retiré (removeBg), filtrées par onglet
+// Onglet Boutique : toutes les photos boutique actives (avec ou sans fond retiré)
+// Onglet Articles : uniquement les photos articles avec fond retiré (détourage)
 const isArticles = (p) =>
   p.gallery === 'articles' || (p.gallery === 'gallery' && p.removeBg === true)
 
@@ -165,7 +166,11 @@ const isBoutique = (p) =>
 
 const baseImages = computed(() =>
   dynamicPhotos.value
-    .filter(p => p.active && p.removeBg && (filter.value === 'articles' ? isArticles(p) : isBoutique(p)))
+    .filter(p => p.active && (
+      filter.value === 'articles'
+        ? (p.removeBg && isArticles(p))
+        : isBoutique(p)
+    ))
     .map(toImg)
 )
 

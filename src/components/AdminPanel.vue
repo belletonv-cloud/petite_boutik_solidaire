@@ -1319,7 +1319,7 @@ const handleFiles = (files) => {
   upload.value.files = images
   upload.value.previews = images.map(f => URL.createObjectURL(f))
   upload.value.alts = images.map(f => f.name.replace(/\.[^/.]+$/, '') || 'Photo')
-  upload.value.removeBg = images.map(() => false)
+  upload.value.removeBg = images.map(() => upload.value.gallery === 'articles')
   upload.value.done = false
   upload.value.error = ''
 }
@@ -1331,7 +1331,12 @@ const onDrop = (e) => {
   handleFiles(Array.from(e.dataTransfer.files))
 }
 
-// removeBg est maintenant indépendant du choix de galerie — on ne reset plus
+// Quand on change de galerie avec des fichiers déjà sélectionnés, ajuster removeBg par défaut
+watch(() => upload.value.gallery, (gallery) => {
+  if (upload.value.files.length) {
+    upload.value.removeBg = upload.value.removeBg.map(() => gallery === 'articles')
+  }
+})
 
   const uploadPhoto = async () => {
     const files = upload.value.files
