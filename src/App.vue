@@ -16,6 +16,7 @@ import Contact from './components/Contact.vue'
 import SocialMedia from './components/SocialMedia.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ActuBanner from './components/ActuBanner.vue'
+import OpenStatusBanner from './components/OpenStatusBanner.vue'
 import SectionNav from './components/SectionNav.vue'
 import StickyBottomBar from './components/StickyBottomBar.vue'
 import MentionsLegales from './components/MentionsLegales.vue'
@@ -82,6 +83,7 @@ onMounted(() => {
 <template>
   <div class="container">
     <SiteHeader />
+    <OpenStatusBanner />
     <ActuBanner />
 
     <SectionNav v-if="sectionLinks.length" :sections="sectionLinks" />

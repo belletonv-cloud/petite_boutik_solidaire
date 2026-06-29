@@ -36,6 +36,7 @@
       :pagination="false"
       :navigation="images.length > 1"
       class="my-swiper"
+      :class="{ 'articles-mode': filter === 'articles' }"
       @swiper="onSwiper"
       @slideChange="onSlideChange"
     >
@@ -154,7 +155,10 @@ onUnmounted(() => {
 
 const filter = ref('boutique') // 'boutique' | 'articles'
 
-const toImg = (p) => ({ fullSrc: p.url, src: p.url, thumb: p.url, alt: p.alt || '', tags: p.tags || [] })
+// Vignette = version affichée (détourée pour les articles) ; vue en grand =
+// photo d'origine si elle existe (le détourage peut être imparfait, on montre
+// alors l'original net quand on regarde de près).
+const toImg = (p) => ({ fullSrc: p.originalUrl || p.url, src: p.url, thumb: p.url, alt: p.alt || '', tags: p.tags || [] })
 
 // Onglet Boutique : toutes les photos boutique actives (avec ou sans fond retiré)
 // Onglet Articles : uniquement les photos articles avec fond retiré (détourage)
@@ -746,6 +750,18 @@ const onSlideChange = (e) => {
 .slide-frame:hover {
   /* minimal transform to avoid layout jank; GPU hinting below */
   transform: translateZ(0) scale(1.008);
+}
+
+/* Onglet Articles : vignettes plus petites (le détourage est moins visible) */
+.my-swiper.articles-mode .slide-frame {
+  height: calc(var(--vh, 1vh) * 38);
+  max-height: 320px;
+}
+@media (max-width: 600px) {
+  .my-swiper.articles-mode .slide-frame {
+    height: calc(var(--vh, 1vh) * 28);
+    max-height: 220px;
+  }
 }
 
 .slide-image {
