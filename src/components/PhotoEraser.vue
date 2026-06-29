@@ -24,9 +24,6 @@
         <div v-show="showCursor && ready && !isLassoMode" class="brush-cursor" :class="mode"
           :style="{ left: cursorX+'px', top: cursorY+'px', width: dispBrush+'px', height: dispBrush+'px' }"
         />
-        <div v-if="mode === 'maglasso' && ready" class="lasso-banner">
-          Vêtement qui dépasse ? Commencez et terminez votre tracé <b>sur un bord</b> (zone bleue) — l'extérieur est complété tout seul.
-        </div>
         <div v-if="isLassoMode && lassoStatus" class="lasso-hint">{{ lassoStatus }}</div>
         <div v-if="!ready" class="eraser-loading">Chargement…</div>
       </div>
@@ -326,15 +323,27 @@ function drawOverlay() {
       octx.lineWidth = 6
       octx.strokeRect(1, 1, W-2, H-2)
     }
+    const lastIdx = magAnchors.length - 1
     for (let i = 0; i < magAnchors.length; i++) {
       const a = magAnchors[i]
       const isDragging = dragAnchorIdx === i
+      // Le dernier point posé = point de reprise : marqué en vert, plus gros
+      const isResume = i === lastIdx && dragAnchorIdx < 0 && magPreview.length === 0
       octx.beginPath()
-      octx.arc(a.x, a.y, isDragging ? 6 : 4, 0, Math.PI*2)
-      octx.fillStyle = isDragging ? '#f90' : '#fff'
+      octx.arc(a.x, a.y, isDragging ? 6 : (isResume ? 6 : 4), 0, Math.PI*2)
+      octx.fillStyle = isDragging ? '#f90' : (isResume ? '#16c060' : '#fff')
       octx.fill()
-      octx.strokeStyle = '#f90'
-      octx.lineWidth = isDragging ? 2.5 : 1.5
+      octx.strokeStyle = isResume ? '#0a8a40' : '#f90'
+      octx.lineWidth = isDragging || isResume ? 2.5 : 1.5
+      octx.stroke()
+    }
+    // Halo pulsant autour du point de reprise pour le repérer facilement
+    if (lastIdx >= 0 && dragAnchorIdx < 0 && magPreview.length === 0) {
+      const a = magAnchors[lastIdx]
+      octx.beginPath()
+      octx.arc(a.x, a.y, 11, 0, Math.PI*2)
+      octx.strokeStyle = 'rgba(22,192,96,0.6)'
+      octx.lineWidth = 2
       octx.stroke()
     }
     // Indicateur de fermeture
@@ -600,15 +609,9 @@ function onDown(e) {
     const snapped = borderSnap.onBorder ? borderSnap : snapToEdge(x, y)
     magAnchors.push(snapped)
     magPreview = []
-    if (magAnchors.length === 1) {
-      lassoStatus.value = isOnBorder(snapped)
-        ? '🔵 Ancre posée sur le bord — continuez le contour'
-        : 'Cliquez pour poser des ancres'
-    } else {
-      lassoStatus.value = isOnBorder(magAnchors[0]) || isOnBorder(snapped)
-        ? 'Retournez sur le bord pour fermer automatiquement'
-        : 'Double-clic ou Entrée pour fermer'
-    }
+    lassoStatus.value = magAnchors.length === 1
+      ? '🟢 La suite repartira du point vert'
+      : '🟢 Reprise au point vert · double-clic pour fermer'
     drawOverlay()
     return
   }
@@ -795,14 +798,6 @@ function save() {
   padding: 4px 12px; border-radius: 12px; font-size: 0.8em;
   pointer-events: none; white-space: nowrap;
 }
-.lasso-banner {
-  position: absolute; top: 8px; left: 8px; right: 8px;
-  background: rgba(56,150,255,0.92); color: #fff;
-  padding: 5px 12px; border-radius: 10px; font-size: 0.76em; line-height: 1.3;
-  pointer-events: none; text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.lasso-banner b { font-weight: 700; }
 
 .eraser-toolbar {
   padding: 10px 14px; border-top: 1px solid #eee;
