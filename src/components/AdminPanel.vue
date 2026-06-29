@@ -1439,26 +1439,26 @@ const toggleRemoveBg = async (photo) => {
   processingBgId.value = photo.id
   try {
     if (newVal) {
-      // Appliquer le détourage (sérialisé via la file d'attente)
+      // Appliquer le détourage — on garde l'original en KV pour pouvoir restaurer
+      const originalUrl = photo.originalUrl || photo.url
       const resp = await fetch(photo.url)
       const blob = await resp.blob()
       const processedBlob = await queueBgRemoval(blob)
       const newUrl = await uploadToWorker(processedBlob)
-      // Supprimer l'ancienne URL pour éviter la fuite de stockage
-      await deleteFromWorker(photo.url)
       await setDoc(doc(db, 'photos', photo.id), {
         ...photo,
         url: newUrl,
-        originalUrl: photo.originalUrl || photo.url,
+        originalUrl,
         removeBg: true,
       })
     } else {
-      // Restaurer l'original si disponible
+      // Restaurer l'original si disponible, supprimer l'image détourée
       if (photo.originalUrl && photo.originalUrl !== photo.url) {
         await deleteFromWorker(photo.url)
         await setDoc(doc(db, 'photos', photo.id), {
           ...photo,
           url: photo.originalUrl,
+          originalUrl: null,
           removeBg: false,
         })
       } else {
