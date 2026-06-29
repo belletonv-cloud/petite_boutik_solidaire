@@ -11,6 +11,8 @@ function corsHeaders(origin) {
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
+    // Requis pour les pages avec Cross-Origin-Embedder-Policy: require-corp (ONNX WASM)
+    'Cross-Origin-Resource-Policy': 'cross-origin',
   }
 }
 

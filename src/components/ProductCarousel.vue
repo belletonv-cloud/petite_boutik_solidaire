@@ -18,14 +18,6 @@
       >
         Articles
       </button>
-      <button
-        v-if="hasFouille"
-        @click="filter = 'fouille'"
-        :class="{ active: filter === 'fouille' }"
-        aria-label="Voir la fouille"
-      >
-        🧺 La Fouille
-      </button>
     </div>
 
     <div class="search-row">
@@ -72,8 +64,8 @@
           <div v-if="modalLoading" class="modal-spinner"></div>
           <div class="modal-image-outer">
               <img
-                :src="images[modalIndex].fullSrc"
-              :alt="images[modalIndex].alt"
+                :src="modalImages[modalIndex].fullSrc"
+              :alt="modalImages[modalIndex].alt"
               class="modal-image"
             :class="{ loading: modalLoading, interactive: enableMagnifier, zoomed: zoomFactor > 1 }"
               decoding="async"
@@ -99,8 +91,8 @@
           <!-- joystick removed (replaced by direct pan & hint animation) -->
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
-          <p class="modal-caption" style="margin:0">{{ images[modalIndex].alt }}</p>
-          <p class="modal-counter" style="margin:0">{{ modalIndex + 1 }} / {{ images.length }}</p>
+          <p class="modal-caption" style="margin:0">{{ modalImages[modalIndex].alt }}</p>
+          <p class="modal-counter" style="margin:0">{{ modalIndex + 1 }} / {{ modalImages.length }}</p>
         </div>
       </div>
     </Modal>
@@ -123,8 +115,8 @@
               <div class="skeleton-caption"></div>
             </div>
           </template>
-          <template v-else-if="baseImagesFiltered && baseImagesFiltered.length">
-            <div class="grid-item" v-for="(img, i) in baseImagesFiltered" :key="i" @click="openFromGrid(i)">
+          <template v-else-if="gridImagesFiltered && gridImagesFiltered.length">
+            <div class="grid-item" v-for="(img, i) in gridImagesFiltered" :key="i" @click="openFromGrid(i)">
               <img :src="img.thumb || img.src" :alt="img.alt" loading="lazy" decoding="async" width="320" height="240" />
               <div class="grid-caption">{{ img.alt }}</div>
             </div>
@@ -160,33 +152,26 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
 })
 
-const filter = ref('boutique') // 'boutique' | 'articles' | 'fouille'
+const filter = ref('boutique') // 'boutique' | 'articles'
 
+const toImg = (p) => ({ fullSrc: p.url, src: p.url, thumb: p.url, alt: p.alt || '', tags: p.tags || [] })
+
+// Slider : uniquement les photos avec fond retiré (removeBg), filtrées par onglet
 const isArticles = (p) =>
   p.gallery === 'articles' || (p.gallery === 'gallery' && p.removeBg === true)
 
 const isBoutique = (p) =>
   p.gallery === 'boutique' || (p.gallery === 'gallery' && p.removeBg === false)
 
-const isFouille = (p) => p.gallery === 'fouille'
-
-const hasFouille = computed(() =>
-  dynamicPhotos.value.some(p => p.active && isFouille(p))
-)
-
 const baseImages = computed(() =>
   dynamicPhotos.value
-    .filter(p => p.active && (
-      filter.value === 'fouille'   ? isFouille(p)  :
-      filter.value === 'articles'  ? isArticles(p) : isBoutique(p)
-    ))
-    .map(p => ({
-      fullSrc: p.url,
-      src: p.url,
-      thumb: p.url,
-      alt: p.alt || '',
-      tags: p.tags || []
-    }))
+    .filter(p => p.active && p.removeBg && (filter.value === 'articles' ? isArticles(p) : isBoutique(p)))
+    .map(toImg)
+)
+
+// Grille "Voir toutes" : toutes les photos actives (avec ou sans fond)
+const gridAllImages = computed(() =>
+  dynamicPhotos.value.filter(p => p.active).map(toImg)
 )
 
 const filterQuery = ref('')
@@ -203,19 +188,27 @@ watchEffect(() => {
 })
 onUnmounted(() => { if (_filterTimer) clearTimeout(_filterTimer) })
 
+const matchesQuery = (img, q) => {
+  if (!q) return true
+  if ((img.alt || '').toLowerCase().includes(q)) return true
+  const tags = img.tags || []
+  if (Array.isArray(tags)) return tags.some(t => (t || '').toLowerCase().includes(q))
+  if (typeof tags === 'string') return tags.toLowerCase().includes(q)
+  return false
+}
+
+// Slider : photos détourées filtrées par onglet + recherche
 const baseImagesFiltered = computed(() => {
   const q = (filterQuery.value || '').trim().toLowerCase()
-  if (!q) return baseImages.value
-  return baseImages.value.filter(img => {
-    if ((img.alt || '').toLowerCase().includes(q)) return true
-    const tags = img.tags || []
-    if (Array.isArray(tags)) return tags.some(t => (t || '').toLowerCase().includes(q))
-    if (typeof tags === 'string') return tags.toLowerCase().includes(q)
-    return false
-  })
+  return baseImages.value.filter(img => matchesQuery(img, q))
 })
 
-// images filtrées — partagées entre le carousel et la grille
+// Grille : toutes les photos actives filtrées par recherche
+const gridImagesFiltered = computed(() => {
+  const q = (filterQuery.value || '').trim().toLowerCase()
+  return gridAllImages.value.filter(img => matchesQuery(img, q))
+})
+
 const images = baseImagesFiltered
 
 const swiperInstance = ref(null)
@@ -224,6 +217,9 @@ const modalOpen = ref(false)
 const modalIndex = ref(0)
 const currentIndex = ref(0)
 const gridOpen = ref(false)
+const _modalFromGrid = ref(false)
+// Source d'images de la modal : slider ou toutes (quand ouvert depuis la grille)
+const modalImages = computed(() => _modalFromGrid.value ? gridAllImages.value : images.value)
 const modalLoading = ref(false)
 const enableMagnifier = ref(true)
 const imgWrap = ref(null)
@@ -578,7 +574,7 @@ const togglePause = () => {
   lastPointer.value = null
 
   // preload image (does not change zoom/transform)
-  const img = images.value[modalIndex.value]
+  const img = modalImages.value[modalIndex.value]
   if (img && img.fullSrc) {
     const test = new Image()
     test.src = img.fullSrc
@@ -586,7 +582,7 @@ const togglePause = () => {
   }
 
   // preload adjacent for UX (no layout/zoom side-effects)
-  preloadAdjacent(idx, images.value)
+  preloadAdjacent(idx, modalImages.value)
 
   // enable magnifier in the modal so touch/drag/zoom is available — still user-toggleable
   // magnifier always enabled
@@ -597,40 +593,37 @@ const togglePause = () => {
 }
 
 const openFromGrid = (idx) => {
-  // open modal from the grid — grid shows baseImagesFiltered
-  const clicked = baseImagesFiltered.value[idx]
-  const targetIndex = images.value.findIndex(i => i.src === clicked.src)
-  if (targetIndex !== -1) {
-    openModal(targetIndex)
-  } else {
-    // fallback: open modal at first
-    openModal(0)
-  }
+  // La grille montre toutes les photos ; la modal utilise le même tableau toutes-photos
+  const clicked = gridImagesFiltered.value[idx]
+  // Chercher dans gridAllImages pour avoir l'index correct dans la modal
+  const targetIndex = gridAllImages.value.findIndex(i => i.src === clicked.src)
+  // On passe temporairement la modal en mode "toutes photos" pour cet affichage
+  _modalFromGrid.value = true
+  openModal(targetIndex !== -1 ? targetIndex : 0)
   gridOpen.value = false
 }
 
 const closeModal = () => {
   modalOpen.value = false
+  _modalFromGrid.value = false
   document.body.style.overflow = ''
 }
 
 const prevModal = () => {
-  modalIndex.value = (modalIndex.value - 1 + images.value.length) % images.value.length
+  modalIndex.value = (modalIndex.value - 1 + modalImages.value.length) % modalImages.value.length
   currentIndex.value = modalIndex.value
   modalLoading.value = true
-  preloadAdjacent(modalIndex.value, images.value)
-  // reset transforms
+  preloadAdjacent(modalIndex.value, modalImages.value)
   zoomFactor.value = 1
   transformX.value = 0
   transformY.value = 0
 }
 
 const nextModal = () => {
-  modalIndex.value = (modalIndex.value + 1) % images.value.length
+  modalIndex.value = (modalIndex.value + 1) % modalImages.value.length
   currentIndex.value = modalIndex.value
   modalLoading.value = true
-  preloadAdjacent(modalIndex.value, images.value)
-  // reset transforms
+  preloadAdjacent(modalIndex.value, modalImages.value)
   zoomFactor.value = 1
   transformX.value = 0
   transformY.value = 0
