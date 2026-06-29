@@ -226,6 +226,17 @@ function magneticPath(x0, y0, x1, y1) {
   return pts
 }
 
+// Chemin entre deux ancres, en collant au bord de l'image quand les deux
+// extrémités sont sur le bord (le tracé suit alors le pourtour au lieu de
+// rentrer dans l'image vers un contour à fort contraste).
+function segmentPath(a, b) {
+  if (isOnBorder(a) && isOnBorder(b)) {
+    const W = canvas.value.width, H = canvas.value.height
+    return [a, ...borderPath(a, b, W, H)]
+  }
+  return magneticPath(a.x, a.y, b.x, b.y)
+}
+
 // ── Snap au bord du canvas ─────────────────────────────────────────────────
 const EDGE_SNAP = 22  // px canvas : distance de snap au bord (zone aimantée généreuse)
 
@@ -299,7 +310,7 @@ function drawOverlay() {
   }
 
   const allPoints = mode.value === 'maglasso'
-    ? [...magAnchors.flatMap((a, i) => i === 0 ? [a] : magneticPath(magAnchors[i-1].x, magAnchors[i-1].y, a.x, a.y)), ...magPreview]
+    ? [...magAnchors.flatMap((a, i) => i === 0 ? [a] : segmentPath(magAnchors[i-1], a)), ...magPreview]
     : lassoPoints
 
   if (allPoints.length < 2) return
@@ -323,27 +334,15 @@ function drawOverlay() {
       octx.lineWidth = 6
       octx.strokeRect(1, 1, W-2, H-2)
     }
-    const lastIdx = magAnchors.length - 1
     for (let i = 0; i < magAnchors.length; i++) {
       const a = magAnchors[i]
       const isDragging = dragAnchorIdx === i
-      // Le dernier point posé = point de reprise : marqué en vert, plus gros
-      const isResume = i === lastIdx && dragAnchorIdx < 0 && magPreview.length === 0
       octx.beginPath()
-      octx.arc(a.x, a.y, isDragging ? 6 : (isResume ? 6 : 4), 0, Math.PI*2)
-      octx.fillStyle = isDragging ? '#f90' : (isResume ? '#16c060' : '#fff')
+      octx.arc(a.x, a.y, isDragging ? 6 : 4, 0, Math.PI*2)
+      octx.fillStyle = isDragging ? '#f90' : '#fff'
       octx.fill()
-      octx.strokeStyle = isResume ? '#0a8a40' : '#f90'
-      octx.lineWidth = isDragging || isResume ? 2.5 : 1.5
-      octx.stroke()
-    }
-    // Halo pulsant autour du point de reprise pour le repérer facilement
-    if (lastIdx >= 0 && dragAnchorIdx < 0 && magPreview.length === 0) {
-      const a = magAnchors[lastIdx]
-      octx.beginPath()
-      octx.arc(a.x, a.y, 11, 0, Math.PI*2)
-      octx.strokeStyle = 'rgba(22,192,96,0.6)'
-      octx.lineWidth = 2
+      octx.strokeStyle = '#f90'
+      octx.lineWidth = isDragging ? 2.5 : 1.5
       octx.stroke()
     }
     // Indicateur de fermeture
@@ -405,7 +404,7 @@ function closeMagLasso() {
   const W = canvas.value.width, H = canvas.value.height
   const fullPath = []
   for (let i = 1; i < magAnchors.length; i++) {
-    fullPath.push(...magneticPath(magAnchors[i-1].x, magAnchors[i-1].y, magAnchors[i].x, magAnchors[i].y))
+    fullPath.push(...segmentPath(magAnchors[i-1], magAnchors[i]))
   }
   const first = magAnchors[0], last = magAnchors[magAnchors.length-1]
   // Vêtement qui déborde : dès qu'UNE extrémité touche un bord, on complète par le
@@ -610,8 +609,8 @@ function onDown(e) {
     magAnchors.push(snapped)
     magPreview = []
     lassoStatus.value = magAnchors.length === 1
-      ? '🟢 La suite repartira du point vert'
-      : '🟢 Reprise au point vert · double-clic pour fermer'
+      ? 'Cliquez le long du contour · le tracé colle au bord de l\'image'
+      : 'Double-clic ou Entrée pour fermer'
     drawOverlay()
     return
   }
@@ -662,10 +661,10 @@ function onMove(e) {
       drawOverlay()
       return
     }
-    // Snap bord pour la preview aussi
+    // Snap bord pour la preview aussi ; colle au bord si départ et cible y sont
     const borderSnap = snapToBorder(x, y)
-    const target = borderSnap.onBorder ? borderSnap : { x, y }
-    magPreview = magneticPath(last.x, last.y, target.x, target.y)
+    const target = borderSnap.onBorder ? borderSnap : { x, y, onBorder: false }
+    magPreview = segmentPath(last, target)
     // Fermeture proche du premier ancre
     if (magAnchors.length > 1) {
       const first = magAnchors[0]
