@@ -166,7 +166,7 @@
                 <span class="bg-model-fixed">👕 Vêtements uniquement</span>
                 <button class="btn-small" type="button" @click="clearBgModelCache" :disabled="bgModelLoading || upload.uploading">Vider le cache ONNX</button>
                 <span class="bg-model-loading" v-if="bgModelLoading">⏳ Chargement modèle...</span>
-                <span class="bg-model-desc" v-else>Modèle fixé pour le détourage des vêtements</span>
+                <span class="bg-model-desc" v-else>Détourage haute qualité (GPU si dispo)</span>
               </div>
               <label>Photo</label>
               <div
@@ -659,6 +659,9 @@ import {
 
 const ORT_WASM_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
 const THREADS_ENABLED = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated
+// WebGPU accélère l'inférence sur GPU sans nécessiter COEP/SharedArrayBuffer
+// (donc compatible avec Firebase Auth). Fallback WASM SIMD sinon.
+const WEBGPU_ENABLED = typeof navigator !== 'undefined' && 'gpu' in navigator
 
 ort.env.wasm.wasmPaths = ORT_WASM_CDN
 ort.env.wasm.numThreads = THREADS_ENABLED ? 4 : 1
@@ -666,20 +669,22 @@ ort.env.wasm.proxy = false
 
 rembgConfig.setBaseUrl('/models')
 
-// Verified binary ONNX model source for u2net_cloth_seg.
-// The local /models path is kept as default for other models, but this one
-// is hard-pinned to a working binary URL to avoid HTML/404 protobuf failures.
-const BG_MODEL_URL = 'https://huggingface.co/bunnio/dis_anime/resolve/main/u2net_cloth_seg.onnx'
-rembgConfig.setCustomModelPath(
-  'u2net_cloth_seg',
-  BG_MODEL_URL
-)
+// Modèle généraliste isnet-general-use : détourage haute qualité (entrée
+// 1024x1024, meilleure détection des contours) bien supérieur à
+// u2net_cloth_seg, qui ne segmentait que des zones de vêtement.
+// Hard-piné sur un miroir HuggingFace binaire (CORS ok) pour éviter les
+// erreurs protobuf liées au /models local absent.
+const BG_MODEL_URL = 'https://huggingface.co/tomjackson2023/rembg/resolve/main/isnet-general-use.onnx'
+const bgModel = 'isnet-general-use'
+rembgConfig.setCustomModelPath(bgModel, BG_MODEL_URL)
 
-const bgModel = 'u2net_cloth_seg'
 const bgModelLoading = ref(false)
 let bgSession = null
 const BG_SESSION_OPTIONS = {
-  executionProviders: ['wasm'],
+  // Laisse bunnio choisir WebGPU si dispo, sinon WASM SIMD (single-thread
+  // sans COEP). Pas d'executionProviders explicite pour permettre le fallback.
+  preferWebGPU: WEBGPU_ENABLED,
+  webgpuPowerPreference: 'high-performance',
   numThreads: THREADS_ENABLED ? 4 : 1,
   simd: true,
   proxy: false,
