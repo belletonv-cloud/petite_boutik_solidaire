@@ -648,118 +648,31 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import { removeBackground } from '@imgly/background-removal'
 
-import * as ort from 'onnxruntime-web'
-import {
-  rembgConfig,
-  remove as removeBgBunnio,
-  newSession,
-  clearModelCacheForModel,
-} from '@bunnio/rembg-web'
-
-const ORT_WASM_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
-const THREADS_ENABLED = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated
-// WebGPU accélère l'inférence sur GPU sans nécessiter COEP/SharedArrayBuffer
-// (donc compatible avec Firebase Auth). Fallback WASM SIMD sinon.
-const WEBGPU_ENABLED = typeof navigator !== 'undefined' && 'gpu' in navigator
-
-ort.env.wasm.wasmPaths = ORT_WASM_CDN
-ort.env.wasm.numThreads = THREADS_ENABLED ? 4 : 1
-// proxy=true : l'inférence (lourde) tourne dans un Web Worker dédié et ne
-// bloque plus le thread principal — évite le gel de l'onglet (RESULT_CODE_HUNG).
-ort.env.wasm.proxy = true
-
-rembgConfig.setBaseUrl('/models')
-
-// Modèle généraliste isnet-general-use : détourage haute qualité (entrée
-// 1024x1024, meilleure détection des contours) bien supérieur à
-// u2net_cloth_seg, qui ne segmentait que des zones de vêtement.
-// Hard-piné sur un miroir HuggingFace binaire (CORS ok) pour éviter les
-// erreurs protobuf liées au /models local absent.
-const BG_MODEL_URL = 'https://huggingface.co/tomjackson2023/rembg/resolve/main/isnet-general-use.onnx'
-const bgModel = 'isnet-general-use'
-rembgConfig.setCustomModelPath(bgModel, BG_MODEL_URL)
-
+// Détourage : IMG.LY background-removal (isnet, optimisé ORT-Web, CDN hébergé).
+// API simple : await imglyRemoveBackground(imageData, config) → Blob PNG.
+// Pas de gestion ONNX manuelle, détourage en Web Worker, GPU si dispo.
 const bgModelLoading = ref(false)
-let bgSession = null
-const BG_SESSION_OPTIONS = {
-  // Laisse bunnio choisir WebGPU si dispo, sinon WASM SIMD (single-thread
-  // sans COEP). Pas d'executionProviders explicite pour permettre le fallback.
-  preferWebGPU: WEBGPU_ENABLED,
-  webgpuPowerPreference: 'high-performance',
-  numThreads: THREADS_ENABLED ? 4 : 1,
-  simd: true,
-  proxy: true,
-}
 
-async function createBgSession(options = {}) {
-  return newSession(bgModel, undefined, { ...BG_SESSION_OPTIONS, ...options })
-}
-
-let bgModelPreflightPromise = null
-async function verifyBgModelSource() {
-  if (!bgModelPreflightPromise) {
-    bgModelPreflightPromise = (async () => {
-      const res = await fetch(BG_MODEL_URL, { method: 'HEAD', redirect: 'follow' })
-      if (!res.ok) {
-        throw new Error(`Model check failed: HTTP ${res.status} for ${BG_MODEL_URL}`)
-      }
-      const contentType = (res.headers.get('content-type') || '').toLowerCase()
-      if (!contentType.includes('octet-stream') && !contentType.includes('application/onnx')) {
-        throw new Error(`Model check failed: unexpected content-type '${contentType || 'unknown'}' for ${BG_MODEL_URL}`)
-      }
-    })()
-  }
-  return bgModelPreflightPromise
-}
-
-// Singleton promise : plusieurs appels simultanés attendent le même résultat
-let _bgSessionPromise = null
-
-async function getBgSession() {
-  if (bgSession) return bgSession
-  if (_bgSessionPromise) return _bgSessionPromise
-
-  _bgSessionPromise = (async () => {
-    bgModelLoading.value = true
-    try {
-      await verifyBgModelSource()
-      bgSession = await createBgSession()
-    } catch (error) {
-      const message = String(error?.message || error || '')
-      if (message.includes('protobuf parsing failed')) {
-        // Cache corrompu — vider et réessayer une fois
-        bgModelPreflightPromise = null
-        bgSession = null
-        await clearModelCacheForModel(bgModel).catch(() => {})
-        await verifyBgModelSource()
-        bgSession = await createBgSession({ bypassModelCache: true })
-      } else {
-        throw error
-      }
-    } finally {
-      bgModelLoading.value = false
-      _bgSessionPromise = null
-    }
-    return bgSession
-  })()
-
-  return _bgSessionPromise
-}
-
-function resetBgSession() {
-  bgSession = null
-  _bgSessionPromise = null
-}
-
-// File d'attente pour le détourage : la session ONNX n'est pas réentrante,
-// les appels simultanés doivent être sérialisés.
+// File d'attente pour sérialiser les détourages (un seul à la fois).
+// imgly gère le Web Worker et la réentrance interne, mais on évite les
+// appels simultanés pour stabiliser la mémoire et les téléchargements du modèle.
 let _bgQueue = Promise.resolve()
 
 function queueBgRemoval(file) {
   const task = _bgQueue.then(async () => {
-    const session = await getBgSession()
-    return removeBgBunnio(file, { session })
+    bgModelLoading.value = true
+    try {
+      const blob = await removeBackground(file, {
+        model: 'isnet', // isnet haute qualité pour vêtements/objets
+        device: 'gpu', // utilise WebGPU si dispo, sinon WASM
+        output: { type: 'foreground' } // juste l'objet, fond transparent
+      })
+      return blob
+    } finally {
+      bgModelLoading.value = false
+    }
   })
   // La file continue même si une tâche échoue
   _bgQueue = task.catch(() => {})
@@ -767,11 +680,9 @@ function queueBgRemoval(file) {
 }
 
 async function clearBgModelCache() {
-  await clearModelCacheForModel(bgModel).catch(() => {})
-  resetBgSession()
-  bgModelPreflightPromise = null
-  bgModelLoading.value = false
-  alert('Cache ONNX vidé. Réessayez le détourage.')
+  // imgly stocke le modèle en cache navigateur (IndexedDB) automatiquement.
+  // Pas d'API pour vider, mais recharger la page forcera un re-téléchargement si le cache est corrompu.
+  alert('Cache géré automatiquement. Rechargez la page pour forcer un re-téléchargement.')
 }
 import { signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import {

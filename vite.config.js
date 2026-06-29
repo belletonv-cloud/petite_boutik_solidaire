@@ -8,21 +8,14 @@ export default defineConfig({
   resolve: {
     conditions: ['onnxruntime-web-use-extern-wasm'],
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      // Explicitly resolve the extern-WASM entry for the nested dependency.
-      // This keeps the package buildable while still relying on the extern
-      // variant selected through resolve.conditions.
-      'onnxruntime-web': fileURLToPath(new URL(
-        './node_modules/@bunnio/rembg-web/node_modules/onnxruntime-web/dist/ort.min.mjs',
-        import.meta.url
-      ))
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('@bunnio/rembg-web') || id.includes('onnxruntime-web')) {
+          if (id.includes('@imgly/background-removal') || id.includes('onnxruntime-web')) {
             return 'vendor-admin'
           }
         }
