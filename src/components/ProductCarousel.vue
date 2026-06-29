@@ -18,6 +18,14 @@
       >
         Articles
       </button>
+      <button
+        v-if="hasFouille"
+        @click="filter = 'fouille'"
+        :class="{ active: filter === 'fouille' }"
+        aria-label="Voir la fouille"
+      >
+        🧺 La Fouille
+      </button>
     </div>
 
     <div class="search-row">
@@ -152,12 +160,7 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
 })
 
-const filter = ref('boutique') // 'boutique' ou 'articles'
-
-// images before search filtering (respecting boutique/articles)
-// Cloudinary transforms removed — cloud diqz414dk is disabled.
-// New uploads use Firebase Storage (no server-side image transforms).
-// The raw URL is used for all sizes.
+const filter = ref('boutique') // 'boutique' | 'articles' | 'fouille'
 
 const isArticles = (p) =>
   p.gallery === 'articles' || (p.gallery === 'gallery' && p.removeBg === true)
@@ -165,10 +168,17 @@ const isArticles = (p) =>
 const isBoutique = (p) =>
   p.gallery === 'boutique' || (p.gallery === 'gallery' && p.removeBg === false)
 
+const isFouille = (p) => p.gallery === 'fouille'
+
+const hasFouille = computed(() =>
+  dynamicPhotos.value.some(p => p.active && isFouille(p))
+)
+
 const baseImages = computed(() =>
   dynamicPhotos.value
     .filter(p => p.active && (
-      filter.value === 'articles' ? isArticles(p) : isBoutique(p)
+      filter.value === 'fouille'   ? isFouille(p)  :
+      filter.value === 'articles'  ? isArticles(p) : isBoutique(p)
     ))
     .map(p => ({
       fullSrc: p.url,
