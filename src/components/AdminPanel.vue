@@ -665,7 +665,9 @@ const WEBGPU_ENABLED = typeof navigator !== 'undefined' && 'gpu' in navigator
 
 ort.env.wasm.wasmPaths = ORT_WASM_CDN
 ort.env.wasm.numThreads = THREADS_ENABLED ? 4 : 1
-ort.env.wasm.proxy = false
+// proxy=true : l'inférence (lourde) tourne dans un Web Worker dédié et ne
+// bloque plus le thread principal — évite le gel de l'onglet (RESULT_CODE_HUNG).
+ort.env.wasm.proxy = true
 
 rembgConfig.setBaseUrl('/models')
 
@@ -687,7 +689,7 @@ const BG_SESSION_OPTIONS = {
   webgpuPowerPreference: 'high-performance',
   numThreads: THREADS_ENABLED ? 4 : 1,
   simd: true,
-  proxy: false,
+  proxy: true,
 }
 
 async function createBgSession(options = {}) {
