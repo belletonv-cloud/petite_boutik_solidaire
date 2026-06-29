@@ -136,6 +136,10 @@
               <input type="checkbox" v-model="actu.visible" />
               Afficher sur le site
             </label>
+            <label class="checkbox-label">
+              <input type="checkbox" :checked="actu.defilant !== false" @change="actu.defilant = $event.target.checked" />
+              Faire défiler le message en haut du site (bandeau animé)
+            </label>
             <button class="btn-save" @click="saveActu">💾 Enregistrer</button>
             <span class="saved-msg" v-if="actuSaved">✓ Enregistré</span>
           </div>

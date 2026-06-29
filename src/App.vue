@@ -16,6 +16,7 @@ import Contact from './components/Contact.vue'
 import SocialMedia from './components/SocialMedia.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ActuBanner from './components/ActuBanner.vue'
+import MarqueeBar from './components/MarqueeBar.vue'
 import SectionNav from './components/SectionNav.vue'
 import StickyBottomBar from './components/StickyBottomBar.vue'
 import MentionsLegales from './components/MentionsLegales.vue'
@@ -81,6 +82,7 @@ onMounted(() => {
 
 <template>
   <div class="container">
+    <MarqueeBar />
     <SiteHeader />
     <ActuBanner />
 
