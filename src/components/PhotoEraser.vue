@@ -39,19 +39,19 @@
           </div>
         </div>
 
-        <div class="tool-col">
-          <div class="tool-label">Taille <b>{{ brushSize }}px</b></div>
-          <input type="range" v-model.number="brushSize" min="4" max="100" class="tool-range" />
-        </div>
-
-        <div class="tool-col">
-          <div class="tool-label">Tolérance <b>{{ tolerance }}</b></div>
-          <input type="range" v-model.number="tolerance" min="5" max="120" class="tool-range" />
-        </div>
-
-        <div class="tool-col" v-show="mode === 'maglasso'">
-          <div class="tool-label">Magnétisme <b>{{ snapRadius }}px</b></div>
-          <input type="range" v-model.number="snapRadius" min="4" max="40" class="tool-range" />
+        <div class="tool-col tool-col-sliders">
+          <div class="slider-row">
+            <div class="tool-label">Taille <b>{{ brushSize }}px</b></div>
+            <input type="range" v-model.number="brushSize" min="4" max="100" class="tool-range" />
+          </div>
+          <div class="slider-row">
+            <div class="tool-label">Tolérance <b>{{ tolerance }}</b></div>
+            <input type="range" v-model.number="tolerance" min="5" max="120" class="tool-range" />
+          </div>
+          <div class="slider-row">
+            <div class="tool-label">Magnétisme <b>{{ snapRadius }}px</b></div>
+            <input type="range" v-model.number="snapRadius" min="4" max="40" class="tool-range" />
+          </div>
         </div>
 
         <div class="tool-col tool-col-actions">
@@ -465,7 +465,8 @@ function paint(px, py) {
   else if (mode.value === 'restore') applyRestore(px, py)
 }
 
-const DRAG_RADIUS = 10  // px canvas : rayon de détection pour saisir une ancre
+const DRAG_RADIUS   = 10  // px canvas : rayon de détection pour saisir une ancre
+const INSERT_RADIUS = 12  // px canvas : rayon de détection pour insérer sur un segment
 
 function nearestAnchor(x, y) {
   let best = -1, bestD = Infinity
@@ -474,6 +475,27 @@ function nearestAnchor(x, y) {
     if (d < DRAG_RADIUS && d < bestD) { best = i; bestD = d }
   }
   return best
+}
+
+// Trouve le segment le plus proche du point (x,y) parmi les segments du tracé.
+// Retourne { segIdx, t } où segIdx est l'index de l'ancre de départ du segment,
+// et t la position interpolée sur ce segment (pour placer la nouvelle ancre).
+function nearestSegment(x, y) {
+  if (magAnchors.length < 2) return null
+  let bestSegIdx = -1, bestD = Infinity, bestT = 0
+  for (let i = 0; i < magAnchors.length - 1; i++) {
+    const a = magAnchors[i], b = magAnchors[i+1]
+    // Point le plus proche sur le segment a→b
+    const dx = b.x-a.x, dy = b.y-a.y
+    const len2 = dx*dx + dy*dy
+    if (len2 === 0) continue
+    const t = Math.max(0, Math.min(1, ((x-a.x)*dx + (y-a.y)*dy) / len2))
+    const px = a.x + t*dx, py = a.y + t*dy
+    const d = Math.hypot(x-px, y-py)
+    if (d < INSERT_RADIUS && d < bestD) { bestD = d; bestSegIdx = i; bestT = t }
+  }
+  if (bestSegIdx < 0) return null
+  return { segIdx: bestSegIdx, t: bestT }
 }
 
 // ── Événements ───────────────────────────────────────────────────────────────
@@ -512,6 +534,21 @@ function onDown(e) {
     // Double-clic → fermer
     if (now - magLastClick < 350 && magAnchors.length > 1) { closeMagLasso(); return }
     magLastClick = now
+
+    // Clic sur un segment existant → insérer une ancre entre les deux points
+    const seg = nearestSegment(x, y)
+    if (seg) {
+      const a = magAnchors[seg.segIdx], b = magAnchors[seg.segIdx+1]
+      const ix = a.x + (b.x-a.x)*seg.t, iy = a.y + (b.y-a.y)*seg.t
+      const borderSnap = snapToBorder(ix, iy)
+      const snapped = borderSnap.onBorder ? borderSnap : snapToEdge(ix, iy)
+      magAnchors.splice(seg.segIdx+1, 0, snapped)
+      dragAnchorIdx = seg.segIdx+1  // permettre de le déplacer immédiatement
+      magPreview = []
+      lassoStatus.value = '✥ Déplacez la nouvelle ancre'
+      drawOverlay()
+      return
+    }
 
     // Clic près du premier ancre → fermer
     if (magAnchors.length > 1) {
@@ -569,10 +606,16 @@ function onMove(e) {
     }
     const last = magAnchors[magAnchors.length - 1]
     const W = canvas.value.width, H = canvas.value.height
-    // Curseur de déplacement si on survole une ancre existante
+    // Hint si on survole une ancre ou un segment existant
     const nearIdx = nearestAnchor(x, y)
     if (nearIdx >= 0) {
       lassoStatus.value = '✥ Cliquez pour déplacer cette ancre'
+      drawOverlay()
+      return
+    }
+    const seg = nearestSegment(x, y)
+    if (seg) {
+      lassoStatus.value = '＋ Cliquez pour ajouter une ancre ici'
       drawOverlay()
       return
     }
@@ -749,4 +792,14 @@ function save() {
 .action-cancel { color: #888; }
 .action-save { background: var(--primary-teal); color: #fff; border-color: var(--primary-teal); }
 .action-save:hover:not(:disabled) { background: #159897; }
+
+.tool-col-sliders {
+  background: #f0f0f0; border-radius: 10px; padding: 7px 10px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.slider-row {
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.slider-row .tool-label { min-width: 130px; margin: 0; }
+.slider-row .tool-range { width: 90px; }
 </style>
