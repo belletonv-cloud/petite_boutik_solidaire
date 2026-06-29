@@ -550,10 +550,18 @@ function onDown(e) {
       return
     }
 
-    // Clic près du premier ancre → fermer
+    // Clic près du premier ancre → s'y accrocher (sans fermer).
+    // La fermeture se fait uniquement au double-clic / Entrée / clic sur le bouton.
     if (magAnchors.length > 1) {
       const first = magAnchors[0]
-      if (Math.hypot(x - first.x, y - first.y) < CLOSE_RADIUS) { closeMagLasso(); return }
+      if (Math.hypot(x - first.x, y - first.y) < CLOSE_RADIUS) {
+        // Pose une ancre exactement sur le premier point (jointure aimantée)
+        magAnchors.push({ x: first.x, y: first.y, onBorder: first.onBorder })
+        magPreview = []
+        lassoStatus.value = '🔗 Rejoint le départ — double-cliquez pour fermer'
+        drawOverlay()
+        return
+      }
     }
     // Snap au bord du canvas si le curseur est proche
     const borderSnap = snapToBorder(x, y)
@@ -628,7 +636,7 @@ function onMove(e) {
       const first = magAnchors[0]
       const closeByAnchor = Math.hypot(target.x - first.x, target.y - first.y) < CLOSE_RADIUS
       const closeByBorder = borderSnap.onBorder && isOnBorder(first)
-      if (closeByAnchor) lassoStatus.value = '🟢 Cliquez pour fermer'
+      if (closeByAnchor) lassoStatus.value = '🔗 Cliquez pour rejoindre le départ · double-clic pour fermer'
       else if (closeByBorder) {
         lassoStatus.value = '🟢 Cliquez — fermeture par le bord du cadre'
         magPreview = [...magneticPath(last.x, last.y, borderSnap.x, borderSnap.y),
