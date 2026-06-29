@@ -107,11 +107,23 @@ export default {
         const { imageUrl } = await request.json()
         if (!imageUrl) return errorResponse(400, 'Missing imageUrl', origin)
 
-        // Télécharger l'image depuis le KV ou une URL publique
-        const imgRes = await fetch(imageUrl)
-        if (!imgRes.ok) return errorResponse(400, 'Cannot fetch image', origin)
-        const imgBuffer = await imgRes.arrayBuffer()
-        const imgBytes = [...new Uint8Array(imgBuffer)]
+        // Lire l'image depuis le KV si c'est une URL locale, sinon fetch externe
+        let imgBytes
+        try {
+          const urlObj = new URL(imageUrl)
+          if (urlObj.pathname.startsWith('/files/')) {
+            const key = urlObj.pathname.slice(7)
+            const buf = await env.PETITE_BOUTIK_IMAGES.get(key, 'arrayBuffer')
+            if (!buf) return errorResponse(404, 'Image not found in KV', origin)
+            imgBytes = [...new Uint8Array(buf)]
+          } else {
+            const imgRes = await fetch(imageUrl)
+            if (!imgRes.ok) return errorResponse(400, 'Cannot fetch image', origin)
+            imgBytes = [...new Uint8Array(await imgRes.arrayBuffer())]
+          }
+        } catch (e) {
+          return errorResponse(400, 'Cannot load image: ' + e.message, origin)
+        }
 
         const aiRes = await env.AI.run('@cf/llava-1.5-7b-hf', {
           image: imgBytes,

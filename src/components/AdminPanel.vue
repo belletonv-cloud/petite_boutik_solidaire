@@ -630,8 +630,11 @@
             <button class="drawer-close" @click="drawerClose" aria-label="Fermer">✕</button>
           </div>
           <div class="drawer-img-wrap">
+            <button class="drawer-nav drawer-nav-prev" @click="drawerPrev" aria-label="Photo précédente" title="← Photo précédente">‹</button>
             <img :src="drawerPhoto._src" :alt="drawerPhoto._displayAlt" class="drawer-img" />
+            <button class="drawer-nav drawer-nav-next" @click="drawerNext" aria-label="Photo suivante" title="Photo suivante →">›</button>
           </div>
+          <div class="drawer-counter">{{ drawerIndex + 1 }} / {{ mergedPhotos.length }}</div>
           <div v-if="suggestError" class="drawer-suggest-error">{{ suggestError }}</div>
           <div class="drawer-controls">
             <!-- Visible -->
@@ -1188,8 +1191,25 @@ const drawerPhotoId = ref(null)
 const drawerPhoto = computed(() =>
   drawerPhotoId.value ? mergedPhotos.value.find(p => p._key === drawerPhotoId.value) ?? null : null
 )
-const drawerOpen = (photo) => { drawerPhotoId.value = photo._key }
+const drawerOpen = (photo) => { drawerPhotoId.value = photo._key; suggestError.value = '' }
 const drawerClose = () => { drawerPhotoId.value = null; suggestError.value = '' }
+
+const drawerIndex = computed(() => mergedPhotos.value.findIndex(p => p._key === drawerPhotoId.value))
+const drawerPrev = () => {
+  const list = mergedPhotos.value
+  if (!list.length) return
+  const idx = (drawerIndex.value - 1 + list.length) % list.length
+  drawerPhotoId.value = list[idx]._key
+  suggestError.value = ''
+}
+const drawerNext = () => {
+  const list = mergedPhotos.value
+  if (!list.length) return
+  const idx = (drawerIndex.value + 1) % list.length
+  drawerPhotoId.value = list[idx]._key
+  suggestError.value = ''
+}
+
 const drawerDelete = async () => {
   if (!drawerPhoto.value) return
   await deleteDynamicPhoto(drawerPhoto.value._raw)
@@ -1545,7 +1565,12 @@ const checkAdmin = async (email) => {
 }
 
 // Au chargement, récupère le résultat si on revient d'une redirection
-const onKeydown = (e) => { if (e.key === 'Escape' && drawerPhoto.value) drawerClose() }
+const onKeydown = (e) => {
+  if (!drawerPhoto.value) return
+  if (e.key === 'Escape') drawerClose()
+  if (e.key === 'ArrowLeft') drawerPrev()
+  if (e.key === 'ArrowRight') drawerNext()
+}
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
   // Finalise une éventuelle connexion par redirection (fallback popup).
@@ -3302,13 +3327,14 @@ const loadData = () => {
   flex-shrink: 0;
 }
 .drawer-img-wrap {
-  padding: 12px 16px;
+  padding: 12px 40px;
   background: #f5f5f5;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
   height: 260px;
+  position: relative;
 }
 .drawer-img {
   max-width: 100%;
@@ -3318,6 +3344,35 @@ const loadData = () => {
   object-fit: contain;
   border-radius: 8px;
   display: block;
+}
+.drawer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.9);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.3em;
+  line-height: 1;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  transition: background 0.15s, color 0.15s;
+}
+.drawer-nav:hover { background: var(--primary-teal); color: #fff; }
+.drawer-nav-prev { left: 8px; }
+.drawer-nav-next { right: 8px; }
+.drawer-counter {
+  text-align: center;
+  font-size: 0.78em;
+  color: #999;
+  padding: 4px 0 0;
+  flex-shrink: 0;
 }
 .drawer-controls {
   padding: 16px;
