@@ -225,30 +225,17 @@
             </div>
             <div class="gallery-grid">
               <div
-                class="gallery-thumb"
+                class="gallery-thumb gallery-thumb--clickable"
                 v-for="photo in photosWithBgRemovalFiltered"
                 :key="photo._key"
                 :class="{ inactive: !photo._active }"
+                @click="drawerOpen(photo)"
+                :title="photo._displayAlt || 'Gérer cette photo'"
               >
                 <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
-                <div class="thumb-overlay">
-                  <label class="toggle-label">
-                    <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
-                    <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
-                  </label>
-                  <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
-                    <option value="boutique">🏬 Boutique</option>
-                    <option value="articles">👕 Articles</option>
-                  </select>
-                  <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" :title="photo._raw.originalUrl ? 'Restaurer l\'original' : 'Réafficher le décor'">{{ processingBgId === photo._key ? '⏳' : (photo._raw.originalUrl ? '↩️' : '🖼') }}</button>
-                  <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
-                </div>
-                <div class="thumb-edit-alt">
-                  <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
-                  <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
-                </div>
-                <div class="thumb-tags">
-                  <input type="text" :value="tagDraft[photo._key] ?? (photo._raw.tags ? (Array.isArray(photo._raw.tags)?photo._raw.tags.join(', '):photo._raw.tags) : '')" @input="onTagInput(photo._key, $event.target.value)" @blur="onTagSave(photo)" class="input-text thumb-tag-input" placeholder="Tags (séparés par ,)" />
+                <div class="thumb-badges">
+                  <span class="badge badge-gallery">{{ photo._raw.gallery === 'articles' ? '👕' : '🏬' }}</span>
+                  <span v-if="!photo._active" class="badge badge-hidden">masquée</span>
                 </div>
               </div>
             </div>
@@ -270,30 +257,17 @@
             </div>
             <div class="gallery-grid">
               <div
-                class="gallery-thumb"
+                class="gallery-thumb gallery-thumb--clickable"
                 v-for="photo in photosWithDecorFiltered"
                 :key="photo._key"
                 :class="{ inactive: !photo._active }"
+                @click="drawerOpen(photo)"
+                :title="photo._displayAlt || 'Gérer cette photo'"
               >
                 <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
-                <div class="thumb-overlay">
-                  <label class="toggle-label">
-                    <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
-                    <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
-                  </label>
-                  <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
-                    <option value="boutique">🏬 Boutique</option>
-                    <option value="articles">👕 Articles</option>
-                  </select>
-                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" title="Supprimer le fond">{{ processingBgId === photo._key ? '⏳' : '👕' }}</button>
-                  <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
-                </div>
-                <div class="thumb-edit-alt">
-                  <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
-                  <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
-                </div>
-                <div class="thumb-tags">
-                  <input type="text" :value="tagDraft[photo._key] ?? (photo._raw.tags ? (Array.isArray(photo._raw.tags)?photo._raw.tags.join(', '):photo._raw.tags) : '')" @input="onTagInput(photo._key, $event.target.value)" @blur="onTagSave(photo)" class="input-text thumb-tag-input" placeholder="Tags (séparés par ,)" />
+                <div class="thumb-badges">
+                  <span class="badge badge-gallery">{{ photo._raw.gallery === 'articles' ? '👕' : '🏬' }}</span>
+                  <span v-if="!photo._active" class="badge badge-hidden">masquée</span>
                 </div>
               </div>
             </div>
@@ -644,11 +618,93 @@
 
       </main>
     </div>
+
+    <!-- Photo drawer -->
+    <Teleport to="body">
+      <div v-if="drawerPhoto" class="photo-drawer-overlay" @click.self="drawerClose">
+        <div class="photo-drawer" role="dialog" aria-modal="true">
+          <button class="drawer-close" @click="drawerClose" aria-label="Fermer">✕</button>
+          <div class="drawer-img-wrap">
+            <img :src="drawerPhoto._src" :alt="drawerPhoto._displayAlt" class="drawer-img" />
+          </div>
+          <div class="drawer-controls">
+            <!-- Visible -->
+            <label class="drawer-row toggle-row">
+              <input type="checkbox" :checked="drawerPhoto._active" @change="toggleDynamicPhoto(drawerPhoto._raw)" />
+              <span>{{ drawerPhoto._active ? 'Visible sur le site' : 'Masquée' }}</span>
+            </label>
+
+            <!-- Galerie -->
+            <div class="drawer-row">
+              <span class="drawer-label">Galerie</span>
+              <div class="drawer-radio-group">
+                <label :class="['drawer-radio', drawerPhoto._raw.gallery === 'boutique' ? 'active' : '']">
+                  <input type="radio" :value="'boutique'" :checked="drawerPhoto._raw.gallery === 'boutique'" @change="changePhotoGallery(drawerPhoto._raw, 'boutique')" />
+                  🏬 Boutique
+                </label>
+                <label :class="['drawer-radio', drawerPhoto._raw.gallery === 'articles' ? 'active' : '']">
+                  <input type="radio" :value="'articles'" :checked="drawerPhoto._raw.gallery === 'articles'" @change="changePhotoGallery(drawerPhoto._raw, 'articles')" />
+                  👕 Articles
+                </label>
+              </div>
+            </div>
+
+            <!-- Fond -->
+            <div class="drawer-row">
+              <span class="drawer-label">Fond</span>
+              <button
+                class="drawer-btn"
+                :class="drawerPhoto._raw.removeBg ? 'btn-outline-active' : 'btn-outline'"
+                @click="toggleRemoveBg(drawerPhoto._raw)"
+                :disabled="processingBgId === drawerPhoto._key"
+              >
+                {{ processingBgId === drawerPhoto._key ? '⏳ En cours…' : (drawerPhoto._raw.removeBg ? '↩️ Restaurer original' : '✂️ Supprimer le fond') }}
+              </button>
+            </div>
+
+            <!-- Description -->
+            <div class="drawer-row drawer-col">
+              <span class="drawer-label">Description</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input
+                  type="text"
+                  :value="altDraft[drawerPhoto._key] ?? drawerPhoto._displayAlt"
+                  @input="onAltInput(drawerPhoto._key, $event.target.value)"
+                  @change="onAltSave(drawerPhoto)"
+                  class="input-text"
+                  placeholder="Description de la photo"
+                  style="flex:1"
+                />
+                <span v-if="altSavedKey === drawerPhoto._key" style="color:var(--primary-teal);font-size:0.9em">✓</span>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="drawer-row drawer-col">
+              <span class="drawer-label">Tags</span>
+              <input
+                type="text"
+                :value="tagDraft[drawerPhoto._key] ?? (drawerPhoto._raw.tags ? (Array.isArray(drawerPhoto._raw.tags) ? drawerPhoto._raw.tags.join(', ') : drawerPhoto._raw.tags) : '')"
+                @input="onTagInput(drawerPhoto._key, $event.target.value)"
+                @blur="onTagSave(drawerPhoto)"
+                class="input-text"
+                placeholder="ex: robe, coton, été"
+              />
+            </div>
+
+            <!-- Supprimer -->
+            <div class="drawer-row drawer-danger">
+              <button class="btn-delete-photo" @click="drawerDelete">🗑 Supprimer cette photo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { removeBackground } from '@imgly/background-removal'
 
 // Détourage : IMG.LY background-removal (isnet, optimisé ORT-Web, CDN hébergé).
@@ -1120,6 +1176,16 @@ const newAdminEmail = ref('')
 const dynamicPhotos = ref([])
 
 // Édition du texte des photos (draft local avant sauvegarde)
+// Photo drawer
+const drawerPhoto = ref(null)
+const drawerOpen = (photo) => { drawerPhoto.value = photo }
+const drawerClose = () => { drawerPhoto.value = null }
+const drawerDelete = async () => {
+  if (!drawerPhoto.value) return
+  await deleteDynamicPhoto(drawerPhoto.value._raw)
+  drawerPhoto.value = null
+}
+
 const altDraft = ref({})
 const altSavedKey = ref('')
 
@@ -1438,7 +1504,9 @@ const checkAdmin = async (email) => {
 }
 
 // Au chargement, récupère le résultat si on revient d'une redirection
+const onKeydown = (e) => { if (e.key === 'Escape' && drawerPhoto.value) drawerClose() }
 onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
   // Finalise une éventuelle connexion par redirection (fallback popup).
   getRedirectResult(auth).catch((e) => {
     if (e?.code && e.code !== 'auth/no-current-user') {
@@ -1446,6 +1514,7 @@ onMounted(() => {
     }
   })
 })
+onUnmounted(() => { document.removeEventListener('keydown', onKeydown) })
 
 function authErrorMessage(e) {
   const code = e?.code || ''
@@ -3097,4 +3166,176 @@ const loadData = () => {
   gap: 12px;
   margin-top: 4px;
 }
+/* ── Vignettes simplifiées ── */
+.gallery-thumb--clickable {
+  cursor: pointer;
+  position: relative;
+}
+.gallery-thumb--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.thumb-badges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+.badge {
+  font-size: 0.75em;
+  border-radius: 10px;
+  padding: 2px 7px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+.badge-gallery {
+  background: rgba(255,255,255,0.85);
+}
+.badge-hidden {
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Drawer ── */
+.photo-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9000;
+  display: flex;
+  justify-content: flex-end;
+}
+.photo-drawer {
+  width: min(420px, 95vw);
+  height: 100%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+  animation: drawerSlide 0.22s ease;
+}
+@keyframes drawerSlide {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.drawer-close {
+  align-self: flex-end;
+  margin: 12px 12px 0;
+  background: none;
+  border: none;
+  font-size: 1.3em;
+  cursor: pointer;
+  color: #888;
+  line-height: 1;
+  padding: 4px 8px;
+}
+.drawer-close:hover { color: #333; }
+.drawer-img-wrap {
+  padding: 12px 16px;
+  background: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 240px;
+  max-height: 50vh;
+}
+.drawer-img {
+  max-width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.drawer-controls {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drawer-col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.toggle-row {
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+.toggle-row input[type=checkbox] { accent-color: var(--primary-teal); width: 18px; height: 18px; cursor: pointer; }
+.drawer-label {
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  font-weight: 600;
+  min-width: 60px;
+}
+.drawer-radio-group {
+  display: flex;
+  gap: 8px;
+}
+.drawer-radio {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s;
+}
+.drawer-radio input { display: none; }
+.drawer-radio.active {
+  border-color: var(--primary-teal);
+  background: rgba(27,169,168,0.08);
+  color: var(--primary-teal);
+  font-weight: 700;
+}
+.drawer-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-outline {
+  border: 2px solid var(--primary-teal);
+  color: var(--primary-teal);
+  background: none;
+}
+.btn-outline:hover { background: var(--primary-teal); color: #fff; }
+.btn-outline-active {
+  border: 2px solid #e07b39;
+  color: #e07b39;
+  background: none;
+}
+.btn-outline-active:hover { background: #e07b39; color: #fff; }
+.drawer-danger { margin-top: 8px; padding-top: 16px; border-top: 1px solid #eee; }
+.btn-delete-photo {
+  background: none;
+  border: 2px solid #e53e3e;
+  color: #e53e3e;
+  border-radius: 20px;
+  padding: 7px 18px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-delete-photo:hover { background: #e53e3e; color: #fff; }
 </style>
