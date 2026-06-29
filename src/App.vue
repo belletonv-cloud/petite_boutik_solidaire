@@ -8,6 +8,7 @@ import About from './components/About.vue'
 import Products from './components/Products.vue'
 import Gallery from './components/ProductCarousel.vue'
 import BoutiqueGallery from './components/BoutiqueGallery.vue'
+import FouilleGallery from './components/FouilleGallery.vue'
 import Association from './components/Association.vue'
 import Calendar from './components/Calendar.vue'
 import Hours from './components/Hours.vue'
@@ -22,7 +23,7 @@ import MentionsLegales from './components/MentionsLegales.vue'
 
 const blocs = ref({})
 
-const DEFAULT_ORDER = ['hero', 'about', 'boutique-gallery', 'carousel', 'collection', 'association', 'calendrier', 'engagement', 'contact', 'social']
+const DEFAULT_ORDER = ['hero', 'about', 'boutique-gallery', 'carousel', 'collection', 'fouille', 'association', 'calendrier', 'engagement', 'contact', 'social']
 
 const SECTION_LABELS = {
   hero: 'Accueil',
@@ -30,6 +31,7 @@ const SECTION_LABELS = {
   'boutique-gallery': 'Boutique',
   carousel: 'Galerie photos',
   collection: 'Nos produits',
+  fouille: 'La Fouille',
   association: 'Association',
   calendrier: 'Horaires',
   engagement: 'Engagement',
@@ -92,6 +94,7 @@ onMounted(() => {
       <BoutiqueGallery v-if="id === 'boutique-gallery' && isVisible('boutique-gallery')" id="boutique-gallery" />
       <Products      v-if="id === 'collection'       && isVisible('collection')"        id="collection" />
       <Gallery       v-if="id === 'carousel'         && isVisible('carousel')"          id="carousel" />
+      <FouilleGallery v-if="id === 'fouille'          && isVisible('fouille')"           id="fouille" />
       <Association   v-if="id === 'association'      && isVisible('association')"       id="association" />
       <div         v-if="id === 'calendrier'       && isVisible('calendrier')"        id="calendrier" class="calendrier-section">
         <Calendar />

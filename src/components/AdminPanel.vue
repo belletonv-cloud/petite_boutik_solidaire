@@ -158,7 +158,11 @@
                 </label>
                 <label class="radio-label" :class="{ active: upload.gallery === 'articles' }">
                   <input type="radio" v-model="upload.gallery" value="articles" />
-                  📦 Articles
+                  👕 Articles
+                </label>
+                <label class="radio-label" :class="{ active: upload.gallery === 'fouille' }">
+                  <input type="radio" v-model="upload.gallery" value="fouille" />
+                  🧺 La Fouille
                 </label>
               </div>
               <div class="bg-model-info">
@@ -238,7 +242,8 @@
                   </label>
                   <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
                     <option value="boutique">🏬 Boutique</option>
-                    <option value="articles">📦 Articles</option>
+                    <option value="articles">👕 Articles</option>
+                    <option value="fouille">🧺 La Fouille</option>
                   </select>
                   <button class="thumb-bg-toggle active" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" :title="photo._raw.originalUrl ? 'Restaurer l\'original' : 'Réafficher le décor'">{{ processingBgId === photo._key ? '⏳' : (photo._raw.originalUrl ? '↩️' : '🖼') }}</button>
                   <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
@@ -283,7 +288,8 @@
                   </label>
                   <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
                     <option value="boutique">🏬 Boutique</option>
-                    <option value="articles">📦 Articles</option>
+                    <option value="articles">👕 Articles</option>
+                    <option value="fouille">🧺 La Fouille</option>
                   </select>
                   <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" title="Supprimer le fond">{{ processingBgId === photo._key ? '⏳' : '👕' }}</button>
                   <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
@@ -298,6 +304,41 @@
               </div>
             </div>
             <p class="empty" v-if="!dynamicPhotos.length">Aucune photo pour l'instant. Ajoutez-en avec le formulaire ci-dessus.</p>
+          </div>
+
+          <!-- La Fouille -->
+          <div class="gallery-section" v-if="photosInFouille.length">
+            <div class="gallery-section-header">
+              <h3>🧺 La Fouille <span class="photo-count">({{ photosInFouille.length }})</span></h3>
+            </div>
+            <p class="section-desc">Photos affichées dans le coin "La Fouille" du site — vêtements sans détourage, contexte naturel.</p>
+            <div class="gallery-grid">
+              <div
+                class="gallery-thumb"
+                v-for="photo in photosInFouille"
+                :key="photo._key"
+                :class="{ inactive: !photo._active }"
+              >
+                <img :src="photo._srcThumb || photo._src" :alt="photo._displayAlt" loading="lazy" width="320" height="240" />
+                <div class="thumb-overlay">
+                  <label class="toggle-label">
+                    <input type="checkbox" :checked="photo._active" @change="toggleDynamicPhoto(photo._raw)" />
+                    <span>{{ photo._active ? 'Visible' : 'Masquée' }}</span>
+                  </label>
+                  <select class="thumb-gallery-select" :value="photo._raw.gallery" @change="changePhotoGallery(photo._raw, $event.target.value)" title="Changer la galerie">
+                    <option value="boutique">🏬 Boutique</option>
+                    <option value="articles">👕 Articles</option>
+                    <option value="fouille">🧺 La Fouille</option>
+                  </select>
+                  <button class="thumb-bg-toggle" @click="toggleRemoveBg(photo._raw)" :disabled="processingBgId === photo._key" title="Tenter le détourage">{{ processingBgId === photo._key ? '⏳' : '👕' }}</button>
+                  <button class="thumb-delete" @click="deleteDynamicPhoto(photo._raw)" title="Supprimer">🗑</button>
+                </div>
+                <div class="thumb-edit-alt">
+                  <input type="text" :value="altDraft[photo._key] ?? photo._displayAlt" @input="onAltInput(photo._key, $event.target.value)" @change="onAltSave(photo)" class="input-text thumb-alt-input" placeholder="Description" />
+                  <span class="alt-saved" v-if="altSavedKey === photo._key">✓</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Zone de danger : suppression massive -->
@@ -1166,11 +1207,15 @@ const mergedPhotos = computed(() =>
 )
 
 const photosWithBgRemoval = computed(() =>
-  mergedPhotos.value.filter(photo => photo._raw.removeBg)
+  mergedPhotos.value.filter(photo => photo._raw.removeBg && photo._raw.gallery !== 'fouille')
 )
 
 const photosWithDecor = computed(() =>
-  mergedPhotos.value.filter(photo => !photo._raw.removeBg)
+  mergedPhotos.value.filter(photo => !photo._raw.removeBg && photo._raw.gallery !== 'fouille')
+)
+
+const photosInFouille = computed(() =>
+  mergedPhotos.value.filter(photo => photo._raw.gallery === 'fouille')
 )
 
 const photosWithBgRemovalFiltered = computed(() => {
@@ -1216,7 +1261,7 @@ const handleFiles = (files) => {
   upload.value.files = images
   upload.value.previews = images.map(f => URL.createObjectURL(f))
   upload.value.alts = images.map(f => f.name.replace(/\.[^/.]+$/, '') || 'Photo')
-  upload.value.removeBg = images.map(() => upload.value.gallery === 'articles')
+  upload.value.removeBg = images.map(() => false)
   upload.value.done = false
   upload.value.error = ''
 }
@@ -1228,10 +1273,7 @@ const onDrop = (e) => {
   handleFiles(Array.from(e.dataTransfer.files))
 }
 
-watch(() => upload.value.gallery, (gallery) => {
-  if (!upload.value.files.length) return
-  upload.value.removeBg = upload.value.removeBg.map(() => gallery === 'articles')
-})
+// removeBg est maintenant indépendant du choix de galerie — on ne reset plus
 
   const uploadPhoto = async () => {
     const files = upload.value.files
