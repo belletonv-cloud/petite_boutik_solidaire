@@ -161,12 +161,8 @@
                   👕 Articles
                 </label>
               </div>
-              <div class="bg-model-info">
-                <span class="bg-model-label">🤖 Détourage :</span>
-                <span class="bg-model-fixed">👕 Vêtements uniquement</span>
-                <button class="btn-small" type="button" @click="clearBgModelCache" :disabled="bgModelLoading || upload.uploading">Vider le cache ONNX</button>
-                <span class="bg-model-loading" v-if="bgModelLoading">⏳ Chargement modèle...</span>
-                <span class="bg-model-desc" v-else>Détourage haute qualité (GPU si dispo)</span>
+              <div v-if="bgModelLoading" class="bg-model-info">
+                <span class="bg-model-loading">⏳ Chargement modèle de détourage...</span>
               </div>
               <label>Photo</label>
               <div

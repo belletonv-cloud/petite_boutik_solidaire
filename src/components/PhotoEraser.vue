@@ -39,12 +39,12 @@
           </div>
         </div>
 
-        <div class="tool-col" v-show="!isLassoMode">
+        <div class="tool-col">
           <div class="tool-label">Taille <b>{{ brushSize }}px</b></div>
           <input type="range" v-model.number="brushSize" min="4" max="100" class="tool-range" />
         </div>
 
-        <div class="tool-col" v-show="mode === 'magic'">
+        <div class="tool-col">
           <div class="tool-label">Tolérance <b>{{ tolerance }}</b></div>
           <input type="range" v-model.number="tolerance" min="5" max="120" class="tool-range" />
         </div>
@@ -115,6 +115,7 @@ let lassoPoints = []
 let magAnchors = []       // ancres posées par l'utilisateur (coords canvas)
 let magPreview = []       // chemin snappé en cours (ancre → curseur)
 let magLastClick = 0      // timestamp pour détecter double-clic
+let dragAnchorIdx = -1    // index de l'ancre en cours de déplacement (-1 = aucune)
 
 const dispBrush = computed(() => brushSize.value / scaleX)
 const CLOSE_RADIUS = 16   // px canvas : distance pour fermer le lasso
@@ -225,6 +226,59 @@ function magneticPath(x0, y0, x1, y1) {
   return pts
 }
 
+// ── Snap au bord du canvas ─────────────────────────────────────────────────
+const EDGE_SNAP = 14  // px canvas : distance de snap au bord
+
+function snapToBorder(px, py) {
+  const W = canvas.value.width, H = canvas.value.height
+  let x = px, y = py
+  const dists = [
+    { edge: 'top',    d: py,    snap: () => ({ x: Math.max(0, Math.min(W, px)), y: 0 }) },
+    { edge: 'bottom', d: H-py,  snap: () => ({ x: Math.max(0, Math.min(W, px)), y: H }) },
+    { edge: 'left',   d: px,    snap: () => ({ x: 0, y: Math.max(0, Math.min(H, py)) }) },
+    { edge: 'right',  d: W-px,  snap: () => ({ x: W, y: Math.max(0, Math.min(H, py)) }) },
+  ]
+  const nearest = dists.sort((a, b) => a.d - b.d)[0]
+  if (nearest.d <= EDGE_SNAP) return { ...nearest.snap(), onBorder: true }
+  return { x: px, y: py, onBorder: false }
+}
+
+function isOnBorder(pt) {
+  const W = canvas.value.width, H = canvas.value.height
+  return pt.x <= 1 || pt.y <= 1 || pt.x >= W - 1 || pt.y >= H - 1
+}
+
+// ── Complétion par le périmètre entre deux points de bord ──────────────────
+// Position sur le périmètre (sens horaire depuis coin supérieur gauche)
+function perimPos(x, y, W, H) {
+  if (y <= 1) return x                  // bord haut
+  if (x >= W - 1) return W + y          // bord droit
+  if (y >= H - 1) return W + H + (W-x) // bord bas
+  return 2*W + H + (H-y)               // bord gauche
+}
+
+function perimPoint(pos, W, H) {
+  const P = 2*(W+H)
+  pos = ((pos % P) + P) % P
+  if (pos <= W) return { x: pos, y: 0 }
+  pos -= W; if (pos <= H) return { x: W, y: pos }
+  pos -= H; if (pos <= W) return { x: W-pos, y: H }
+  return { x: 0, y: H-(pos-W) }
+}
+
+function borderPath(p1, p2, W, H) {
+  const P = 2*(W+H)
+  const pos1 = perimPos(p1.x, p1.y, W, H)
+  const pos2 = perimPos(p2.x, p2.y, W, H)
+  let delta = pos2 - pos1
+  // Choisir le chemin le plus court
+  if (Math.abs(delta) > P/2) delta -= Math.sign(delta) * P
+  const steps = Math.max(2, Math.round(Math.abs(delta) / 4))
+  const pts = []
+  for (let i = 1; i <= steps; i++) pts.push(perimPoint(pos1 + delta*(i/steps), W, H))
+  return pts
+}
+
 // ── Overlay lasso ─────────────────────────────────────────────────────────────
 function drawOverlay() {
   const o = overlay.value
@@ -249,23 +303,32 @@ function drawOverlay() {
   // Points d'ancre
   if (mode.value === 'maglasso') {
     octx.setLineDash([])
-    octx.fillStyle = '#fff'
-    for (const a of magAnchors) {
+    // Halo "bord actif" sur le périmètre si le premier ancre est sur un bord
+    if (magAnchors.length > 0 && isOnBorder(magAnchors[0])) {
+      const W = o.width, H = o.height
+      octx.strokeStyle = 'rgba(0,200,100,0.4)'
+      octx.lineWidth = 6
+      octx.strokeRect(1, 1, W-2, H-2)
+    }
+    for (let i = 0; i < magAnchors.length; i++) {
+      const a = magAnchors[i]
+      const isDragging = dragAnchorIdx === i
       octx.beginPath()
-      octx.arc(a.x, a.y, 4, 0, Math.PI*2)
+      octx.arc(a.x, a.y, isDragging ? 6 : 4, 0, Math.PI*2)
+      octx.fillStyle = isDragging ? '#f90' : '#fff'
       octx.fill()
       octx.strokeStyle = '#f90'
-      octx.lineWidth = 1.5
+      octx.lineWidth = isDragging ? 2.5 : 1.5
       octx.stroke()
     }
     // Indicateur de fermeture
-    if (magAnchors.length > 2) {
+    if (magAnchors.length > 1) {
       const first = magAnchors[0]
-      const last = magPreview[magPreview.length-1] || magAnchors[magAnchors.length-1]
-      const dist = Math.hypot(last.x - first.x, last.y - first.y)
+      const lastPt = magPreview[magPreview.length-1] || magAnchors[magAnchors.length-1]
+      const dist = Math.hypot(lastPt.x - first.x, lastPt.y - first.y)
       if (dist < CLOSE_RADIUS) {
         octx.beginPath()
-        octx.arc(first.x, first.y, CLOSE_RADIUS / scaleX, 0, Math.PI*2)
+        octx.arc(first.x, first.y, CLOSE_RADIUS, 0, Math.PI*2)
         octx.strokeStyle = '#0f0'
         octx.lineWidth = 2
         octx.stroke()
@@ -300,14 +363,20 @@ function applyLassoPoints(points) {
 }
 
 function closeMagLasso() {
-  if (magAnchors.length < 3) { magAnchors = []; magPreview = []; drawOverlay(); return }
+  if (magAnchors.length < 2) { magAnchors = []; magPreview = []; drawOverlay(); return }
   pushUndo()
+  const W = canvas.value.width, H = canvas.value.height
   const fullPath = []
   for (let i = 1; i < magAnchors.length; i++) {
     fullPath.push(...magneticPath(magAnchors[i-1].x, magAnchors[i-1].y, magAnchors[i].x, magAnchors[i].y))
   }
-  // Fermer vers le premier ancre
-  fullPath.push(...magneticPath(magAnchors[magAnchors.length-1].x, magAnchors[magAnchors.length-1].y, magAnchors[0].x, magAnchors[0].y))
+  const first = magAnchors[0], last = magAnchors[magAnchors.length-1]
+  // Si les deux extrémités sont sur le bord du canvas → longer le périmètre (vêtement qui déborde)
+  if (isOnBorder(first) && isOnBorder(last)) {
+    fullPath.push(...borderPath(last, first, W, H))
+  } else {
+    fullPath.push(...magneticPath(last.x, last.y, first.x, first.y))
+  }
   applyLassoPoints(fullPath)
   magAnchors = []; magPreview = []; lassoStatus.value = ''
 }
@@ -396,10 +465,21 @@ function paint(px, py) {
   else if (mode.value === 'restore') applyRestore(px, py)
 }
 
+const DRAG_RADIUS = 10  // px canvas : rayon de détection pour saisir une ancre
+
+function nearestAnchor(x, y) {
+  let best = -1, bestD = Infinity
+  for (let i = 0; i < magAnchors.length; i++) {
+    const d = Math.hypot(x - magAnchors[i].x, y - magAnchors[i].y)
+    if (d < DRAG_RADIUS && d < bestD) { best = i; bestD = d }
+  }
+  return best
+}
+
 // ── Événements ───────────────────────────────────────────────────────────────
 function setMode(m) {
   mode.value = m
-  magAnchors = []; magPreview = []; lassoPoints = []
+  magAnchors = []; magPreview = []; lassoPoints = []; dragAnchorIdx = -1
   if (octx && overlay.value) octx.clearRect(0, 0, overlay.value.width, overlay.value.height)
   lassoStatus.value = ''
   drawing.value = false
@@ -417,22 +497,41 @@ function onDown(e) {
   refreshScale()
   const { x, y } = toCanvas(e.clientX, e.clientY)
 
-  // ── Lasso magnétique : poser une ancre ──────────────────────────────────
+  // ── Lasso magnétique : poser une ancre ou déplacer une existante ──────────
   if (mode.value === 'maglasso') {
     const now = Date.now()
+
+    // Clic sur une ancre existante → déplacement
+    const nearIdx = nearestAnchor(x, y)
+    if (nearIdx >= 0) {
+      dragAnchorIdx = nearIdx
+      lassoStatus.value = '✥ Déplacez l\'ancre'
+      return
+    }
+
     // Double-clic → fermer
-    if (now - magLastClick < 350 && magAnchors.length > 2) { closeMagLasso(); return }
+    if (now - magLastClick < 350 && magAnchors.length > 1) { closeMagLasso(); return }
     magLastClick = now
 
     // Clic près du premier ancre → fermer
-    if (magAnchors.length > 2) {
+    if (magAnchors.length > 1) {
       const first = magAnchors[0]
       if (Math.hypot(x - first.x, y - first.y) < CLOSE_RADIUS) { closeMagLasso(); return }
     }
-    const snapped = snapToEdge(x, y)
+    // Snap au bord du canvas si le curseur est proche
+    const borderSnap = snapToBorder(x, y)
+    const snapped = borderSnap.onBorder ? borderSnap : snapToEdge(x, y)
     magAnchors.push(snapped)
     magPreview = []
-    lassoStatus.value = magAnchors.length > 2 ? 'Cliquez ou double-cliquez pour fermer' : 'Cliquez pour poser des ancres'
+    if (magAnchors.length === 1) {
+      lassoStatus.value = isOnBorder(snapped)
+        ? '🔵 Ancre posée sur le bord — continuez le contour'
+        : 'Cliquez pour poser des ancres'
+    } else {
+      lassoStatus.value = isOnBorder(magAnchors[0]) || isOnBorder(snapped)
+        ? 'Retournez sur le bord pour fermer automatiquement'
+        : 'Double-clic ou Entrée pour fermer'
+    }
     drawOverlay()
     return
   }
@@ -456,14 +555,44 @@ function onMove(e) {
   const { x, y } = toCanvas(e.clientX, e.clientY)
 
   if (mode.value === 'maglasso') {
-    if (!magAnchors.length) return
+    // Déplacement d'ancre en cours
+    if (dragAnchorIdx >= 0) {
+      const borderSnap = snapToBorder(x, y)
+      magAnchors[dragAnchorIdx] = borderSnap.onBorder ? borderSnap : snapToEdge(x, y)
+      magPreview = []
+      drawOverlay()
+      return
+    }
+    if (!magAnchors.length) {
+      // Changer curseur si on est près d'une ancre (zone de drag)
+      return
+    }
     const last = magAnchors[magAnchors.length - 1]
-    magPreview = magneticPath(last.x, last.y, x, y)
-    // Indiquer proximité de fermeture
-    if (magAnchors.length > 2) {
+    const W = canvas.value.width, H = canvas.value.height
+    // Curseur de déplacement si on survole une ancre existante
+    const nearIdx = nearestAnchor(x, y)
+    if (nearIdx >= 0) {
+      lassoStatus.value = '✥ Cliquez pour déplacer cette ancre'
+      drawOverlay()
+      return
+    }
+    // Snap bord pour la preview aussi
+    const borderSnap = snapToBorder(x, y)
+    const target = borderSnap.onBorder ? borderSnap : { x, y }
+    magPreview = magneticPath(last.x, last.y, target.x, target.y)
+    // Fermeture proche du premier ancre
+    if (magAnchors.length > 1) {
       const first = magAnchors[0]
-      if (Math.hypot(x - first.x, y - first.y) < CLOSE_RADIUS)
-        lassoStatus.value = '🟢 Relâchez pour fermer'
+      const closeByAnchor = Math.hypot(target.x - first.x, target.y - first.y) < CLOSE_RADIUS
+      const closeByBorder = borderSnap.onBorder && isOnBorder(first)
+      if (closeByAnchor) lassoStatus.value = '🟢 Cliquez pour fermer'
+      else if (closeByBorder) {
+        lassoStatus.value = '🟢 Cliquez — fermeture par le bord du cadre'
+        magPreview = [...magneticPath(last.x, last.y, borderSnap.x, borderSnap.y),
+                      ...borderPath(borderSnap, first, W, H)]
+      } else {
+        lassoStatus.value = isOnBorder(first) ? 'Retournez sur le bord pour fermer automatiquement' : 'Double-clic ou Entrée pour fermer'
+      }
     }
     drawOverlay()
     return
@@ -481,6 +610,11 @@ function onMove(e) {
 }
 
 function onUp(e) {
+  if (mode.value === 'maglasso' && dragAnchorIdx >= 0) {
+    dragAnchorIdx = -1
+    lassoStatus.value = magAnchors.length > 1 ? 'Double-clic ou Entrée pour fermer' : 'Cliquez pour poser des ancres'
+    return
+  }
   if (mode.value === 'lasso' && drawing.value) {
     if (lassoPoints.length > 3) {
       pushUndo()
